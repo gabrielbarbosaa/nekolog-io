@@ -17,12 +17,18 @@ path prefix (see `docs/PLANO.md` section 13):
 | Português | `/docs/pt-br/` | `src/content/docs/pt-br/` |
 | Español | `/docs/es/` | `src/content/docs/es/` |
 
+The locale list lives in `locales.mjs`, which `astro.config.mjs` feeds to
+Starlight and `tests/i18n-parity.test.ts` reads. Adding a locale there makes the
+parity test immediately require translations for every existing page.
+
 Starlight ships its own translations for the UI strings in all three locales.
 `src/content/i18n/*.json` exists to override individual strings when needed —
 the files are intentionally near-empty.
 
-**Every page must exist in all three locales.** A page that is missing a
-translation falls back to English silently, which is easy to miss in review.
+**Every page must exist in all three locales**, and `pnpm --filter @apps/docs
+test` fails if one is missing (or if a translated page has no English source).
+Without that check a missing translation silently falls back to English, which
+is easy to miss in review.
 
 ## No `typecheck` script
 
