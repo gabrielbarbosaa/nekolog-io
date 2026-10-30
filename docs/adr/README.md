@@ -21,6 +21,7 @@ consequências que se aceitou conviver.
 | [0010](0010-tres-branches-de-longa-duracao.md) | Três branches de longa duração | Aceita |
 | [0011](0011-tres-idiomas.md) | Três idiomas na interface e na documentação | Aceita |
 | [0012](0012-escolha-de-bibliotecas.md) | Escolha de bibliotecas (ECharts, Valibot, runner próprio) | Aceita |
+| [0013](0013-garage-no-lugar-do-minio.md) | Garage no lugar do MinIO para armazenamento S3 | Aceita |
 
 ## O que vira ADR e o que não vira
 

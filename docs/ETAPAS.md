@@ -47,7 +47,7 @@
 - [x] **0.7** `ci/branch-rules` — check que só aceita PRs para `qa` vindos da `dev`, e para `main` vindos da `qa`, de `hotfix/…` ou do PR do Changesets; fluxo documentado em `docs/process/branching.md`. Depois, configurar os rulesets no GitHub (manual).
 - [x] **0.8** `chore/changesets` — Changesets versionando pacotes e apps, snapshots `dev` e `next`, workflow de release ainda sem publicar.
 - [x] **0.9** `chore/internal-base` — `internal/config` (com a validação das variáveis de ambiente da especificação 2), `internal/schema` e as interfaces de `internal/adapters`.
-- [x] **0.10** `infra/dev-compose` — `deploy/docker-compose.dev.yml` com ClickHouse, Postgres, Valkey, Mailpit e MinIO; script `pnpm dev`; `.env.example`.
+- [x] **0.10** `infra/dev-compose` — `deploy/docker-compose.dev.yml` com ClickHouse, Postgres, Valkey, Mailpit e Garage; script `pnpm dev`; `.env.example`.
 - [x] **0.11** `feat/web-scaffold` — `apps/web` com Next.js, Tailwind v4, shadcn/ui, tema Grafite (`tema/globals.css`), seletor de tema e `next-intl` com en, pt-BR e es.
 - [x] **0.12** `feat/docs-scaffold` — `apps/docs` com Starlight nos três idiomas.
 - [x] **0.13** `test/i18n-parity` — teste que falha se uma chave de tradução faltar em algum idioma.

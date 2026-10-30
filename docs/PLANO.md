@@ -125,7 +125,7 @@ O código do repositório público roda num `docker-compose`, trocando cada serv
 | Workers (ingest, jobs) | containers Node com o mesmo app Hono |
 | KV | cache em memória + Postgres |
 | Upstash Redis | Redis ou Valkey (obrigatório) |
-| R2 | MinIO ou disco (mesma API S3) |
+| R2 | Garage (mesma API S3) — ver ADR [0013](adr/0013-garage-no-lugar-do-minio.md) |
 | Cron Triggers | agendador dentro do container de jobs |
 | Neon / VM Oracle | Postgres e ClickHouse no próprio compose |
 | Resend | SMTP qualquer |
@@ -802,7 +802,7 @@ O passo a passo de cada marco, etapa por etapa e com o nome de cada branch, est�
 
 | Marco | Entrega | Pronto quando |
 |---|---|---|
-| **M0 — Fundação** | repositório com `main`, `qa` e `dev` e suas regras, monorepo, CI, base de segurança (seção 14.2), licenças, docker-compose de dev (ClickHouse, Postgres, Valkey, Mailpit, MinIO), dashboard e docs vazios com tema Grafite nos três idiomas, primeiros ADRs e modelo de ameaças | `pnpm dev` sobe tudo e o CI passa nas três branches |
+| **M0 — Fundação** | repositório com `main`, `qa` e `dev` e suas regras, monorepo, CI, base de segurança (seção 14.2), licenças, docker-compose de dev (ClickHouse, Postgres, Valkey, Mailpit, Garage), dashboard e docs vazios com tema Grafite nos três idiomas, primeiros ADRs e modelo de ameaças | `pnpm dev` sobe tudo e o CI passa nas três branches |
 | **M1 — Ingestão** | formato do payload v1, `core` + `node`, ingest (Node e Workers) com contingência no R2, jobs, tabelas no ClickHouse, keys por ambiente via script, limites e cotas, infraestrutura em OpenTofu e VM da Oracle | um `log.info()` no exemplo Express aparece no ClickHouse de `dev` |
 | **M2 — Plataforma** | `internal/auth` (seção 11), convites, área do operador, orgs, projetos, ambientes, keys, Explorer, gráfico de volume, termos e privacidade, monitoramento, backups, e-mail com SPF/DKIM/DMARC, deploy nos três ambientes | alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção |
 | **M3 — Front e integrações** | `browser`, `react`, `next`, `express`, `fastify`, `hono`, `nestjs`, `pino`, `winston`, breadcrumbs, `traceparent`, trace view, matriz de compatibilidade, `cli init` e passo a passo do primeiro log | um clique no front e a request no back aparecem na mesma linha do tempo |
