@@ -26,10 +26,15 @@ services:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-nekolog_dev}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-nekolog}
+      CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:-nekolog}
+      CLICKHOUSE_INSERT_PASSWORD: ${CLICKHOUSE_INSERT_PASSWORD:-nekolog}
+      CLICKHOUSE_JOBS_PASSWORD: ${CLICKHOUSE_JOBS_PASSWORD:-nekolog}
+      CLICKHOUSE_MIGRATOR_PASSWORD: ${CLICKHOUSE_MIGRATOR_PASSWORD:-nekolog}
     ports:
       - "8123:8123"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-users.dev.xml:/etc/clickhouse-server/users.d/nekolog.xml:ro
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
       interval: 5s

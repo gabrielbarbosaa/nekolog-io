@@ -102,6 +102,17 @@ export const jobsEnvSchema = v.pipe(
 
 export type JobsEnv = v.InferOutput<typeof jobsEnvSchema>
 
+export const migrationsEnvSchema = v.object({
+  CLICKHOUSE_URL: urlString,
+  CLICKHOUSE_DB: nonEmptyString,
+  CLICKHOUSE_MIGRATOR_USER: nonEmptyString,
+  CLICKHOUSE_MIGRATOR_PASSWORD: nonEmptyString,
+  CF_ACCESS_CLIENT_ID: v.optional(nonEmptyString),
+  CF_ACCESS_CLIENT_SECRET: v.optional(nonEmptyString),
+})
+
+export type MigrationsEnv = v.InferOutput<typeof migrationsEnvSchema>
+
 export class EnvValidationError extends Error {
   constructor(appName: string, issues: ReadonlyArray<v.BaseIssue<unknown>>) {
     const details = issues
@@ -115,12 +126,22 @@ export class EnvValidationError extends Error {
   }
 }
 
+export function withoutBlanks(source: Record<string, string | undefined>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(source)) {
+    if (value !== undefined && value.trim() !== '') {
+      result[key] = value
+    }
+  }
+  return result
+}
+
 export function loadEnv<TSchema extends v.GenericSchema>(
   appName: string,
   schema: TSchema,
   source: Record<string, string | undefined> = process.env,
 ): v.InferOutput<TSchema> {
-  const result = v.safeParse(schema, source)
+  const result = v.safeParse(schema, withoutBlanks(source))
   if (!result.success) {
     throw new EnvValidationError(appName, result.issues)
   }
