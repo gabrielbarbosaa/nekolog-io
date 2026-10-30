@@ -48,3 +48,36 @@ Configurados em Settings → Rules → Rulesets, um por branch (`main`, `qa`, `d
 - Require signed commits (só em `main` e `qa`)
 
 Revisão obrigatória de PR só entra quando houver um segundo mantenedor (o GitHub não deixa aprovar o próprio PR); nesse momento, o `CODEOWNERS` passa a ser respeitado pelo ruleset.
+
+## Assinatura de commits
+
+Commits são assinados com **chave SSH** (`gpg.format=ssh`, `commit.gpgsign=true`),
+registrada no GitHub como *Signing Key*. `main` e `qa` recusam commit não
+assinado.
+
+### Exceção histórica
+
+A assinatura só foi configurada em **30/10/2026**, no meio do M0 — o item
+correspondente do [ETAPAS.md](../ETAPAS.md) tinha sido pulado. Três commits
+anteriores a essa data não estão assinados e **continuam no histórico**:
+
+| Commit | Etapa |
+|---|---|
+| `d1225ab` | 0.3 — pnpm workspaces, Turborepo, tsconfig, Biome |
+| `f0be04e` | 0.5 — workflow de CI |
+| `6530e83` | 0.4 — commitlint, lefthook, templates |
+
+Eles entraram pelas PRs #1–#3, mergeadas com *merge commit* (que preserva os
+commits originais). Da PR #4 em diante o merge foi por *squash*, e o GitHub
+passou a criar um commit novo já assinado.
+
+Para promover o M0, a regra `required_signatures` de `qa` e `main` foi
+**suspensa durante o merge e restaurada em seguida**. Optou-se por isso em vez
+de reescrever o histórico: `d1225ab` é o commit #2 de 19, então assiná-lo
+retroativamente mudaria o SHA de praticamente toda a `dev` e quebraria a
+referência das PRs já mergeadas — risco alto para benefício baixo num
+repositório de um mantenedor só.
+
+**Isso não deve se repetir.** Todo commit a partir de 30/10/2026 nasce assinado;
+se uma promoção futura for bloqueada por assinatura, trate como bug, não como
+caso para repetir a exceção.

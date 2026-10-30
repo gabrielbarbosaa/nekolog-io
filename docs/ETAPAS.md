@@ -31,7 +31,7 @@
 - [ ] Registrar `nekolog.io` no Cloudflare Registrar e ativar o DNSSEC.
 - [ ] Criar as contas gratuitas: Cloudflare, Oracle Cloud, Neon, Upstash, Vercel, Resend e Better Stack (monitor externo).
 - [ ] Ativar passkey ou chave de segurança em todas essas contas, além do GitHub e do npm.
-- [ ] Configurar a assinatura de commits com chave SSH no Git e no GitHub.
+- [x] Configurar a assinatura de commits com chave SSH no Git e no GitHub. *(feito em 30/10/2026, no meio do M0 — os commits anteriores a essa data não estão assinados; ver `docs/process/branching.md`.)*
 - [ ] Ativar o Cloudflare Email Routing para `security@`, `dmarc@` e `contato@nekolog.io`.
 
 ---
