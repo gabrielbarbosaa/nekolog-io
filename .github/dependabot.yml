@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Renovate (renovate.json) owns npm dependency updates, with
+  # minimumReleaseAge and workspace-aware grouping. Dependabot here only
+  # covers GitHub Actions, since it natively rewrites both the pinned SHA
+  # and its version comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(ci)"
