@@ -10,7 +10,10 @@
   "scripts": {
     "prepare": "lefthook install",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev:infra": "docker compose -f deploy/docker-compose.dev.yml --env-file .env up -d",
+    "dev:infra:down": "docker compose -f deploy/docker-compose.dev.yml --env-file .env down",
+    "dev:infra:logs": "docker compose -f deploy/docker-compose.dev.yml --env-file .env logs -f",
+    "dev": "pnpm dev:infra && turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
