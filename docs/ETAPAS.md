@@ -51,7 +51,7 @@
 - [x] **0.11** `feat/web-scaffold` — `apps/web` com Next.js, Tailwind v4, shadcn/ui, tema Grafite (`tema/globals.css`), seletor de tema e `next-intl` com en, pt-BR e es.
 - [x] **0.12** `feat/docs-scaffold` — `apps/docs` com Starlight nos três idiomas.
 - [x] **0.13** `test/i18n-parity` — teste que falha se uma chave de tradução faltar em algum idioma.
-- [ ] **0.14** `docs/adr` — ADRs das decisões da seção 1 do plano.
+- [x] **0.14** `docs/adr` — ADRs das decisões da seção 1 do plano.
 - [ ] **0.15** `docs/security` — primeira versão do modelo de ameaças e dos runbooks.
 
 **Pronto quando:** `pnpm dev` sobe tudo, o CI passa nas três branches e o dashboard vazio abre com tema claro e escuro nos três idiomas.
