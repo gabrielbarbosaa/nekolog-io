@@ -1,9 +1,5 @@
 name: Release
 
-# Only manages the "Version Packages" PR for now (see docs/PLANO.md section
-# 19). Actual `npm publish` via trusted publishing (OIDC) is wired up once
-# there are real packages to release.
-
 on:
   push:
     branches: [main]
@@ -26,9 +22,6 @@ jobs:
         with:
           egress-policy: audit
 
-      # NOTE: persist-credentials is intentionally left at its default
-      # (true) here. changesets/action pushes the "Version Packages" branch
-      # using the credentials actions/checkout leaves in place.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

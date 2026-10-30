@@ -3,9 +3,6 @@ import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 import { SOURCE_LOCALE, starlightLocales } from './locales.mjs'
 
-// English is the source language and lives at the root; the other locales get
-// a path prefix (docs/PLANO.md section 13). The locale list lives in
-// locales.mjs so the i18n parity test enforces exactly what is configured here.
 export default defineConfig({
   site: 'https://nekolog.io',
   base: '/docs',
