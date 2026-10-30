@@ -12,6 +12,10 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 
 ## 1. Decisões tomadas
 
+> As decisões arquiteturais desta tabela têm um ADR em [docs/adr/](adr/README.md)
+> com o contexto completo, as alternativas descartadas e as consequências
+> aceitas. Esta tabela é o resumo; o ADR é o aprofundamento.
+
 | Tema | Decisão | Motivo |
 |---|---|---|
 | Nome | NekoLog: site `nekolog.io`, escopo `@nekolog-io` no npm, org `nekolog-io` no GitHub | `@nekolog` e `nekolog` já estavam ocupados; o mesmo nome nos três lugares |
@@ -786,7 +790,7 @@ docs/specs/     # especificações técnicas (payload, busca, fingerprint, alert
 - **Open-core:** este repositório (SDKs, ingestão, jobs, site, docs) é open source sob MIT. O dashboard (`nekolog-dashboard`) é fechado e só roda na instância hospedada — ver seção 1.
 - **Licença:** MIT em todo este repositório.
 - **Arquivos da comunidade:** `README` em inglês (com versões em português e espanhol), com GIF e quickstart, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY.md` (com o private vulnerability reporting do GitHub), templates de issue e PR, label `good first issue`, Discussions, roadmap público no GitHub Projects.
-- **ADRs** em `docs/adr/`, começando pelas decisões da seção 1.
+- **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da seção 1.
 - **Demo pública** com dados falsos e sessão somente leitura.
 - **Divulgação na 1.0:** TabNews, dev.to e Show HN.
 
