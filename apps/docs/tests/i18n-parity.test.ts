@@ -6,7 +6,6 @@ import { SOURCE_LOCALE, TRANSLATED_LOCALES } from '../locales.mjs'
 const DOCS_DIR = fileURLToPath(new URL('../src/content/docs/', import.meta.url))
 const PAGE_EXTENSIONS = ['.md', '.mdx']
 
-/** Every page path under src/content/docs/, relative to it, using "/" separators. */
 async function listPages(): Promise<string[]> {
   const entries = await readdir(DOCS_DIR, { recursive: true, withFileTypes: true })
   return entries
@@ -17,12 +16,6 @@ async function listPages(): Promise<string[]> {
     })
 }
 
-/**
- * The locale-independent identity of a page: "pt-br/getting-started/intro.md"
- * and "getting-started/intro.mdx" are both the page "getting-started/intro".
- * The extension is dropped so a translation may use .md where the source uses
- * .mdx (Starlight resolves both to the same route).
- */
 function pageId(path: string, localeDir: string): string {
   const withoutLocale = localeDir ? path.slice(localeDir.length + 1) : path
   return withoutLocale.replace(/\.mdx?$/, '')
@@ -36,7 +29,6 @@ describe('documentation i18n parity', () => {
   it('has every page translated into every locale', async () => {
     const pages = await listPages()
 
-    // Guard against the walk silently finding nothing and the test passing vacuously.
     expect(pages.length).toBeGreaterThan(0)
 
     const byLocale = new Map<string, Set<string>>()
@@ -62,8 +54,6 @@ describe('documentation i18n parity', () => {
           .join(', ')}`,
       ).toEqual([])
 
-      // A page that only exists in a translation is just as broken: readers of
-      // other locales silently never see it.
       const orphaned = [...translated].filter((page) => !source.has(page)).sort()
       expect(
         orphaned,
