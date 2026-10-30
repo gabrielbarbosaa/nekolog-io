@@ -55,29 +55,34 @@ Commits são assinados com **chave SSH** (`gpg.format=ssh`, `commit.gpgsign=true
 registrada no GitHub como *Signing Key*. `main` e `qa` recusam commit não
 assinado.
 
-### Exceção histórica
+### Reescrita do histórico em 30/10/2026
 
-A assinatura só foi configurada em **30/10/2026**, no meio do M0 — o item
-correspondente do [ETAPAS.md](../ETAPAS.md) tinha sido pulado. Três commits
-anteriores a essa data não estão assinados e **continuam no histórico**:
+A assinatura só foi configurada no meio do M0 — o item correspondente do
+[ETAPAS.md](../ETAPAS.md) tinha sido pulado. Três commits anteriores
+(`d1225ab`, `f0be04e`, `6530e83`, das etapas 0.3, 0.5 e 0.4) ficaram sem
+assinatura e entraram no histórico pelas PRs #1–#3, mergeadas com *merge
+commit*, que preserva os commits originais.
 
-| Commit | Etapa |
-|---|---|
-| `d1225ab` | 0.3 — pnpm workspaces, Turborepo, tsconfig, Biome |
-| `f0be04e` | 0.5 — workflow de CI |
-| `6530e83` | 0.4 — commitlint, lefthook, templates |
+Isso só apareceu na primeira promoção, e não como um contratempo pontual: como
+`qa` e `main` recusam commit não assinado, **toda promoção futura com merge
+commit ficaria bloqueada**. A primeira promoção do M0 chegou a ser feita com
+squash para contornar, o que exigiu depois uma sincronização de volta para a
+`dev` com resolução de conflito `add/add`.
 
-Eles entraram pelas PRs #1–#3, mergeadas com *merge commit* (que preserva os
-commits originais). Da PR #4 em diante o merge foi por *squash*, e o GitHub
-passou a criar um commit novo já assinado.
+Em vez de conviver com isso, o histórico foi **reescrito e reassinado**:
 
-Para promover o M0, a regra `required_signatures` de `qa` e `main` foi
-**suspensa durante o merge e restaurada em seguida**. Optou-se por isso em vez
-de reescrever o histórico: `d1225ab` é o commit #2 de 19, então assiná-lo
-retroativamente mudaria o SHA de praticamente toda a `dev` e quebraria a
-referência das PRs já mergeadas — risco alto para benefício baixo num
-repositório de um mantenedor só.
+- Os 19 commits foram recriados com assinatura SSH e verificados pelo GitHub.
+- O histórico ficou **linear** — os merge commits das PRs #1–#3 e da
+  sincronização foram achatados.
+- O conteúdo não mudou: a árvore resultante é idêntica à anterior.
+- `dev`, `qa` e `main` foram apontadas para o mesmo commit.
+- A regra `required_signatures` **não** foi tocada; o que se suspendeu durante
+  os três pushes foi o bloqueio de force-push, restaurado em seguida.
 
-**Isso não deve se repetir.** Todo commit a partir de 30/10/2026 nasce assinado;
-se uma promoção futura for bloqueada por assinatura, trate como bug, não como
-caso para repetir a exceção.
+**Custo aceito:** todos os SHAs mudaram, então as PRs #1–#24 referenciam commits
+órfãos. Os diffs continuam visíveis no GitHub. Isso foi feito com o repositório
+tendo 5 horas de vida, sem nenhuma tag ou release — o momento mais barato
+possível.
+
+**Não deve se repetir.** Todo commit nasce assinado desde então. Se uma promoção
+futura for bloqueada por assinatura, é bug, não precedente para nova exceção.
