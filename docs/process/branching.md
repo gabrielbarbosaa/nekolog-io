@@ -31,7 +31,7 @@ PR para a `dev`, squash merge, CI verde.
 
 O workflow [`branch-rules.yml`](../../.github/workflows/branch-rules.yml) é um check obrigatório que barra combinações fora do fluxo:
 
-- PR com base `qa` só é aceito se vier de `dev`.
+- PR com base `qa` só é aceito se vier de `dev` (promoção) ou de `main` (sincronização pós-release, passo 3 acima).
 - PR com base `main` só é aceito se vier de `qa`, de `hotfix/*`, ou for o PR do Changesets (`changeset-release/main`).
 - PRs com outra base (normalmente `dev`) não têm restrição de origem.
 
