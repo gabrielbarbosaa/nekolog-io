@@ -16,7 +16,13 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": [
+        "CLICKHOUSE_TEST_REQUIRED",
+        "CLICKHOUSE_TEST_URL",
+        "CLICKHOUSE_TEST_USER",
+        "CLICKHOUSE_TEST_PASSWORD"
+      ]
     }
   }
 }

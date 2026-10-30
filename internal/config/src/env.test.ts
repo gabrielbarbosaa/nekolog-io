@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { EnvValidationError, ingestEnvSchema, jobsEnvSchema, loadEnv, webEnvSchema } from './env'
+import {
+  EnvValidationError,
+  ingestEnvSchema,
+  jobsEnvSchema,
+  loadEnv,
+  migrationsEnvSchema,
+  webEnvSchema,
+} from './env.ts'
 
 const validWebEnv = {
   APP_ENV: 'dev',
@@ -112,5 +119,43 @@ describe('jobsEnvSchema', () => {
     expect(() =>
       loadEnv('jobs', jobsEnvSchema, { ...validJobsEnv, SMTP_URL: 'smtp://localhost:1025' }),
     ).toThrow(EnvValidationError)
+  })
+})
+
+describe('migrationsEnvSchema', () => {
+  const validMigrationsEnv = {
+    CLICKHOUSE_URL: 'https://ch.nekolog.io',
+    CLICKHOUSE_DB: 'nekolog_dev',
+    CLICKHOUSE_MIGRATOR_USER: 'migrator',
+    CLICKHOUSE_MIGRATOR_PASSWORD: 'secret',
+  }
+
+  it('accepts a configuration without Cloudflare Access', () => {
+    expect(() => loadEnv('migrations', migrationsEnvSchema, validMigrationsEnv)).not.toThrow()
+  })
+
+  it('rejects a missing migrator credential', () => {
+    const { CLICKHOUSE_MIGRATOR_PASSWORD, ...rest } = validMigrationsEnv
+    expect(() => loadEnv('migrations', migrationsEnvSchema, rest)).toThrow(EnvValidationError)
+  })
+})
+
+describe('loadEnv', () => {
+  it('treats a variable set to an empty string as unset', () => {
+    const parsed = loadEnv('web', webEnvSchema, { ...validWebEnv, EMAIL_ALLOWLIST: '' })
+
+    expect(parsed.EMAIL_ALLOWLIST).toBeUndefined()
+  })
+
+  it('treats a variable set to whitespace as unset', () => {
+    expect(() =>
+      loadEnv('web', webEnvSchema, { ...validWebEnv, UPSTASH_REDIS_REST_URL: '   ' }),
+    ).toThrow(EnvValidationError)
+  })
+
+  it('still rejects a required variable left empty', () => {
+    expect(() => loadEnv('web', webEnvSchema, { ...validWebEnv, DATABASE_URL: '' })).toThrow(
+      EnvValidationError,
+    )
   })
 })

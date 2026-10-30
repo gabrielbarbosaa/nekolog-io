@@ -114,6 +114,8 @@
 | E7 | SSRF: webhook de alerta apontado para a rede interna ou para o metadata da nuvem | 5 | Só HTTPS; bloqueio de IP privado, loopback e endereço de metadata; sem seguir redirecionamento; timeout curto | Planejada (M5) |
 | E8 | Nome de arquivo de source map com `../` escrevendo fora do destino | 4 | Tamanho máximo, tipo validado e nome normalizado | Planejada (M4) |
 | E9 | VM invadida por porta exposta | 2 | **Nenhuma porta de entrada**: tudo pelo Cloudflare Tunnel, lista de segurança da Oracle nega entrada; SSH só por chave, via Cloudflare Access; `unattended-upgrades` | Planejada (M1) |
+| E10 | Credencial do ClickHouse vazada de um app faz mais do que aquele app precisa | 2 | Um usuário por papel, com *grant* mínimo: leitura, ingestão, jobs e migrations são credenciais distintas, e só a de migrations tem DDL — e ela existe só nos *secrets* do CI | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
+| E11 | Credencial de ingestão lê o conteúdo dos logs | 1 | O usuário de ingestão tem `INSERT` em `logs` e `SELECT` **só nas cinco colunas** que a *materialized view* lê (`project_id`, `environment_id`, `timestamp`, `level`, `service`); `message`, `stacktrace`, `attributes` e `user_id` ficam fora do alcance | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
 
 ---
 

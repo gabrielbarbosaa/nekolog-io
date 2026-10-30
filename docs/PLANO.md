@@ -198,6 +198,7 @@ SETTINGS non_replicated_deduplication_window = 1000;
 
 - O `retention_days` vem da configuração do ambiente e é gravado em cada linha, então o `TTL` respeita a retenção de cada ambiente sem job de limpeza. Uma mudança na retenção vale só para logs novos.
 - A *materialized view* `logs_per_minute` (contagem por projeto, ambiente, nível, serviço e minuto) alimenta os gráficos e o controle de cota.
+- **O usuário de ingestão não pode ser só de `INSERT`.** O ClickHouse pede `SELECT` nas colunas que a *materialized view* lê, e sem isso o `INSERT` grava em `logs`, falha ao alimentar a view e devolve erro — gravação pela metade. Então ele tem `INSERT` em `logs` e `SELECT` **restrito às cinco colunas** da view (`project_id`, `environment_id`, `timestamp`, `level`, `service`). `message`, `stacktrace`, `attributes` e `user_id` continuam fora do alcance dessa credencial (ameaça E11).
 
 ---
 

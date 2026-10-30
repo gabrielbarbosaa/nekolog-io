@@ -154,6 +154,7 @@ As credenciais do R2 que o ClickHouse usa para gravar exportações ficam numa *
 | `VERCEL_API_TOKEN`, `GITHUB_ADMIN_TOKEN` | ✓ | providers da Vercel e do GitHub |
 | `BACKUP_DATABASE_URL` | ✓ | papel do Postgres só de leitura, para o `pg_dump` |
 | `BACKUP_AGE_RECIPIENT` | | chave **pública** do `age`; a chave privada fica offline, com o autor |
+| `CLICKHOUSE_MIGRATOR_USER`, `CLICKHOUSE_MIGRATOR_PASSWORD` | ✓ | único usuário com DDL no ClickHouse; só o job de deploy o usa |
 
 A publicação no npm não usa nenhum token: é feita por trusted publishing.
 
@@ -169,6 +170,11 @@ A publicação no npm não usa nenhum token: é feita por trusted publishing.
 - **Banco por ambiente:** `{{database}}` nos arquivos é trocado por `nekolog_dev`, `nekolog_qa` ou `nekolog_prod`.
 - **Concorrência:** o ClickHouse não tem lock de migrations, então o runner só roda no job de deploy do CI, com um grupo de `concurrency` do GitHub Actions por ambiente.
 - **Comandos:** `pnpm ch:migrate`, `pnpm ch:status` e `pnpm ch:new <nome>`.
+- **Numeração sem buraco:** as versões começam em `0001` e não pulam nem repetem. Um buraco é quase sempre um arquivo perdido num merge, então o runner recusa o conjunto inteiro.
+- **Nada fora de ordem:** se uma migration antiga está pendente e uma mais nova já foi aplicada, o runner para.
+- **Nada some:** se o banco lembra de uma migration que não existe mais nos arquivos, o runner para.
+- **O banco não é criado pelo runner:** se `CLICKHOUSE_DB` não existir, ele avisa e para. Criar o banco é provisionamento.
+- **Checksum:** SHA-256 do arquivo **antes** da substituição de `{{database}}`, com `\r\n` normalizado para `\n`, para dar o mesmo valor em qualquer sistema operacional.
 
 ---
 

@@ -1,0 +1,44 @@
+<clickhouse>
+  <users>
+    <nekolog_reader>
+      <password from_env="CLICKHOUSE_READ_PASSWORD"/>
+      <networks><ip>::/0</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT ON nekolog_dev.*</query>
+      </grants>
+    </nekolog_reader>
+
+    <nekolog_ingest>
+      <password from_env="CLICKHOUSE_INSERT_PASSWORD"/>
+      <networks><ip>::/0</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT INSERT ON nekolog_dev.logs</query>
+        <query>GRANT SELECT(project_id, environment_id, timestamp, level, service) ON nekolog_dev.logs</query>
+      </grants>
+    </nekolog_ingest>
+
+    <nekolog_jobs>
+      <password from_env="CLICKHOUSE_JOBS_PASSWORD"/>
+      <networks><ip>::/0</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT, INSERT ON nekolog_dev.*</query>
+      </grants>
+    </nekolog_jobs>
+
+    <nekolog_migrator>
+      <password from_env="CLICKHOUSE_MIGRATOR_PASSWORD"/>
+      <networks><ip>::/0</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT, INSERT, CREATE, DROP, ALTER, TRUNCATE, SHOW ON *.*</query>
+      </grants>
+    </nekolog_migrator>
+  </users>
+</clickhouse>

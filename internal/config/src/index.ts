@@ -1,8 +1,10 @@
-export type { IngestEnv, JobsEnv, WebEnv } from './env'
+export type { IngestEnv, JobsEnv, MigrationsEnv, WebEnv } from './env.ts'
 export {
   EnvValidationError,
   ingestEnvSchema,
   jobsEnvSchema,
   loadEnv,
+  migrationsEnvSchema,
   webEnvSchema,
-} from './env'
+  withoutBlanks,
+} from './env.ts'
