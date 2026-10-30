@@ -1,0 +1,16 @@
+{
+  "HomePage": {
+    "title": "NekoLog",
+    "tagline": "Logging platform for JavaScript and TypeScript applications.",
+    "comingSoon": "The dashboard is just getting started."
+  },
+  "ThemeToggle": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "LocaleSwitcher": {
+    "label": "Language"
+  }
+}

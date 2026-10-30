@@ -13,6 +13,8 @@ out/
 .next/
 .vercel/
 .wrangler/
+.astro/
+next-env.d.ts
 
 # Env files
 .env

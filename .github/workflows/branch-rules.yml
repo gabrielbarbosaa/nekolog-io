@@ -1,0 +1,47 @@
+name: Branch Rules
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate PR source branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Validate base/head branch pairing
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          echo "PR: $HEAD_REF -> $BASE_REF"
+
+          case "$BASE_REF" in
+            qa)
+              if [ "$HEAD_REF" != "dev" ]; then
+                echo "::error::PRs into 'qa' must come from 'dev' (got '$HEAD_REF')."
+                exit 1
+              fi
+              ;;
+            main)
+              case "$HEAD_REF" in
+                qa|hotfix/*|changeset-release/main)
+                  ;;
+                *)
+                  echo "::error::PRs into 'main' must come from 'qa', a 'hotfix/*' branch, or the Changesets release PR (got '$HEAD_REF')."
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "No source restriction for base branch '$BASE_REF'."
+              ;;
+          esac

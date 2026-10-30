@@ -1,21 +1,26 @@
 # NekoLog — plano do projeto
 
-> Plataforma de logs open source · site `nekolog.io` · npm `@nekolog-io` · GitHub `nekolog-io` · Atualizado em 29/10/2026
+> Plataforma de logs open-core · site `nekolog.io` · npm `@nekolog-io` · GitHub `nekolog-io` · Atualizado em 30/10/2026
 >
 > Documentos: [ETAPAS.md](ETAPAS.md) (ordem de execução) · [ESPECIFICACOES.md](ESPECIFICACOES.md) (contratos técnicos)
 
 Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e no back-end: SDKs publicados no npm, uma API que recebe os logs, armazenamento analítico e um dashboard com filtros, gráficos e projetos, com keys separadas por ambiente.
 
-É um projeto pessoal, de estudo e open source. Roda só em serviços gratuitos na nuvem e também pode ser hospedado por conta própria com Docker.
+É um projeto pessoal e de estudo, **open-core**: SDKs, ingestão, jobs e API de leitura são open source (MIT) e rodam só em serviços gratuitos na nuvem, com self-host completo via Docker. **O dashboard é fechado**, vive no repositório privado [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) e só roda na instância hospedada na nuvem — não faz parte do self-host. Veja a decisão completa na seção 1 e o detalhe em `docs/adr/` quando o ADR for escrito.
 
 ---
 
 ## 1. Decisões tomadas
 
+> As decisões arquiteturais desta tabela têm um ADR em [docs/adr/](adr/README.md)
+> com o contexto completo, as alternativas descartadas e as consequências
+> aceitas. Esta tabela é o resumo; o ADR é o aprofundamento.
+
 | Tema | Decisão | Motivo |
 |---|---|---|
 | Nome | NekoLog: site `nekolog.io`, escopo `@nekolog-io` no npm, org `nekolog-io` no GitHub | `@nekolog` e `nekolog` já estavam ocupados; o mesmo nome nos três lugares |
-| Modelo | Open source, projeto pessoal de estudo | Liberdade de escolhas e portfólio |
+| Modelo | Open-core, projeto pessoal de estudo | Liberdade de escolhas, portfólio público e um produto hospedado que não expõe o código do dashboard a terceiros |
+| Repositórios | Dois: `nekolog-io` (público, MIT — SDKs, ingestão, jobs, API de leitura, site, docs) e `nekolog-dashboard` (privado — dashboard Next.js, só roda na instância hospedada) | Dashboard fechado para terceiros não terem acesso ao código; o resto continua aberto e self-hostável |
 | Escopo | Plano completo até a 1.0, executado em marcos | Evita retrabalho de arquitetura depois do MVP |
 | Hospedagem | Só serviços gratuitos; o único gasto é o domínio `nekolog.io` (~US$ 50/ano no Cloudflare) | Projeto de estudo; o domínio é exigido pela Resend e pelo Cloudflare Tunnel |
 | Logs | ClickHouse numa VM Oracle Always Free | Banco colunar, rápido em agregações; o ClickHouse Cloud só tem trial |
@@ -32,7 +37,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 | Segurança | Prioridade máxima em todas as camadas (seção 14) | A plataforma recebe dados de terceiros e publica pacotes que rodam em outras aplicações |
 | Versionamento | Tudo versionado: pacotes, apps, API, payload, migrations e docs (seção 16) | Atualizações previsíveis para quem usa e para quem hospeda |
 | Branches | `main` (produção), `qa` (homologação) e `dev` (desenvolvimento), com uma branch por etapa (seção 17) | Histórico organizado e promoção controlada entre ambientes |
-| Licença | MIT em todo o repositório (SDKs e plataforma) | Simples e permissiva; projeto de estudo e portfólio |
+| Licença | MIT no repositório público `nekolog-io` (SDKs, ingestão, jobs, site, docs); `nekolog-dashboard` é privado, sem licença de redistribuição | Simples e permissiva para a parte aberta; o dashboard fica fora do open source por decisão de produto |
 | Infraestrutura | Como código, com OpenTofu, a partir do M1 (seção 15.5) | Tudo recriável, versionado e revisado em PR |
 | Acompanhamento | Cada etapa é uma issue no GitHub, dentro do milestone do seu marco | Cada PR fecha uma issue; o histórico fica rastreável |
 | Cotas da instância hospedada | 10 mil eventos por dia por organização e retenção de 7 dias, ajustáveis pelo operador; projetos e membros sem limite | Cabe nas cotas gratuitas e pode crescer depois |
@@ -46,6 +51,8 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 - **Reservar o quanto antes:** a org `nekolog-io` no npm e no GitHub (gratuitas) e o domínio `nekolog.io` pelo Cloudflare Registrar, que já deixa o DNS pronto para o Tunnel e a Resend. Os três estavam livres em 29/10/2026.
 - **Logo e ícone:** o autor vai criar e adicionar depois; até lá, o projeto usa o nome em texto.
 - **Mockups das telas:** aprovação antes do M2 (etapa 2.1).
+- **Compartilhamento de código entre os dois repositórios:** o `nekolog-dashboard` (privado) precisa ler o mesmo Postgres (`internal/db`) e ClickHouse deste repositório, além de possivelmente reaproveitar `internal/schema` e parte de `internal/adapters` (ex.: `RedisClient`, `Mailer`). Decidir antes do M2: publicar esses pacotes internos num registro privado (ex.: GitHub Packages) para o dashboard consumir, duplicar o que for pequeno o suficiente, ou o dashboard só acessar o Postgres via Drizzle apontando para o mesmo schema sem importar código daqui. `internal/auth` (senhas, OTP, JWT, sessões) é exclusivo do dashboard e deve nascer direto no `nekolog-dashboard`, não aqui.
+- **Replanejar o M2** quando o `nekolog-dashboard` ganhar sua própria estrutura: as etapas 2.1–2.25 deste arquivo descrevem o dashboard como se vivesse neste monorepo. Elas servem de referência de escopo, mas a numeração e os nomes de branch delas serão recriados no roteiro do repositório novo.
 
 ---
 
@@ -86,7 +93,8 @@ Cloudflare R2: source maps
 - **Exposição do ClickHouse:** pelo Cloudflare Tunnel, sem abrir portas na VM.
 - **Dois usuários no ClickHouse:** um só com `INSERT` (ingestão) e outro só com `SELECT` (dashboard e jobs).
 - **A VM é descartável.** Ela é recriada por script (cloud-init + docker-compose). Os dados que não podem ser perdidos (usuários, keys) ficam no Neon.
-- **Endereços:** `nekolog.io` (site e docs), `app.nekolog.io` (dashboard), `ingest.nekolog.io` (Worker de ingestão) e `ch.nekolog.io` (ClickHouse pelo Tunnel, protegido pelas credenciais do ClickHouse e, de preferência, por um token de serviço do Cloudflare Access). Os ambientes `dev` e `qa` têm endereços próprios (seção 17).
+- **Endereços:** `nekolog.io` (site e docs, deste repositório), `app.nekolog.io` (dashboard, deployado a partir do `nekolog-dashboard`), `ingest.nekolog.io` (Worker de ingestão) e `ch.nekolog.io` (ClickHouse pelo Tunnel, protegido pelas credenciais do ClickHouse e, de preferência, por um token de serviço do Cloudflare Access). Os ambientes `dev` e `qa` têm endereços próprios (seção 17).
+- **Dois repositórios, uma infraestrutura:** `nekolog-io` (público) e `nekolog-dashboard` (privado) compartilham o mesmo ClickHouse, Postgres e Redis/Upstash — só o código do dashboard fica fora do repositório público.
 
 ### Serviços gratuitos
 
@@ -100,7 +108,7 @@ Cloudflare R2: source maps
 | Plano B para logs | Tinybird Free | 10 GB, 1.000 consultas/dia |
 | Metadados | Neon Postgres | 0,5 GB por projeto, 100 CU-h/mês |
 | Autenticação | Upstash Redis | 256 MB, 500 mil comandos/mês |
-| Dashboard e docs | Vercel Hobby | uso não comercial; cron só 1×/dia |
+| Site, docs e dashboard | Vercel Hobby (dois projetos, um por repositório) | uso não comercial; cron só 1×/dia |
 | Source maps | Cloudflare R2 | 10 GB, download grátis |
 | E-mail | Resend | 3.000/mês, 100/dia, exige domínio verificado |
 | Exposição da VM | Cloudflare Tunnel | gratuito, exige domínio no Cloudflare |
@@ -108,7 +116,9 @@ Cloudflare R2: source maps
 
 ## 5. Self-host
 
-O mesmo código roda num `docker-compose`, trocando cada serviço gratuito pelo equivalente:
+**O self-host cobre só o repositório público:** SDKs, ingestão, jobs e a API pública de leitura (seção 9). **O dashboard não faz parte do self-host** — é exclusivo da instância hospedada na nuvem, porque seu código vive no repositório privado `nekolog-dashboard`. Quem hospeda por conta própria envia logs, consulta pela API pública e recebe alertas, mas não tem a interface web.
+
+O código do repositório público roda num `docker-compose`, trocando cada serviço gratuito pelo equivalente:
 
 | Nuvem gratuita | Self-host |
 |---|---|
@@ -250,6 +260,8 @@ await log.flush() // essencial em serverless
 ---
 
 ## 10. Dashboard
+
+> **Código fechado:** o dashboard vive no repositório privado [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard), não neste repositório. Esta seção continua sendo a especificação de produto que esse repositório deve seguir — só o código-fonte muda de lugar.
 
 **Stack:** Next.js (App Router), Tailwind v4 + shadcn/ui (tema Grafite), `next-themes`, TanStack Query, Table e Virtual, ECharts, `nuqs` (filtros na URL), Drizzle e o módulo `internal/auth`.
 
@@ -581,11 +593,11 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 14.1 Processo
 
-- **Modelo de ameaças** (STRIDE) em `docs/security/threat-model.md`, revisado a cada marco.
+- **Modelo de ameaças** (STRIDE) em [docs/security/threat-model.md](security/threat-model.md), revisado a cada marco.
 - **Checklist OWASP ASVS nível 2** para autenticação, sessão, controle de acesso, validação de entrada e configuração.
 - **PRs sensíveis:** os que tocam `internal/auth`, `apps/ingest` ou permissões recebem o label `security` e passam por um checklist próprio antes do merge.
 - **`SECURITY.md`** com o private vulnerability reporting do GitHub, prazo de resposta e reconhecimento público de quem reportar.
-- **Runbooks** em `docs/runbooks/`: incidente, vazamento de key, rotação de segredos (JWT, HMAC dos códigos, senhas do ClickHouse, tokens de deploy) e restauração de backup.
+- **Runbooks** em [docs/runbooks/](runbooks/README.md): [incidente](runbooks/incidente.md), [vazamento de key](runbooks/vazamento-de-key.md), [rotação de segredos](runbooks/rotacao-de-segredos.md) (JWT, HMAC dos códigos, senhas do ClickHouse, tokens de deploy) e [restauração de backup](runbooks/restauracao-de-backup.md).
 
 ### 14.2 Dependências, repositório e publicação
 
@@ -733,20 +745,26 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ## 18. Estrutura do repositório
 
+Este é o repositório **público** (`nekolog-io`). O dashboard tem seu próprio repositório **privado** (`nekolog-dashboard`), com estrutura equivalente (Next.js, `internal/auth`, `internal/db`) mas fechada.
+
 ```
 packages/       # publicados no npm: core, browser, node, react, next, express,
                 # fastify, hono, nestjs, pino, winston, cli, bundler-plugin
 apps/
   ingest/       # Hono → Cloudflare Workers e Node
   jobs/         # alertas, issues, uso e cotas
-  web/          # dashboard Next.js (rotas de auth, proxy.ts, tema, i18n)
+  web/          # site público (landing page), tema, i18n — não é o dashboard
   docs/         # Starlight (i18n nativo)
 internal/       # não publicados
-  auth/         # senhas, códigos, tokens, sessões, rate limit, Lua
   schema/       # formato do payload (SDK ↔ ingest)
-  db/           # Drizzle + migrations
+  db/           # Drizzle + migrations (orgs, projetos, alert_rules…) — fica
+                # aqui porque o apps/jobs também lê e grava neste banco
   clickhouse/   # migrations, query builder, parser da busca
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
+                # (consumidos por ingest/jobs aqui; o nekolog-dashboard usa
+                # sua própria cópia ou um pacote privado — seção 2)
+                # internal/auth (senhas, OTP, JWT, sessões) é exclusivo do
+                # dashboard e vive só no nekolog-dashboard, não aqui.
 examples/       # express, nestjs, next, react-vite (também nos testes e2e)
 deploy/         # docker-compose (dev e self-host), cloud-init da VM, wrangler
 infra/          # OpenTofu: módulos e um diretório por ambiente
@@ -769,9 +787,10 @@ docs/specs/     # especificações técnicas (payload, busca, fingerprint, alert
 
 ## 20. Open source
 
-- **Licença:** MIT em todo o repositório.
+- **Open-core:** este repositório (SDKs, ingestão, jobs, site, docs) é open source sob MIT. O dashboard (`nekolog-dashboard`) é fechado e só roda na instância hospedada — ver seção 1.
+- **Licença:** MIT em todo este repositório.
 - **Arquivos da comunidade:** `README` em inglês (com versões em português e espanhol), com GIF e quickstart, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY.md` (com o private vulnerability reporting do GitHub), templates de issue e PR, label `good first issue`, Discussions, roadmap público no GitHub Projects.
-- **ADRs** em `docs/adr/`, começando pelas decisões da seção 1.
+- **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da seção 1.
 - **Demo pública** com dados falsos e sessão somente leitura.
 - **Divulgação na 1.0:** TabNews, dev.to e Show HN.
 
