@@ -10,4 +10,6 @@ minimumReleaseAge: 4320
 # Nenhuma dependência roda install scripts por padrão (pnpm 10+);
 # libere aqui pelo nome quando algo precisar legitimamente de um build nativo.
 allowBuilds:
+  "@parcel/watcher": true
+  "@swc/core": true
   lefthook: true
