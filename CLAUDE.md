@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-M0 ("Fundação") is in progress — check `docs/ETAPAS.md` for exactly which steps are checked off before assuming something exists. As of this writing: pnpm workspace + Turborepo + Biome, commitlint/lefthook, CI (lint/typecheck/test/build), security baseline (CodeQL, dependency-review, Scorecard, Dependabot, Renovate), branch rulesets, Changesets, the `internal/config` + `internal/schema` + `internal/adapters` packages, the dev `docker-compose` stack, and a scaffolded `apps/web` (Next.js 16 + Tailwind v4 + shadcn/ui + next-themes + next-intl, no real screens yet — just the Grafite theme, a theme toggle, and a locale switcher proving the wiring) all exist. Nothing else under `apps/` or `packages/` exists yet (no SDKs, no ingest/jobs Workers, no docs site, no auth/database) — that continues through step 0.12 and M1–M3.
+M0 ("Fundação") is in progress — check `docs/ETAPAS.md` for exactly which steps are checked off before assuming something exists. As of this writing: pnpm workspace + Turborepo + Biome, commitlint/lefthook, CI (lint/typecheck/test/build), security baseline (CodeQL, dependency-review, Scorecard, Dependabot, Renovate), branch rulesets, Changesets, the `internal/config` + `internal/schema` + `internal/adapters` packages, the dev `docker-compose` stack, and a scaffolded `apps/web` — **the public landing page**, not the dashboard (see "Two repositories" below) — (Next.js 16 + Tailwind v4 + shadcn/ui + next-themes + next-intl, no real marketing content yet — just the Grafite theme, a theme toggle, and a locale switcher proving the wiring) all exist. Nothing else under `apps/` or `packages/` exists yet (no SDKs, no ingest/jobs Workers, no docs site) — that continues through step 0.12 and M1–M3.
+
+**Two repositories (decided 2026-10-30):** this repo (`nekolog-io`, public, MIT) holds the SDKs, ingestion, jobs, public read API, landing page, and docs. The **dashboard is closed-source** and lives in a separate private repo, [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) — open-core model, so third parties can't see the dashboard's code. Self-host covers only what's in this public repo; the dashboard is cloud-only. See `docs/PLANO.md` §1, §2, §5, §10, §18, §20 for the full rationale and what's still undecided (e.g. how the dashboard repo will share `internal/db`/`internal/schema`/`internal/adapters` with this one). `docs/ETAPAS.md`'s M2 still describes the dashboard's scope but its steps will be re-run in the new repo, not here.
 
 **Local toolchain note:** this project requires Node 24 (`.nvmrc`); some dependencies (e.g. `@changesets/cli`) use Node APIs unavailable on Node 20. If `node --version` doesn't match, switch with your Node version manager (e.g. `nvm install 24 && nvm use 24`) and re-run `corepack enable` before `pnpm install`.
 
@@ -19,9 +21,9 @@ When asked to start implementing, consult ETAPAS.md for the next unchecked step 
 
 ## What NekoLog is
 
-An open-source logging platform for JS/TS apps (frontend + backend): npm SDKs that batch-send logs, an ingestion API, ClickHouse for storage, and a Next.js dashboard with search/filters/charts/alerts, with separate API keys per environment (`nekolog_pk_…` public, `nekolog_sk_…` secret — the key determines the environment, SDKs never pass one explicitly).
+An open-core logging platform for JS/TS apps (frontend + backend): npm SDKs that batch-send logs, an ingestion API, ClickHouse for storage, background jobs for alerts, and a dashboard with search/filters/charts/alerts, with separate API keys per environment (`nekolog_pk_…` public, `nekolog_sk_…` secret — the key determines the environment, SDKs never pass one explicitly).
 
-It's a personal/portfolio project designed to run entirely on free-tier cloud services (Cloudflare Workers/KV/R2/Tunnel, Oracle Always Free VM for ClickHouse, Neon Postgres, Upstash Redis, Vercel, Resend) and to also be self-hostable via a single `docker-compose`. The only paid cost is the `nekolog.io` domain.
+It's a personal/portfolio project designed to run entirely on free-tier cloud services (Cloudflare Workers/KV/R2/Tunnel, Oracle Always Free VM for ClickHouse, Neon Postgres, Upstash Redis, Vercel, Resend). The SDKs, ingestion, jobs, and public read API are self-hostable via a single `docker-compose`; **the dashboard is not** — it's closed-source and cloud-only (see "Two repositories" above). The only paid cost is the `nekolog.io` domain.
 
 ### Architecture at a glance
 
@@ -29,7 +31,8 @@ It's a personal/portfolio project designed to run entirely on free-tier cloud se
 SDKs (browser / node) → HTTPS batch (gzip)
    → Cloudflare Worker "ingest" (Hono) → KV (key→project/env/quota) → ClickHouse (via Tunnel, on Oracle VM)
    Cloudflare Worker "jobs" (cron, 1 min) → alerts/issues/usage/quotas → Resend/Slack/Discord/webhook
-   Vercel: Next.js dashboard → Neon Postgres (users/orgs/projects/keys/alerts), Upstash Redis (auth), Resend
+   Vercel: Next.js dashboard (closed-source, deployed from the separate nekolog-dashboard repo)
+      → Neon Postgres (users/orgs/projects/keys/alerts), Upstash Redis (auth), Resend
    Cloudflare R2: source maps
 ```
 
@@ -44,18 +47,19 @@ Key invariants from `docs/PLANO.md` §3–4 that should guide any implementation
 
 ### Planned repository layout (docs/PLANO.md §18)
 
+This is the **public** repo's layout. The dashboard has its own structure in the separate **private** `nekolog-dashboard` repo (Next.js, `internal/auth`, `internal/db`'s consumer side — not here).
+
 ```
 packages/       # published to npm: core, browser, node, react, next, express,
                 # fastify, hono, nestjs, pino, winston, cli, bundler-plugin
 apps/
   ingest/       # Hono → Cloudflare Workers and Node
   jobs/         # alerts, issues, usage, quotas
-  web/          # Next.js dashboard (auth routes, proxy.ts, theme, i18n)
+  web/          # public landing page (marketing site), theme, i18n — NOT the dashboard
   docs/         # Starlight docs site (native i18n)
 internal/       # not published
-  auth/         # passwords, OTP codes, tokens, sessions, rate limiting, Lua scripts
   schema/       # ingestion payload format (SDK ↔ ingest contract)
-  db/           # Drizzle + Postgres migrations
+  db/           # Drizzle + Postgres migrations — stays here because apps/jobs reads/writes it too
   clickhouse/   # migrations, query builder, search-language parser
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
 examples/       # express, nestjs, next, react-vite (also used by e2e tests)
@@ -73,7 +77,7 @@ docs/specs/     # technical specs (payload, search, fingerprinting, alerts…)
 - `pnpm install` — install everything (pnpm 12 via Corepack; `minimumReleaseAge` in `pnpm-workspace.yaml` will refuse packages published too recently — this is intentional, not a bug).
 - `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev`, which now also starts `apps/web` on :3000 (Turbopack). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the docker stack directly.
 - `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently `apps/web`, `internal/config`, `internal/schema`, `internal/adapters` define some). A package with no matching script is silently skipped by Turbo — that's expected, not a failure.
-- `apps/web` locale: resolved from a `NEKOLOG_LOCALE` cookie, falling back to `Accept-Language`, falling back to `en` (see `apps/web/i18n/request.ts`) — there's no `/[locale]/` URL prefix, matching the route map in `docs/PLANO.md` §10.1. The in-page `LocaleSwitcher`/`ThemeToggle` components are temporary proof-of-wiring, not final UI.
+- `apps/web` (landing page) locale: resolved from a `NEKOLOG_LOCALE` cookie, falling back to `Accept-Language`, falling back to `en` (see `apps/web/i18n/request.ts`) — no `/[locale]/` URL prefix. This mirrors the approach the dashboard repo should use too, since `docs/PLANO.md` §10.1's route map never puts locale in the path. The in-page `LocaleSwitcher`/`ThemeToggle` components are temporary proof-of-wiring from step 0.11, not final landing-page UI.
 - `pnpm check` — `biome check --write .` (formats + lints; excludes `**/*.md` and lockfiles — see `biome.json`). CI instead runs `biome ci .` (no writes).
 - `pnpm changeset` — add a changeset for a package/app you just changed; `pnpm changeset:status` shows what's pending relative to `dev`.
 - To run a single package's tests/typecheck directly: `cd internal/config && pnpm test` or `pnpm --filter @internal/config test`.
@@ -92,6 +96,6 @@ docs/specs/     # technical specs (payload, search, fingerprinting, alerts…)
 - **Commits:** Conventional Commits in English, scoped by package/app (e.g. `feat(core): add batching transport`, `fix(ingest): reject payloads above 512 KB`), enforced by commitlint (`npm-conventional` types only — `security/`-prefixed branches still commit as `chore(security): ...` or similar, not `security(...)`, since `security` isn't a valid commit type).
 - **Branches:** one step from ETAPAS.md = one branch off `dev`, prefixed `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `test/`, `security/`, `infra/`, or `a11y/`. PRs into `dev` squash-merge; promotion `dev→qa→main` uses merge commits (no squash) so branches don't diverge. **This is enforced live, not just convention:** GitHub rulesets on `main`/`qa`/`dev` block deletion/force-push and require PRs + passing status checks (nobody has bypass, not even the repo owner), and `.github/workflows/branch-rules.yml` rejects PRs into `qa`/`main` from the wrong source branch. The `gh` CLI is set up and authenticated in this environment — prefer it (`gh pr create`, `gh pr checks --watch`, `gh pr merge --squash --delete-branch`) over raw GitHub API calls.
 - **A step merges only when:** CI is green, new tests cover the change, a changeset exists if a package/app changed, UI strings exist in all three locales, docs are updated for anything public-facing, and (if labeled `security`) the security checklist was followed.
-- **i18n:** dashboard, docs, emails, and README ship in pt-BR, en (source/fallback), and es. Code, commits, branches, and PRs are English-only. A CI test must fail if a translation key exists in one locale but not another.
-- **Security is the top priority** (docs/PLANO.md §14): parameterized SQL only, permission checks server-side on every route/query, SSRF protections on alert webhooks, CSV export must guard against formula injection, PRs touching `internal/auth`, `apps/ingest`, or permissions get the `security` label and a dedicated review pass.
+- **i18n:** landing page, docs, dashboard (in its own repo), emails, and README ship in pt-BR, en (source/fallback), and es. Code, commits, branches, and PRs are English-only. A CI test must fail if a translation key exists in one locale but not another.
+- **Security is the top priority** (docs/PLANO.md §14): parameterized SQL only, permission checks server-side on every route/query, SSRF protections on alert webhooks, CSV export must guard against formula injection, PRs touching `apps/ingest`, `internal/db`, or permission-checking code get the `security` label and a dedicated review pass.
 - **Logs are untrusted input** — anyone with a public key can send arbitrary text. Never render log content with `dangerouslySetInnerHTML`; escape everything.
