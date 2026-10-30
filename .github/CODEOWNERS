@@ -1,0 +1,4 @@
+# Default owner for everything in the repo.
+# When a second maintainer joins, branch protection will start requiring
+# their review per docs/PLANO.md section 1 ("Revisão").
+* @gabrielbarbosaa
