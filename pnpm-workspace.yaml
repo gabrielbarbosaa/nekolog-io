@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "internal/*"
+  - "examples/*"
+
+# Nenhuma dependência roda install scripts por padrão (pnpm 10+);
+# libere aqui pelo nome quando algo precisar legitimamente de um build nativo.
+onlyBuiltDependencies: []
+
+# Minutos: recusa instalar uma versão publicada há menos de 3 dias.
+minimumReleaseAge: 4320
