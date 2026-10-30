@@ -26,10 +26,14 @@ jobs:
 
           case "$BASE_REF" in
             qa)
-              if [ "$HEAD_REF" != "dev" ]; then
-                echo "::error::PRs into 'qa' must come from 'dev' (got '$HEAD_REF')."
-                exit 1
-              fi
+              case "$HEAD_REF" in
+                dev|main)
+                  ;;
+                *)
+                  echo "::error::PRs into 'qa' must come from 'dev' (promotion) or 'main' (post-release sync), got '$HEAD_REF'."
+                  exit 1
+                  ;;
+              esac
               ;;
             main)
               case "$HEAD_REF" in
