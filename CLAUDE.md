@@ -56,7 +56,7 @@ apps/
   ingest/       # Hono → Cloudflare Workers and Node
   jobs/         # alerts, issues, usage, quotas
   web/          # public landing page (marketing site), theme, i18n — NOT the dashboard
-  docs/         # Starlight docs site (native i18n)
+  docs/         # Starlight docs site: en at /docs/, pt-BR at /docs/pt-br/, es at /docs/es/
 internal/       # not published
   schema/       # ingestion payload format (SDK ↔ ingest contract)
   db/           # Drizzle + Postgres migrations — stays here because apps/jobs reads/writes it too
@@ -75,8 +75,8 @@ docs/specs/     # technical specs (payload, search, fingerprinting, alerts…)
 ## Commands that work today
 
 - `pnpm install` — install everything (pnpm 12 via Corepack; `minimumReleaseAge` in `pnpm-workspace.yaml` will refuse packages published too recently — this is intentional, not a bug).
-- `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev`, which now also starts `apps/web` on :3000 (Turbopack). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the docker stack directly.
-- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently `apps/web`, `internal/config`, `internal/schema`, `internal/adapters` define some). A package with no matching script is silently skipped by Turbo — that's expected, not a failure.
+- `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev`, which also starts `apps/web` on :3000 (Turbopack) and `apps/docs` on :4321/docs (Astro). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the docker stack directly.
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently `apps/web`, `apps/docs`, `internal/config`, `internal/schema`, `internal/adapters` define some). A package with no matching script is silently skipped by Turbo — that's expected, not a failure. `apps/docs` deliberately has **no** `typecheck` script: `astro check` doesn't support TypeScript 7 and Astro is deprecating it — `astro build` validates the content schemas instead (see `apps/docs/README.md`).
 - `apps/web` (landing page) locale: resolved from a `NEKOLOG_LOCALE` cookie, falling back to `Accept-Language`, falling back to `en` (see `apps/web/i18n/request.ts`) — no `/[locale]/` URL prefix. This mirrors the approach the dashboard repo should use too, since `docs/PLANO.md` §10.1's route map never puts locale in the path. The in-page `LocaleSwitcher`/`ThemeToggle` components are temporary proof-of-wiring from step 0.11, not final landing-page UI.
 - `pnpm check` — `biome check --write .` (formats + lints; excludes `**/*.md` and lockfiles — see `biome.json`). CI instead runs `biome ci .` (no writes).
 - `pnpm changeset` — add a changeset for a package/app you just changed; `pnpm changeset:status` shows what's pending relative to `dev`.
