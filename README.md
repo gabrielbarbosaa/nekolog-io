@@ -4,9 +4,11 @@
 >
 > Read this in [Português (pt-BR)](README.pt-BR.md) or [Español (es)](README.es.md).
 
-NekoLog is an open-source logging platform: npm SDKs that batch-send logs from your app, an ingestion API, analytical storage (ClickHouse), and a dashboard with search, filters, charts, issues, and alerts — with separate API keys per environment.
+NekoLog is an open-core logging platform: npm SDKs that batch-send logs from your app, an ingestion API, analytical storage (ClickHouse), background jobs for alerts, and a dashboard with search, filters, charts, issues, and alerts — with separate API keys per environment.
 
-It's a personal, open-source study project. It runs entirely on free-tier cloud services and can also be self-hosted with Docker.
+This repository (SDKs, ingestion, jobs, public read API, site, and docs) is open source under MIT and can be self-hosted with Docker. The dashboard itself is closed-source, lives in a private companion repository, and only runs on the hosted cloud instance — see [docs/PLANO.md](docs/PLANO.md) section 1 for why.
+
+It's a personal study project that runs entirely on free-tier cloud services.
 
 ## Status
 
