@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-M0 ("Fundação") is in progress — check `docs/ETAPAS.md` for exactly which steps are checked off before assuming something exists. As of this writing: pnpm workspace + Turborepo + Biome, commitlint/lefthook, CI (lint/typecheck/test/build), security baseline (CodeQL, dependency-review, Scorecard, Dependabot, Renovate), branch rulesets, Changesets, the `internal/config` + `internal/schema` + `internal/adapters` packages, and the dev `docker-compose` stack all exist. Nothing under `apps/` or `packages/` exists yet (no dashboard, no SDKs, no ingest/jobs Workers) — that starts at step 0.11 and continues through M1–M3.
+M0 ("Fundação") is in progress — check `docs/ETAPAS.md` for exactly which steps are checked off before assuming something exists. As of this writing: pnpm workspace + Turborepo + Biome, commitlint/lefthook, CI (lint/typecheck/test/build), security baseline (CodeQL, dependency-review, Scorecard, Dependabot, Renovate), branch rulesets, Changesets, the `internal/config` + `internal/schema` + `internal/adapters` packages, the dev `docker-compose` stack, and a scaffolded `apps/web` (Next.js 16 + Tailwind v4 + shadcn/ui + next-themes + next-intl, no real screens yet — just the Grafite theme, a theme toggle, and a locale switcher proving the wiring) all exist. Nothing else under `apps/` or `packages/` exists yet (no SDKs, no ingest/jobs Workers, no docs site, no auth/database) — that continues through step 0.12 and M1–M3.
 
 **Local toolchain note:** this project requires Node 24 (`.nvmrc`); some dependencies (e.g. `@changesets/cli`) use Node APIs unavailable on Node 20. If `node --version` doesn't match, switch with your Node version manager (e.g. `nvm install 24 && nvm use 24`) and re-run `corepack enable` before `pnpm install`.
 
@@ -13,7 +13,7 @@ The three documents in `docs/` are the source of truth for everything about this
 - **[docs/PLANO.md](docs/PLANO.md)** — the "what" and "why": architecture, data model, APIs, auth design, theming, i18n, security, operations. Read this first for any architectural question.
 - **[docs/ETAPAS.md](docs/ETAPAS.md)** — the "in what order": one checklist item = one GitHub issue = one branch = one PR, grouped into milestones M0–M6. Defines branch-naming prefixes and the definition of done for a step.
 - **[docs/ESPECIFICACOES.md](docs/ESPECIFICACOES.md)** — binding technical contracts (ingestion payload v1, env vars, ClickHouse migration runner, search grammar, error fingerprinting, alert rules). These are the specs code must conform to once written; in the repo they're meant to eventually move to `docs/specs/` as individual files, one per spec, changed only by PR.
-- **docs/tema/globals.css** — the finished Tailwind v4 / shadcn "Grafite" theme (OKLCH tokens, light+dark, log-level and environment colors, chart palette). Destined for `apps/web/app/globals.css` once the dashboard scaffold exists — copy it, don't redesign it.
+- **docs/tema/globals.css** — the canonical source for the Tailwind v4 / shadcn "Grafite" theme (OKLCH tokens, light+dark, log-level and environment colors, chart palette). Already copied verbatim into `apps/web/app/globals.css`; change tokens there first, then re-sync, don't fork the two files.
 
 When asked to start implementing, consult ETAPAS.md for the next unchecked step and PLANO.md/ESPECIFICACOES.md for the contract that step must satisfy.
 
@@ -71,15 +71,16 @@ docs/specs/     # technical specs (payload, search, fingerprinting, alerts…)
 ## Commands that work today
 
 - `pnpm install` — install everything (pnpm 12 via Corepack; `minimumReleaseAge` in `pnpm-workspace.yaml` will refuse packages published too recently — this is intentional, not a bug).
-- `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev` (currently a no-op — no app defines a `dev` script yet). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the stack directly.
-- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently only `internal/config`, `internal/schema`, `internal/adapters` define any). A package with no matching script is silently skipped by Turbo — that's expected, not a failure.
+- `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev`, which now also starts `apps/web` on :3000 (Turbopack). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the docker stack directly.
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently `apps/web`, `internal/config`, `internal/schema`, `internal/adapters` define some). A package with no matching script is silently skipped by Turbo — that's expected, not a failure.
+- `apps/web` locale: resolved from a `NEKOLOG_LOCALE` cookie, falling back to `Accept-Language`, falling back to `en` (see `apps/web/i18n/request.ts`) — there's no `/[locale]/` URL prefix, matching the route map in `docs/PLANO.md` §10.1. The in-page `LocaleSwitcher`/`ThemeToggle` components are temporary proof-of-wiring, not final UI.
 - `pnpm check` — `biome check --write .` (formats + lints; excludes `**/*.md` and lockfiles — see `biome.json`). CI instead runs `biome ci .` (no writes).
 - `pnpm changeset` — add a changeset for a package/app you just changed; `pnpm changeset:status` shows what's pending relative to `dev`.
 - To run a single package's tests/typecheck directly: `cd internal/config && pnpm test` or `pnpm --filter @internal/config test`.
 
 ## Planned tooling (not yet present in the repo)
 
-- **Tests:** Playwright (e2e, including Mailpit-based auth flows and axe accessibility checks) once `apps/web` exists. Integration tests should run against real ClickHouse/Postgres/Redis as CI services — do not mock the database/ClickHouse for integration-level tests per the project's testing philosophy.
+- **Tests:** Playwright (e2e, including Mailpit-based auth flows and axe accessibility checks) — not wired up yet. Integration tests should run against real ClickHouse/Postgres/Redis as CI services — do not mock the database/ClickHouse for integration-level tests per the project's testing philosophy.
 - **Build:** `tsdown` for package builds; `publint` + `@arethetypeswrong/cli` + `size-limit` (browser SDK must stay under 5 KB gzip) checked in CI.
 - **ClickHouse migrations:** a custom TypeScript runner (one SQL statement per file in `internal/clickhouse/migrations/`, tracked in a `_migrations` table, forward-only, checksummed — see spec 3 in ESPECIFICACOES.md). Planned commands: `pnpm ch:migrate`, `pnpm ch:status`, `pnpm ch:new <name>`.
 - **npm publishing:** Changesets' `release.yml` only maintains the "Version Packages" PR for now; trusted publishing (OIDC) gets wired up once real packages exist to publish.
