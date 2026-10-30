@@ -593,11 +593,11 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 14.1 Processo
 
-- **Modelo de ameaças** (STRIDE) em `docs/security/threat-model.md`, revisado a cada marco.
+- **Modelo de ameaças** (STRIDE) em [docs/security/threat-model.md](security/threat-model.md), revisado a cada marco.
 - **Checklist OWASP ASVS nível 2** para autenticação, sessão, controle de acesso, validação de entrada e configuração.
 - **PRs sensíveis:** os que tocam `internal/auth`, `apps/ingest` ou permissões recebem o label `security` e passam por um checklist próprio antes do merge.
 - **`SECURITY.md`** com o private vulnerability reporting do GitHub, prazo de resposta e reconhecimento público de quem reportar.
-- **Runbooks** em `docs/runbooks/`: incidente, vazamento de key, rotação de segredos (JWT, HMAC dos códigos, senhas do ClickHouse, tokens de deploy) e restauração de backup.
+- **Runbooks** em [docs/runbooks/](runbooks/README.md): [incidente](runbooks/incidente.md), [vazamento de key](runbooks/vazamento-de-key.md), [rotação de segredos](runbooks/rotacao-de-segredos.md) (JWT, HMAC dos códigos, senhas do ClickHouse, tokens de deploy) e [restauração de backup](runbooks/restauracao-de-backup.md).
 
 ### 14.2 Dependências, repositório e publicação
 

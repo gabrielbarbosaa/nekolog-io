@@ -52,7 +52,7 @@
 - [x] **0.12** `feat/docs-scaffold` — `apps/docs` com Starlight nos três idiomas.
 - [x] **0.13** `test/i18n-parity` — teste que falha se uma chave de tradução faltar em algum idioma.
 - [x] **0.14** `docs/adr` — ADRs das decisões da seção 1 do plano.
-- [ ] **0.15** `docs/security` — primeira versão do modelo de ameaças e dos runbooks.
+- [x] **0.15** `docs/security` — primeira versão do modelo de ameaças e dos runbooks.
 
 **Pronto quando:** `pnpm dev` sobe tudo, o CI passa nas três branches e o dashboard vazio abre com tema claro e escuro nos três idiomas.
 
