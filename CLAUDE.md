@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-This repository currently contains **only planning documentation** — no source code, package manifests, or CI config exist yet (see `docs/ETAPAS.md`, where every step under M0 "Fundação" is still unchecked). Before assuming any build/lint/test command, check whether the relevant files (`package.json`, `pnpm-workspace.yaml`, CI workflows, etc.) actually exist — the commands described below are the **planned** tooling from the docs, not yet-implemented reality.
+M0 ("Fundação") is in progress — check `docs/ETAPAS.md` for exactly which steps are checked off before assuming something exists. As of this writing: pnpm workspace + Turborepo + Biome, commitlint/lefthook, CI (lint/typecheck/test/build), security baseline (CodeQL, dependency-review, Scorecard, Dependabot, Renovate), branch rulesets, Changesets, the `internal/config` + `internal/schema` + `internal/adapters` packages, and the dev `docker-compose` stack all exist. Nothing under `apps/` or `packages/` exists yet (no dashboard, no SDKs, no ingest/jobs Workers) — that starts at step 0.11 and continues through M1–M3.
+
+**Local toolchain note:** this project requires Node 24 (`.nvmrc`); some dependencies (e.g. `@changesets/cli`) use Node APIs unavailable on Node 20. If `node --version` doesn't match, switch with your Node version manager (e.g. `nvm install 24 && nvm use 24`) and re-run `corepack enable` before `pnpm install`.
 
 The three documents in `docs/` are the source of truth for everything about this project:
 
@@ -66,20 +68,28 @@ docs/process/   # branching/release process
 docs/specs/     # technical specs (payload, search, fingerprinting, alerts…)
 ```
 
+## Commands that work today
+
+- `pnpm install` — install everything (pnpm 12 via Corepack; `minimumReleaseAge` in `pnpm-workspace.yaml` will refuse packages published too recently — this is intentional, not a bug).
+- `pnpm dev` — starts the dev `docker-compose` stack (ClickHouse on :8123, Postgres on :5432, Valkey on :6379, Mailpit on :8025 web UI, MinIO on :9000/:9001) and then `turbo run dev` (currently a no-op — no app defines a `dev` script yet). Copy `.env.example` to `.env` first. `pnpm dev:infra:down` / `pnpm dev:infra:logs` manage the stack directly.
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` — Turborepo tasks fanning out to every package's own script (currently only `internal/config`, `internal/schema`, `internal/adapters` define any). A package with no matching script is silently skipped by Turbo — that's expected, not a failure.
+- `pnpm check` — `biome check --write .` (formats + lints; excludes `**/*.md` and lockfiles — see `biome.json`). CI instead runs `biome ci .` (no writes).
+- `pnpm changeset` — add a changeset for a package/app you just changed; `pnpm changeset:status` shows what's pending relative to `dev`.
+- To run a single package's tests/typecheck directly: `cd internal/config && pnpm test` or `pnpm --filter @internal/config test`.
+
 ## Planned tooling (not yet present in the repo)
 
-- **Monorepo:** pnpm workspaces + Turborepo, TypeScript, Biome for lint/format.
-- **Tests:** Vitest (unit/integration) and Playwright (e2e, including Mailpit-based auth flows and axe accessibility checks). Integration tests run against real ClickHouse/Postgres/Redis as CI services — do not mock the database/ClickHouse for integration-level tests per the project's testing philosophy.
+- **Tests:** Playwright (e2e, including Mailpit-based auth flows and axe accessibility checks) once `apps/web` exists. Integration tests should run against real ClickHouse/Postgres/Redis as CI services — do not mock the database/ClickHouse for integration-level tests per the project's testing philosophy.
 - **Build:** `tsdown` for package builds; `publint` + `@arethetypeswrong/cli` + `size-limit` (browser SDK must stay under 5 KB gzip) checked in CI.
 - **ClickHouse migrations:** a custom TypeScript runner (one SQL statement per file in `internal/clickhouse/migrations/`, tracked in a `_migrations` table, forward-only, checksummed — see spec 3 in ESPECIFICACOES.md). Planned commands: `pnpm ch:migrate`, `pnpm ch:status`, `pnpm ch:new <name>`.
-- **Local dev stack:** `deploy/docker-compose.dev.yml` (ClickHouse, Postgres, Valkey, Mailpit, MinIO), started via `pnpm dev`.
+- **npm publishing:** Changesets' `release.yml` only maintains the "Version Packages" PR for now; trusted publishing (OIDC) gets wired up once real packages exist to publish.
 - **Infra:** OpenTofu under `infra/envs/{dev,qa,prod}`, `tofu plan` on PRs touching `infra/`, `tofu apply` on merge.
 - **Deploy:** `wrangler deploy --env <env>` for `apps/ingest` and `apps/jobs`; Vercel Git integration for `apps/web` and `apps/docs`.
 
-## Conventions to follow once code exists
+## Conventions
 
-- **Commits:** Conventional Commits in English, scoped by package/app (e.g. `feat(core): add batching transport`, `fix(ingest): reject payloads above 512 KB`), enforced by commitlint.
-- **Branches:** one step from ETAPAS.md = one branch off `dev`, prefixed `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `test/`, `security/`, `infra/`, or `a11y/`. PRs into `dev` squash-merge; promotion `dev→qa→main` uses merge commits (no squash) so branches don't diverge. Never force-push or push directly to `main`/`qa`/`dev`.
+- **Commits:** Conventional Commits in English, scoped by package/app (e.g. `feat(core): add batching transport`, `fix(ingest): reject payloads above 512 KB`), enforced by commitlint (`npm-conventional` types only — `security/`-prefixed branches still commit as `chore(security): ...` or similar, not `security(...)`, since `security` isn't a valid commit type).
+- **Branches:** one step from ETAPAS.md = one branch off `dev`, prefixed `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `test/`, `security/`, `infra/`, or `a11y/`. PRs into `dev` squash-merge; promotion `dev→qa→main` uses merge commits (no squash) so branches don't diverge. **This is enforced live, not just convention:** GitHub rulesets on `main`/`qa`/`dev` block deletion/force-push and require PRs + passing status checks (nobody has bypass, not even the repo owner), and `.github/workflows/branch-rules.yml` rejects PRs into `qa`/`main` from the wrong source branch. The `gh` CLI is set up and authenticated in this environment — prefer it (`gh pr create`, `gh pr checks --watch`, `gh pr merge --squash --delete-branch`) over raw GitHub API calls.
 - **A step merges only when:** CI is green, new tests cover the change, a changeset exists if a package/app changed, UI strings exist in all three locales, docs are updated for anything public-facing, and (if labeled `security`) the security checklist was followed.
 - **i18n:** dashboard, docs, emails, and README ship in pt-BR, en (source/fallback), and es. Code, commits, branches, and PRs are English-only. A CI test must fail if a translation key exists in one locale but not another.
 - **Security is the top priority** (docs/PLANO.md §14): parameterized SQL only, permission checks server-side on every route/query, SSRF protections on alert webhooks, CSV export must guard against formula injection, PRs touching `internal/auth`, `apps/ingest`, or permissions get the `security` label and a dedicated review pass.
