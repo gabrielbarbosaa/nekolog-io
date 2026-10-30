@@ -11,7 +11,6 @@ async function loadMessages(locale: Locale): Promise<Messages> {
   return JSON.parse(await readFile(`${MESSAGES_DIR}${locale}.json`, 'utf8'))
 }
 
-/** { a: { b: "x" } } -> ["a.b"], so nested keys are compared individually. */
 function flattenKeys(messages: Messages, prefix = ''): string[] {
   return Object.entries(messages).flatMap(([key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key
@@ -34,7 +33,6 @@ describe('dashboard message i18n parity', () => {
   it('defines the same keys in every locale', async () => {
     const source = flattenKeys(await loadMessages(defaultLocale)).sort()
 
-    // Guard against an empty source file making every comparison trivially pass.
     expect(source.length).toBeGreaterThan(0)
 
     for (const locale of translatedLocales) {
@@ -43,8 +41,6 @@ describe('dashboard message i18n parity', () => {
       const missing = source.filter((key) => !translated.includes(key))
       expect(missing, `${locale}.json is missing: ${missing.join(', ')}`).toEqual([])
 
-      // Extra keys are dead weight: next-intl never reads them, and they hide
-      // the fact that the key was renamed in the source locale.
       const extra = translated.filter((key) => !source.includes(key))
       expect(
         extra,

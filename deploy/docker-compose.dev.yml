@@ -26,8 +26,6 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-nekolog}
     ports:
-      # HTTP interface only — the project always talks to ClickHouse over
-      # HTTP (see docs/ESPECIFICACOES.md spec 3), never the native protocol.
       - "8123:8123"
     volumes:
       - clickhouse_data:/var/lib/clickhouse

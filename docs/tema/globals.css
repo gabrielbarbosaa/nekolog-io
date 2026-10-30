@@ -1,9 +1,3 @@
-/*
- * Tema do dashboard do NekoLog - paleta Grafite (light + dark)
- * Tailwind CSS v4 + shadcn/ui. Valores em OKLCH, com o hex original ao lado.
- * Níveis de log e gráficos validados para contraste e daltonismo nos dois temas.
- * Destino: apps/web/app/globals.css
- */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));

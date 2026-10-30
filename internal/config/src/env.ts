@@ -70,9 +70,6 @@ export const webEnvSchema = v.pipe(
 
 export type WebEnv = v.InferOutput<typeof webEnvSchema>
 
-// Workers KV/R2 bindings (KEYS, SPOOL) are provided by the Cloudflare
-// runtime, not plain strings, so they are typed separately once apps/ingest
-// exists instead of being part of this Valibot schema.
 export const ingestEnvSchema = v.object({
   CLICKHOUSE_URL: urlString,
   CLICKHOUSE_DB: nonEmptyString,
