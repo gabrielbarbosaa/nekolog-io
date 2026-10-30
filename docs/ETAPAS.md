@@ -31,28 +31,28 @@
 - [ ] Registrar `nekolog.io` no Cloudflare Registrar e ativar o DNSSEC.
 - [ ] Criar as contas gratuitas: Cloudflare, Oracle Cloud, Neon, Upstash, Vercel, Resend e Better Stack (monitor externo).
 - [ ] Ativar passkey ou chave de segurança em todas essas contas, além do GitHub e do npm.
-- [ ] Configurar a assinatura de commits com chave SSH no Git e no GitHub.
+- [x] Configurar a assinatura de commits com chave SSH no Git e no GitHub. *(feito em 30/10/2026, no meio do M0 — os commits anteriores a essa data não estão assinados; ver `docs/process/branching.md`.)*
 - [ ] Ativar o Cloudflare Email Routing para `security@`, `dmarc@` e `contato@nekolog.io`.
 
 ---
 
 ## M0 — Fundação
 
-- [ ] **0.1** `chore/repo-init` — repositório `nekolog-io/nekolog` com as branches `main`, `qa` e `dev`; `.gitignore`, `.editorconfig`, `.nvmrc` (Node 24), licenças e README em inglês, com versões em pt-BR e es.
+- [x] **0.1** `chore/repo-init` — repositório `nekolog-io/nekolog` com as branches `main`, `qa` e `dev`; `.gitignore`, `.editorconfig`, `.nvmrc` (Node 24), licenças e README em inglês, com versões em pt-BR e es.
 - [ ] **0.2** `chore/github-tracking` — script com o `gh` que cria os milestones M0–M6 e uma issue por etapa a partir deste arquivo, com labels por tipo (`feat`, `security`, `infra`…).
-- [ ] **0.3** `chore/workspace` — pnpm workspaces, Turborepo, `tsconfig` base e Biome; pnpm com `onlyBuiltDependencies` e `minimumReleaseAge`.
-- [ ] **0.4** `chore/commit-conventions` — commitlint (Conventional Commits), git hooks com lefthook, templates de PR e de issue.
-- [ ] **0.5** `ci/pipeline` — workflow de PR com lint, typecheck, testes e build; actions fixadas por SHA, `permissions` mínimas, harden-runner e cache do pnpm.
-- [ ] **0.6** `security/baseline` — `SECURITY.md`, Dependabot, Renovate (com `minimumReleaseAge`), CodeQL, dependency review, OpenSSF Scorecard e `CODEOWNERS`.
-- [ ] **0.7** `ci/branch-rules` — check que só aceita PRs para `qa` vindos da `dev`, e para `main` vindos da `qa`, de `hotfix/…` ou do PR do Changesets; fluxo documentado em `docs/process/branching.md`. Depois, configurar os rulesets no GitHub (manual).
-- [ ] **0.8** `chore/changesets` — Changesets versionando pacotes e apps, snapshots `dev` e `next`, workflow de release ainda sem publicar.
-- [ ] **0.9** `chore/internal-base` — `internal/config` (com a validação das variáveis de ambiente da especificação 2), `internal/schema` e as interfaces de `internal/adapters`.
-- [ ] **0.10** `infra/dev-compose` — `deploy/docker-compose.dev.yml` com ClickHouse, Postgres, Valkey, Mailpit e MinIO; script `pnpm dev`; `.env.example`.
-- [ ] **0.11** `feat/web-scaffold` — `apps/web` com Next.js, Tailwind v4, shadcn/ui, tema Grafite (`tema/globals.css`), seletor de tema e `next-intl` com en, pt-BR e es.
-- [ ] **0.12** `feat/docs-scaffold` — `apps/docs` com Starlight nos três idiomas.
-- [ ] **0.13** `test/i18n-parity` — teste que falha se uma chave de tradução faltar em algum idioma.
-- [ ] **0.14** `docs/adr` — ADRs das decisões da seção 1 do plano.
-- [ ] **0.15** `docs/security` — primeira versão do modelo de ameaças e dos runbooks.
+- [x] **0.3** `chore/workspace` — pnpm workspaces, Turborepo, `tsconfig` base e Biome; pnpm com `onlyBuiltDependencies` e `minimumReleaseAge`.
+- [x] **0.4** `chore/commit-conventions` — commitlint (Conventional Commits), git hooks com lefthook, templates de PR e de issue.
+- [x] **0.5** `ci/pipeline` — workflow de PR com lint, typecheck, testes e build; actions fixadas por SHA, `permissions` mínimas, harden-runner e cache do pnpm.
+- [x] **0.6** `security/baseline` — `SECURITY.md`, Dependabot, Renovate (com `minimumReleaseAge`), CodeQL, dependency review, OpenSSF Scorecard e `CODEOWNERS`.
+- [x] **0.7** `ci/branch-rules` — check que só aceita PRs para `qa` vindos da `dev`, e para `main` vindos da `qa`, de `hotfix/…` ou do PR do Changesets; fluxo documentado em `docs/process/branching.md`. Depois, configurar os rulesets no GitHub (manual).
+- [x] **0.8** `chore/changesets` — Changesets versionando pacotes e apps, snapshots `dev` e `next`, workflow de release ainda sem publicar.
+- [x] **0.9** `chore/internal-base` — `internal/config` (com a validação das variáveis de ambiente da especificação 2), `internal/schema` e as interfaces de `internal/adapters`.
+- [x] **0.10** `infra/dev-compose` — `deploy/docker-compose.dev.yml` com ClickHouse, Postgres, Valkey, Mailpit e MinIO; script `pnpm dev`; `.env.example`.
+- [x] **0.11** `feat/web-scaffold` — `apps/web` com Next.js, Tailwind v4, shadcn/ui, tema Grafite (`tema/globals.css`), seletor de tema e `next-intl` com en, pt-BR e es.
+- [x] **0.12** `feat/docs-scaffold` — `apps/docs` com Starlight nos três idiomas.
+- [x] **0.13** `test/i18n-parity` — teste que falha se uma chave de tradução faltar em algum idioma.
+- [x] **0.14** `docs/adr` — ADRs das decisões da seção 1 do plano.
+- [x] **0.15** `docs/security` — primeira versão do modelo de ameaças e dos runbooks.
 
 **Pronto quando:** `pnpm dev` sobe tudo, o CI passa nas três branches e o dashboard vazio abre com tema claro e escuro nos três idiomas.
 
@@ -80,6 +80,8 @@
 **Pronto quando:** um `log.info()` no exemplo Express aparece no ClickHouse do ambiente `dev`.
 
 ## M2 — Plataforma
+
+> **Nota (30/10/2026):** o dashboard virou um produto de código fechado, no repositório privado [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) (ver PLANO.md seção 1 e 2). As etapas abaixo ainda descrevem o escopo certo, mas a numeração, os nomes de branch e os PRs de boa parte delas (tudo que é dashboard/auth/UI) vão acontecer naquele repositório, não aqui. `internal/db` e os adaptadores continuam neste repositório público, já que `apps/jobs` também depende deles. Antes de começar o M2, revisitar este marco e separar o que fica aqui do que migra para o repo novo.
 
 **Base**
 

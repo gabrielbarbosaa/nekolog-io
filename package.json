@@ -1,0 +1,40 @@
+{
+  "name": "nekolog",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "prepare": "lefthook install",
+    "build": "turbo run build",
+    "dev:infra": "docker compose -f deploy/docker-compose.dev.yml --env-file .env up -d",
+    "dev:infra:down": "docker compose -f deploy/docker-compose.dev.yml --env-file .env down",
+    "dev:infra:logs": "docker compose -f deploy/docker-compose.dev.yml --env-file .env logs -f",
+    "dev": "pnpm dev:infra && turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check --write .",
+    "changeset": "changeset",
+    "changeset:status": "changeset status --since=origin/dev",
+    "version-packages": "changeset version",
+    "version-packages:dev": "changeset version --snapshot dev",
+    "version-packages:next": "changeset version --snapshot next",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.0",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.0",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "lefthook": "^2.1.0",
+    "turbo": "^2.11.10",
+    "typescript": "^7.0.2"
+  }
+}

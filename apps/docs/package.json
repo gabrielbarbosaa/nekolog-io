@@ -1,0 +1,19 @@
+{
+  "name": "@apps/docs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.0",
+    "astro": "^7.4.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}
