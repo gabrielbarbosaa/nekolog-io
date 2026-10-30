@@ -58,7 +58,7 @@
 
 ## M1 — Ingestão
 
-- [ ] **1.1** `feat/schema-v1` — formato do payload v1 (tipos + Valibot), conforme a especificação 1.
+- [x] **1.1** `feat/schema-v1` — formato do payload v1 (tipos + Valibot), conforme a especificação 1.
 - [ ] **1.2** `feat/clickhouse-migrations` — runner de migrations (especificação 3), tabela `logs`, *materialized view* `logs_per_minute` e usuários só com `INSERT` e só com `SELECT`.
 - [ ] **1.3** `feat/core-logger` — `@nekolog-io/core`: níveis, `child()` e contexto.
 - [ ] **1.4** `feat/core-transport` — envio em lote, retry com backoff, respeito ao `429 Retry-After`, `flush()` e fila com limite.
