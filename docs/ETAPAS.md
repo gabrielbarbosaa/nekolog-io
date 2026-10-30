@@ -81,6 +81,8 @@
 
 ## M2 — Plataforma
 
+> **Nota (30/10/2026):** o dashboard virou um produto de código fechado, no repositório privado [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) (ver PLANO.md seção 1 e 2). As etapas abaixo ainda descrevem o escopo certo, mas a numeração, os nomes de branch e os PRs de boa parte delas (tudo que é dashboard/auth/UI) vão acontecer naquele repositório, não aqui. `internal/db` e os adaptadores continuam neste repositório público, já que `apps/jobs` também depende deles. Antes de começar o M2, revisitar este marco e separar o que fica aqui do que migra para o repo novo.
+
 **Base**
 
 - [ ] **2.1** `docs/ui-mockups` — mockups HTML no tema Grafite das telas principais (login e código, Explorer, issues, keys, primeiro log) para aprovação, seguindo o mapa de telas da seção 10.1 do plano.
