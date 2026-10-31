@@ -3,6 +3,7 @@ import { isLogLevel, passesThreshold } from './levels.ts'
 import { DEFAULT_SERVICE, MAX_RELEASE_CHARS, MAX_SERVICE_CHARS } from './limits.ts'
 import { detectRuntime, isRuntime } from './runtime.ts'
 import { consoleSink, globalConsole } from './sinks.ts'
+import { createTransport } from './transport.ts'
 import type {
   AttributeInput,
   LogContext,
@@ -138,11 +139,30 @@ function createChild(shared: Shared, context: LogContext): Logger {
   }
 }
 
+function sinkFrom(options: LoggerOptions, resource: Resource, sdk: Sdk): Sink {
+  if (options.sink) {
+    return options.sink
+  }
+  if (typeof options.apiKey === 'string' && options.apiKey !== '') {
+    return createTransport({
+      ...options.transport,
+      apiKey: options.apiKey,
+      resource,
+      sdk,
+      onError: options.onError ?? defaultOnError,
+    })
+  }
+  return consoleSink()
+}
+
 export function createLogger(options: LoggerOptions = {}): Logger {
+  const resource = resourceFrom(options)
+  const sdk = sdkFrom(options)
+
   const shared: Shared = {
-    resource: resourceFrom(options),
-    sdk: sdkFrom(options),
-    sink: options.sink ?? consoleSink(),
+    resource,
+    sdk,
+    sink: sinkFrom(options, resource, sdk),
     enabled: options.enabled !== false,
     level: isLogLevel(options.level) ? options.level : DEFAULT_LEVEL,
     onError: options.onError ?? defaultOnError,

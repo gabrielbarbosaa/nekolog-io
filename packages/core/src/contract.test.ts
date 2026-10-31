@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest'
 import * as limits from './limits.ts'
 import { createLogger } from './logger.ts'
 import { memorySink } from './sinks.ts'
+import { createTransport } from './transport.ts'
 import type { LogEvent } from './types.ts'
+import { uuidv7 } from './uuid.ts'
 import { SDK_NAME, SDK_VERSION } from './version.ts'
 
 const packageJson = JSON.parse(
@@ -23,6 +25,9 @@ describe('the limits this package carries', () => {
     ['MAX_RELEASE_CHARS', limits.MAX_RELEASE_CHARS, schema.MAX_RELEASE_CHARS],
     ['MAX_SDK_NAME_CHARS', limits.MAX_SDK_NAME_CHARS, schema.MAX_SDK_NAME_CHARS],
     ['MAX_SDK_VERSION_CHARS', limits.MAX_SDK_VERSION_CHARS, schema.MAX_SDK_VERSION_CHARS],
+    ['MIN_EVENTS_PER_BATCH', limits.MIN_EVENTS_PER_BATCH, schema.MIN_EVENTS_PER_BATCH],
+    ['MAX_EVENTS_PER_BATCH', limits.MAX_EVENTS_PER_BATCH, schema.MAX_EVENTS_PER_BATCH],
+    ['MAX_BATCH_BYTES', limits.MAX_BATCH_BYTES, schema.MAX_BATCH_BYTES],
     ['MAX_MESSAGE_BYTES', limits.MAX_MESSAGE_BYTES, schema.MAX_MESSAGE_BYTES],
     ['MAX_ATTRIBUTE_KEYS', limits.MAX_ATTRIBUTE_KEYS, schema.MAX_ATTRIBUTE_KEYS],
     ['MAX_ATTRIBUTE_KEY_CHARS', limits.MAX_ATTRIBUTE_KEY_CHARS, schema.MAX_ATTRIBUTE_KEY_CHARS],
@@ -184,6 +189,66 @@ describe('events this logger produces, run through the real ingest parser', () =
 
     expect(sink.events[0]).not.toHaveProperty('trace')
     expect(acceptAll(sink.events, logger).rejected).toEqual([])
+  })
+
+  it('sends an envelope the ingest parser accepts, end to end', async () => {
+    const bodies: string[] = []
+    const log = createLogger({
+      apiKey: 'nekolog_sk_abcdef0123456789',
+      service: 'checkout-web',
+      release: '1.4.2',
+      level: 'trace',
+      transport: { flushIntervalMs: 0 },
+      sink: createTransport({
+        apiKey: 'nekolog_sk_abcdef0123456789',
+        sdk: { name: SDK_NAME, version: SDK_VERSION },
+        resource: { service: 'checkout-web', release: '1.4.2', runtime: 'node' },
+        flushIntervalMs: 0,
+        fetch: async (_url, init) => {
+          bodies.push(init.body)
+          return {
+            ok: true,
+            status: 202,
+            headers: { get: () => null },
+            text: async () => '{"accepted":2,"rejected":[]}',
+          }
+        },
+      }),
+    })
+
+    log.info('Pedido criado', { orderId: 123 })
+    log
+      .child({
+        trace: { traceId: '4bf92f3577b34da6a3ce929d0e0e4736', spanId: '00f067aa0ba902b7' },
+        session: { id: 's_8f2k1', userId: 'u_42' },
+      })
+      .error(new TypeError('boom'), { step: 'pagamento' })
+    await log.flush()
+
+    expect(bodies).toHaveLength(1)
+    const result = schema.parseBatch(JSON.parse(bodies[0] as string))
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.batch.rejected).toEqual([])
+      expect(result.batch.accepted).toHaveLength(2)
+    }
+  })
+
+  it('stamps a batch id the ingest parser reads as a uuid v7', () => {
+    expect(schema.parseBatch({ ...envelopeFor([], createLogger({ sink: memorySink() })) })).toEqual(
+      expect.objectContaining({ ok: false }),
+    )
+    expect(
+      schema.parseBatch({
+        schemaVersion: limits.SCHEMA_VERSION,
+        batchId: uuidv7(),
+        sdk: { name: SDK_NAME, version: SDK_VERSION },
+        resource: { runtime: 'node' },
+        events: [
+          { timestamp: '2026-10-30T14:03:12.481Z', level: 'info' as const, message: 'hello' },
+        ],
+      }).ok,
+    ).toBe(true)
   })
 
   it('never sends an empty message, which the api rejects', () => {
