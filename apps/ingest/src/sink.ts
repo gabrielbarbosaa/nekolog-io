@@ -6,6 +6,7 @@ import {
   spoolKey,
 } from '@internal/spool'
 import type { BatchSink } from './app.ts'
+import type { AttributeBudget } from './attributes.ts'
 import { countryOf, rowsFor } from './rows.ts'
 
 export type SpooledBatch = {
@@ -17,6 +18,7 @@ export type SpooledBatch = {
 export type LogStoreSinkOptions = {
   logStore: LogStore
   spool?: BlobStore
+  attributeBudget?: AttributeBudget
   deduplicate?: boolean
   now?: () => number
   onSpooled?: (spooled: SpooledBatch) => void
@@ -34,9 +36,13 @@ export function createLogStoreSink(options: LogStoreSinkOptions): BatchSink {
       return
     }
 
+    const budget = options.attributeBudget
     const rows = rowsFor(batch, principal, {
       receivedAt: context.receivedAt,
       country: countryOf(context.request),
+      ...(budget === undefined
+        ? {}
+        : { admitAttribute: (key: string) => budget.admit(principal.projectId, key) }),
     })
     const token = deduplicationTokenFor(principal.environmentId, batch.batchId)
 

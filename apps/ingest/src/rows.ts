@@ -41,6 +41,7 @@ function attributeText(value: string | number | boolean | null): string {
 export type RowContext = {
   receivedAt: number
   country: string
+  admitAttribute?: (key: string) => boolean
 }
 
 export function rowsFor(
@@ -51,9 +52,14 @@ export function rowsFor(
   const receivedAt = clickHouseTimestamp(context.receivedAt)
   const retentionDays = principal.retentionDays ?? DEFAULT_RETENTION_DAYS
 
+  const admitAttribute = context.admitAttribute
+
   return batch.accepted.map(({ event }) => {
     const attributes: Record<string, string> = {}
     for (const [key, value] of Object.entries(event.attributes ?? {})) {
+      if (admitAttribute !== undefined && !admitAttribute(key)) {
+        continue
+      }
       attributes[key] = attributeText(value)
     }
 

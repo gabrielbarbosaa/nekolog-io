@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { KeyRecord } from '../key-store'
+import type { KvNamespace } from '../kv'
 import { cachedKeyStore } from './cached-key-store'
 import {
   generateApiKey,
@@ -10,7 +11,7 @@ import {
   parseApiKey,
   SECRET_KEY_PREFIX,
 } from './format'
-import { type KvNamespace, kvKeyFor, kvKeyStore, parseKeyRecord } from './kv-key-store'
+import { kvKeyFor, kvKeyStore, parseKeyRecord } from './kv-key-store'
 import { memoryKeyStore } from './memory-key-store'
 
 const RECORD: KeyRecord = {

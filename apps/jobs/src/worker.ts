@@ -1,18 +1,22 @@
-import { type R2BucketLike, r2BlobStore } from '@internal/adapters'
+import { type KvNamespace, kvQuotaStore, type R2BucketLike, r2BlobStore } from '@internal/adapters'
 import { clickHouseLogStore } from '@internal/clickhouse/log-store'
+import { clickHouseUsageStore } from '@internal/clickhouse/usage-store'
 import type { Hono } from 'hono'
 import { createJobsApp } from './app.ts'
 import { type RunSummary, runDueTasks } from './run.ts'
 import type { Task } from './task.ts'
+import type { QuotaBlockEvent } from './tasks/quota-block.ts'
 import type { SpoolResendEvent } from './tasks/spool-resend.ts'
 import { buildTasks } from './tasks.ts'
 
 export type JobsEnv = {
+  KEYS: KvNamespace
   SPOOL: R2BucketLike
   CLICKHOUSE_URL: string
   CLICKHOUSE_DB: string
   CLICKHOUSE_JOBS_USER: string
   CLICKHOUSE_JOBS_PASSWORD: string
+  DAILY_EVENT_QUOTA?: string
   CF_ACCESS_CLIENT_ID?: string
   CF_ACCESS_CLIENT_SECRET?: string
   JOBS_VERSION?: string
@@ -28,12 +32,26 @@ export type ExecutionContextLike = {
 }
 
 const REQUIRED: ReadonlyArray<keyof JobsEnv> = [
+  'KEYS',
   'SPOOL',
   'CLICKHOUSE_URL',
   'CLICKHOUSE_DB',
   'CLICKHOUSE_JOBS_USER',
   'CLICKHOUSE_JOBS_PASSWORD',
 ]
+
+export function dailyQuotaFrom(value: string | undefined): number | undefined {
+  if (value === undefined || value === '') {
+    return undefined
+  }
+  const quota = Number(value)
+  if (!Number.isInteger(quota) || quota <= 0) {
+    throw new Error(
+      `DAILY_EVENT_QUOTA must be a positive whole number, got ${JSON.stringify(value)}`,
+    )
+  }
+  return quota
+}
 
 export function assertEnv(env: Partial<JobsEnv>): JobsEnv {
   const missing = REQUIRED.filter((name) => {
@@ -43,6 +61,7 @@ export function assertEnv(env: Partial<JobsEnv>): JobsEnv {
   if (missing.length > 0) {
     throw new Error(`The jobs worker is missing bindings: ${missing.join(', ')}`)
   }
+  dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
   return env as JobsEnv
 }
 
@@ -70,22 +89,42 @@ export function writeSpoolEvent(event: SpoolResendEvent): void {
   write('warn', '[nekolog/jobs] spool', JSON.stringify({ kind: event.kind, key: event.key }))
 }
 
+export function writeQuotaEvent(event: QuotaBlockEvent): void {
+  write(
+    'warn',
+    '[nekolog/jobs] quota',
+    JSON.stringify({
+      kind: event.kind,
+      environmentId: event.environmentId,
+      events: event.events,
+      quota: event.quota,
+    }),
+  )
+}
+
 export function buildJobTasks(env: JobsEnv): readonly Task[] {
+  const clickHouse = {
+    url: env.CLICKHOUSE_URL,
+    database: env.CLICKHOUSE_DB,
+    user: env.CLICKHOUSE_JOBS_USER,
+    password: env.CLICKHOUSE_JOBS_PASSWORD,
+    ...(env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET
+      ? {
+          accessClientId: env.CF_ACCESS_CLIENT_ID,
+          accessClientSecret: env.CF_ACCESS_CLIENT_SECRET,
+        }
+      : {}),
+  }
+  const dailyQuota = dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
+
   return buildTasks({
     spool: r2BlobStore(env.SPOOL),
-    logStore: clickHouseLogStore({
-      url: env.CLICKHOUSE_URL,
-      database: env.CLICKHOUSE_DB,
-      user: env.CLICKHOUSE_JOBS_USER,
-      password: env.CLICKHOUSE_JOBS_PASSWORD,
-      ...(env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET
-        ? {
-            accessClientId: env.CF_ACCESS_CLIENT_ID,
-            accessClientSecret: env.CF_ACCESS_CLIENT_SECRET,
-          }
-        : {}),
-    }),
+    logStore: clickHouseLogStore(clickHouse),
+    usage: clickHouseUsageStore(clickHouse),
+    quotas: kvQuotaStore(env.KEYS),
+    ...(dailyQuota === undefined ? {} : { dailyQuota }),
     onSpoolEvent: writeSpoolEvent,
+    onQuotaEvent: writeQuotaEvent,
   })
 }
 

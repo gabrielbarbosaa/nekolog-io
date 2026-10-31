@@ -49,7 +49,7 @@ describe.skipIf(!reachable)('the migration runner against a real ClickHouse', ()
     )
   })
 
-  it('creates the logs table, the rollup and the materialized view', async () => {
+  it('creates the logs table, both rollups and their materialized views', async () => {
     const rows = await queryRows<{ name: string }>(
       config,
       `SELECT name FROM system.tables WHERE database = '${database}' ORDER BY name`,
@@ -60,6 +60,8 @@ describe.skipIf(!reachable)('the migration runner against a real ClickHouse', ()
       'logs',
       'logs_per_minute',
       'logs_per_minute_mv',
+      'usage_per_minute',
+      'usage_per_minute_mv',
     ])
   })
 

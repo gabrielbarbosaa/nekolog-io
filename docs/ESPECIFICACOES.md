@@ -126,6 +126,7 @@ Toda variável existe nos três ambientes (`dev`, `qa`, `prod`), com valores dif
 | `SPOOL` (R2) | | contingência |
 | `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | | destino dos logs |
 | `CLICKHOUSE_INSERT_USER`, `CLICKHOUSE_INSERT_PASSWORD` | ✓ | usuário só com `INSERT` |
+| `INGEST_EVENTS_PER_MINUTE` | | rate limit por ambiente, por instância do Worker; o padrão vale se não for definida |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | ✓ | passar pelo Access |
 
 ### Jobs (`apps/jobs`, Worker)
@@ -140,6 +141,7 @@ Toda variável existe nos três ambientes (`dev`, `qa`, `prod`), com valores dif
 | `RESEND_API_KEY`, `EMAIL_FROM` | ✓ / — | alertas e avisos de exportação |
 | `BETTERSTACK_HEARTBEAT_URL` | ✓ | heartbeat a cada execução |
 | `OPS_DISCORD_WEBHOOK_URL` | ✓ | alertas críticos para o operador |
+| `DAILY_EVENT_QUOTA` | | cota diária de eventos por ambiente; o padrão vale se não for definida |
 
 As credenciais do R2 que o ClickHouse usa para gravar exportações ficam numa *named collection* configurada na VM, e não nas queries.
 

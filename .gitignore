@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 .pnpm-store/
 
@@ -27,6 +27,7 @@ npm-debug.log*
 pnpm-debug.log*
 
 # Tests and coverage
+.vitest/
 coverage/
 playwright-report/
 test-results/

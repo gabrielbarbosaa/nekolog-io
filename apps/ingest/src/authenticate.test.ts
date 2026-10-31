@@ -1,12 +1,14 @@
 import {
+  cachedBlockedEnvironments,
   generateApiKey,
   hashApiKey,
   type KeyRecord,
   type KeyStore,
   memoryKeyStore,
+  memoryQuotaStore,
 } from '@internal/adapters'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { createKeyAuthenticator } from './authenticate.ts'
+import { createKeyAuthenticator, QUOTA_RETRY_AFTER_SECONDS } from './authenticate.ts'
 import { keyFromRequest } from './keys.ts'
 
 const PUBLIC_KEY = generateApiKey('public')
@@ -245,5 +247,76 @@ describe('the hash it looks up by', () => {
 
     expect(lookedUp).toEqual([await hashApiKey(SECRET_KEY)])
     expect(lookedUp[0]).not.toContain('nekolog_')
+  })
+})
+
+describe('the daily quota block', () => {
+  const blocking = (...environmentIds: string[]) =>
+    cachedBlockedEnvironments(
+      memoryQuotaStore(
+        environmentIds.map((environmentId) => ({
+          environmentId,
+          blockedAt: 0,
+          events: 10_500,
+          quota: 10_000,
+        })),
+      ),
+    )
+
+  it('refuses a key whose environment the jobs have blocked', async () => {
+    const keyStore = memoryKeyStore({ [await hashApiKey(SECRET_KEY)]: WRITABLE })
+    const authenticate = createKeyAuthenticator({ keyStore, blocks: blocking('e_1') })
+
+    expect(await authenticate(withBearer(SECRET_KEY))).toMatchObject({
+      ok: false,
+      code: 'quota_exceeded',
+      retryAfter: QUOTA_RETRY_AFTER_SECONDS,
+    })
+  })
+
+  it('lets a key through when some other environment is the one blocked', async () => {
+    const keyStore = memoryKeyStore({ [await hashApiKey(SECRET_KEY)]: WRITABLE })
+    const authenticate = createKeyAuthenticator({ keyStore, blocks: blocking('e_2') })
+
+    expect(await authenticate(withBearer(SECRET_KEY))).toMatchObject({ ok: true })
+  })
+
+  it('tells a key that was revoked apart from one that is over quota', async () => {
+    const keyStore = memoryKeyStore({
+      [await hashApiKey(SECRET_KEY)]: { ...WRITABLE, blocked: true },
+    })
+    const authenticate = createKeyAuthenticator({ keyStore })
+
+    expect(await authenticate(withBearer(SECRET_KEY))).toMatchObject({
+      code: 'quota_exceeded',
+      message: 'This environment is over its quota',
+      retryAfter: QUOTA_RETRY_AFTER_SECONDS,
+    })
+  })
+
+  it('never asks about blocks for a key it already refused', async () => {
+    const asked: string[] = []
+    const keyStore = memoryKeyStore({})
+    const authenticate = createKeyAuthenticator({
+      keyStore,
+      blocks: {
+        async isBlocked(environmentId) {
+          asked.push(environmentId)
+          return true
+        },
+      },
+    })
+
+    await authenticate(withBearer(SECRET_KEY))
+
+    expect(asked).toEqual([])
+  })
+
+  it('ingests as before when no block list is wired up', async () => {
+    const keyStore = memoryKeyStore({ [await hashApiKey(SECRET_KEY)]: WRITABLE })
+
+    expect(await createKeyAuthenticator({ keyStore })(withBearer(SECRET_KEY))).toMatchObject({
+      ok: true,
+    })
   })
 })

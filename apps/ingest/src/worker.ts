@@ -1,15 +1,21 @@
 import {
+  cachedBlockedEnvironments,
   cachedKeyStore,
   type KvNamespace,
   kvKeyStore,
+  kvQuotaStore,
+  memoryRateLimiter,
   type R2BucketLike,
   r2BlobStore,
 } from '@internal/adapters'
 import { clickHouseLogStore } from '@internal/clickhouse/log-store'
 import type { Hono } from 'hono'
 import { createIngestApp } from './app.ts'
+import { createAttributeBudget } from './attributes.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
 import { createLogStoreSink, type SpooledBatch } from './sink.ts'
+
+export const DEFAULT_EVENTS_PER_MINUTE = 2_000
 
 export type IngestEnv = {
   KEYS: KvNamespace
@@ -18,6 +24,7 @@ export type IngestEnv = {
   CLICKHOUSE_DB: string
   CLICKHOUSE_INSERT_USER: string
   CLICKHOUSE_INSERT_PASSWORD: string
+  INGEST_EVENTS_PER_MINUTE?: string
   CF_ACCESS_CLIENT_ID?: string
   CF_ACCESS_CLIENT_SECRET?: string
 }
@@ -35,6 +42,19 @@ const REQUIRED: ReadonlyArray<keyof IngestEnv> = [
   'CLICKHOUSE_INSERT_PASSWORD',
 ]
 
+export function eventsPerMinuteFrom(value: string | undefined): number {
+  if (value === undefined || value === '') {
+    return DEFAULT_EVENTS_PER_MINUTE
+  }
+  const limit = Number(value)
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error(
+      `INGEST_EVENTS_PER_MINUTE must be a positive whole number, got ${JSON.stringify(value)}`,
+    )
+  }
+  return limit
+}
+
 export function assertEnv(env: Partial<IngestEnv>): IngestEnv {
   const missing = REQUIRED.filter((name) => {
     const value = env[name]
@@ -43,6 +63,7 @@ export function assertEnv(env: Partial<IngestEnv>): IngestEnv {
   if (missing.length > 0) {
     throw new Error(`The ingest worker is missing bindings: ${missing.join(', ')}`)
   }
+  eventsPerMinuteFrom(env.INGEST_EVENTS_PER_MINUTE)
   return env as IngestEnv
 }
 
@@ -83,12 +104,20 @@ export function buildIngestApp(env: IngestEnv): Hono {
   })
 
   return createIngestApp({
-    authenticate: createKeyAuthenticator({ keyStore: cachedKeyStore(kvKeyStore(env.KEYS)) }),
+    authenticate: createKeyAuthenticator({
+      keyStore: cachedKeyStore(kvKeyStore(env.KEYS)),
+      blocks: cachedBlockedEnvironments(kvQuotaStore(env.KEYS), { onError: reportToConsole }),
+    }),
     sink: createLogStoreSink({
       logStore,
       spool: r2BlobStore(env.SPOOL),
+      attributeBudget: createAttributeBudget(),
       onSpooled: reportSpooled,
     }),
+    limits: {
+      rateLimiter: memoryRateLimiter(),
+      eventsPerWindow: eventsPerMinuteFrom(env.INGEST_EVENTS_PER_MINUTE),
+    },
     onError: reportToConsole,
   })
 }

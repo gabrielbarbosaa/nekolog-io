@@ -12,6 +12,13 @@ import worker, {
 } from './worker.ts'
 
 const ENV: JobsEnv = {
+  KEYS: {
+    async get() {
+      return null
+    },
+    async put() {},
+    async delete() {},
+  },
   SPOOL: {
     async put() {
       return undefined
@@ -183,11 +190,17 @@ describe('assertEnv', () => {
 })
 
 describe('buildJobTasks', () => {
-  it('registers the spool resend, which runs every minute', () => {
+  it('registers every task, each of which runs every minute', () => {
     const tasks = buildJobTasks(ENV)
 
-    expect(tasks.map((task) => task.name)).toEqual(['spool-resend'])
-    expect(tasks[0]?.everyMinutes).toBe(1)
+    expect(tasks.map((task) => task.name)).toEqual(['spool-resend', 'quota-block'])
+    expect(tasks.every((task) => task.everyMinutes === 1)).toBe(true)
+  })
+
+  it('refuses to boot on a quota that is not a positive whole number', () => {
+    expect(() => buildJobTasks({ ...ENV, DAILY_EVENT_QUOTA: 'lots' })).toThrow(/DAILY_EVENT_QUOTA/)
+    expect(() => assertEnv({ ...ENV, DAILY_EVENT_QUOTA: '0' })).toThrow(/DAILY_EVENT_QUOTA/)
+    expect(() => assertEnv({ ...ENV, DAILY_EVENT_QUOTA: '1.5' })).toThrow(/DAILY_EVENT_QUOTA/)
   })
 })
 
@@ -200,7 +213,7 @@ describe('the worker entry', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ service: 'jobs', version: '1.2.3', tasks: 1 })
+    expect(await response.json()).toMatchObject({ service: 'jobs', version: '1.2.3', tasks: 2 })
   })
 
   it('keeps the cron alive with waitUntil and returns the same promise', async () => {

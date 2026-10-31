@@ -1,11 +1,20 @@
-import { hashApiKey, type KeyRecord, type KeyStore, originAllowed } from '@internal/adapters'
+import {
+  type BlockedEnvironments,
+  hashApiKey,
+  type KeyRecord,
+  type KeyStore,
+  originAllowed,
+} from '@internal/adapters'
 import type { Authenticator, AuthOutcome, IngestPrincipal } from './app.ts'
 import { keyFromRequest } from './keys.ts'
 
 export const WRITE_SCOPE = 'logs:write'
 
+export const QUOTA_RETRY_AFTER_SECONDS = 60
+
 export type KeyAuthenticatorOptions = {
   keyStore: KeyStore
+  blocks?: BlockedEnvironments
   hash?: (value: string) => Promise<string>
 }
 
@@ -34,6 +43,16 @@ export function createKeyAuthenticator(options: KeyAuthenticatorOptions): Authen
         ok: false,
         code: 'quota_exceeded',
         message: 'This environment is over its quota',
+        retryAfter: QUOTA_RETRY_AFTER_SECONDS,
+      }
+    }
+
+    if (options.blocks !== undefined && (await options.blocks.isBlocked(record.environmentId))) {
+      return {
+        ok: false,
+        code: 'quota_exceeded',
+        message: 'This environment is over its daily quota',
+        retryAfter: QUOTA_RETRY_AFTER_SECONDS,
       }
     }
 

@@ -1,3 +1,4 @@
+import type { RateLimiter, RateLimitResult } from '@internal/adapters'
 import { type BatchErrorCode, type ParsedBatch, parseBatch } from '@internal/schema'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
@@ -30,9 +31,18 @@ export type BatchSink = (
   context: SinkContext,
 ) => Promise<unknown> | undefined
 
+export const DEFAULT_RATE_WINDOW_SECONDS = 60
+
+export type IngestLimits = {
+  rateLimiter: RateLimiter
+  eventsPerWindow: number
+  windowSeconds?: number
+}
+
 export type IngestDeps = {
   authenticate: Authenticator
   sink: BatchSink
+  limits?: IngestLimits
   defer?: (work: Promise<unknown>) => void
   onError?: (error: unknown) => void
   now?: () => number
@@ -69,6 +79,29 @@ function report(deps: IngestDeps, error: unknown): void {
     deps.onError?.(error)
   } catch {
     return
+  }
+}
+
+async function measure(
+  deps: IngestDeps,
+  environmentId: string,
+  events: number,
+): Promise<RateLimitResult | null> {
+  const limits = deps.limits
+  if (limits === undefined || events === 0) {
+    return null
+  }
+
+  try {
+    return await limits.rateLimiter.consume(
+      environmentId,
+      limits.eventsPerWindow,
+      limits.windowSeconds ?? DEFAULT_RATE_WINDOW_SECONDS,
+      events,
+    )
+  } catch (error) {
+    report(deps, error)
+    return null
   }
 }
 
@@ -114,6 +147,15 @@ export function createIngestApp(deps: IngestDeps): Hono {
     const parsed = parseBatch(body.value)
     if (!parsed.ok) {
       return refuse(parsed.code, parsed.message)
+    }
+
+    const verdict = await measure(deps, auth.principal.environmentId, parsed.batch.accepted.length)
+    if (verdict !== null && !verdict.allowed) {
+      return refuse(
+        'rate_limited',
+        'Too many events for this environment',
+        verdict.retryAfterSeconds,
+      )
     }
 
     const context: SinkContext = {

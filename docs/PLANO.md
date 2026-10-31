@@ -197,8 +197,8 @@ SETTINGS non_replicated_deduplication_window = 1000;
 - O `non_replicated_deduplication_window` permite usar o `batchId` como token de deduplicação no reenvio da contingência.
 
 - O `retention_days` vem da configuração do ambiente e é gravado em cada linha, então o `TTL` respeita a retenção de cada ambiente sem job de limpeza. Uma mudança na retenção vale só para logs novos.
-- A *materialized view* `logs_per_minute` (contagem por projeto, ambiente, nível, serviço e minuto) alimenta os gráficos e o controle de cota.
-- **O usuário de ingestão não pode ser só de `INSERT`.** O ClickHouse pede `SELECT` nas colunas que a *materialized view* lê, e sem isso o `INSERT` grava em `logs`, falha ao alimentar a view e devolve erro — gravação pela metade. Então ele tem `INSERT` em `logs` e `SELECT` **restrito às cinco colunas** da view (`project_id`, `environment_id`, `timestamp`, `level`, `service`). `message`, `stacktrace`, `attributes` e `user_id` continuam fora do alcance dessa credencial (ameaça E11).
+- A *materialized view* `logs_per_minute` (contagem por projeto, ambiente, nível, serviço e minuto do `timestamp`) alimenta os gráficos. A `usage_per_minute` (por projeto, ambiente e minuto do `received_at`) alimenta uso e cota: o `timestamp` é escolhido pelo cliente, então cobrar cota por ele permitiria fugir da cota datando os eventos no passado.
+- **O usuário de ingestão não pode ser só de `INSERT`.** O ClickHouse pede `SELECT` nas colunas que a *materialized view* lê, e sem isso o `INSERT` grava em `logs`, falha ao alimentar a view e devolve erro — gravação pela metade. Então ele tem `INSERT` em `logs` e `SELECT` **restrito às seis colunas** que as views leem (`project_id`, `environment_id`, `timestamp`, `received_at`, `level`, `service`). `message`, `stacktrace`, `attributes` e `user_id` continuam fora do alcance dessa credencial (ameaça E11).
 
 ---
 
@@ -251,7 +251,7 @@ await log.flush() // essencial em serverless
 - **Limite de atributos:** no máximo 500 chaves distintas em `attributes` por projeto; chaves novas além disso são descartadas e aparecem no uso.
 - **Rate limit sem Redis:**
   - a config da key fica em cache na memória do Worker por 60 s, e um contador por instância segura rajadas;
-  - a cota diária é controlada pelos jobs: a cada minuto, eles somam o uso do dia na `logs_per_minute` e, se um ambiente estourar, gravam `blocked: true` no KV. A ingestão passa a responder `429`. O KV só é escrito quando o estado muda.
+  - a cota diária é controlada pelos jobs: a cada minuto, eles somam o uso do dia na `usage_per_minute` e mantêm no KV um documento com a lista de ambientes bloqueados. A ingestão lê essa lista (também em cache de 60 s) e passa a responder `429`. O KV só é escrito quando o conjunto de bloqueados muda — o plano gratuito dá 1.000 escritas por dia e o cron acorda 1.440 vezes.
 
 ### Consulta
 

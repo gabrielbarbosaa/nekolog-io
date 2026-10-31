@@ -127,3 +127,37 @@ linguagem de busca (especificação 4) vêm depois, neste mesmo pacote.
 A `logs_per_minute` ficou **sem TTL** de propósito: os gráficos olham mais para
 trás do que a retenção do log cru permite, e o plano não fixa esse prazo. Fica
 como decisão em aberto, não como esquecimento.
+
+## Os dois rollups, e por que não é um só
+
+| Tabela | Agrupa por | Responde |
+|---|---|---|
+| `logs_per_minute` | `timestamp` | "quando isso aconteceu" — gráficos |
+| `usage_per_minute` | `received_at` | "quanto nos custou hoje" — cota e uso |
+
+O `timestamp` é escolhido por quem envia. Para um gráfico isso é o certo: a
+pessoa quer ver a hora do evento na aplicação dela, inclusive quando o relógio
+do cliente está torto. Para cota é o errado, e de um jeito explorável — bastaria
+datar os eventos de ontem para nunca aparecer na contagem de hoje. O
+`received_at` é carimbado pelo servidor e não aceita opinião.
+
+A `usage_per_minute` também não guarda `level` nem `service`: contar uso não
+precisa do recorte, e sem ele a tabela fica pequena. Ela tem TTL de 90 dias,
+porque uso antigo não serve para nada depois que vira fatura.
+
+### Isso muda os grants
+
+Toda *materialized view* obriga o usuário que faz `INSERT` em `logs` a ter
+`SELECT` nas colunas que a view lê. A `usage_per_minute_mv` lê `received_at`,
+então o `nekolog_ingest` passou a precisar dela:
+
+```sql
+GRANT SELECT(project_id, environment_id, timestamp, received_at, level, service)
+  ON nekolog_<ambiente>.logs
+```
+
+**O grant tem que valer antes da migration rodar.** Sem ele o `INSERT` grava em
+`logs`, falha ao alimentar a view e devolve erro — a gravação pela metade
+descrita na seção 7 do plano. Em dev o `deploy/clickhouse-users.dev.xml` está
+montado em `users.d/` e o ClickHouse recarrega o arquivo sozinho, sem restart;
+em qualquer outro lugar a ordem é responsabilidade de quem faz o deploy.
