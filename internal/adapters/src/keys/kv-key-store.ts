@@ -58,7 +58,7 @@ export function parseKeyRecord(raw: string): KeyRecord | null {
     return null
   }
 
-  return {
+  const record: KeyRecord = {
     projectId,
     environmentId,
     scopes: scopes.filter(
@@ -68,6 +68,13 @@ export function parseKeyRecord(raw: string): KeyRecord | null {
     originAllowlist: allowlist,
     blocked: candidate.blocked === true,
   }
+
+  const retentionDays = candidate.retentionDays
+  if (typeof retentionDays === 'number' && Number.isInteger(retentionDays) && retentionDays > 0) {
+    record.retentionDays = retentionDays
+  }
+
+  return record
 }
 
 export function kvKeyStore(namespace: KvNamespace): KeyStore {

@@ -85,7 +85,7 @@
 | I3 | Key secreta na URL aparece em log de proxy, histórico e referer | 1 | `sk` só em header; `sk` na URL é recusada com `secret_key_in_url` **antes de qualquer consulta**, então nem o hash dela é calculado | **Implementada** (etapa 1.8) |
 | I4 | Arquivo de exportação no R2 acessível por quem tiver o link | 4 | E-mail leva ao dashboard, não ao arquivo; download exige login e permissão no ambiente; ciclo de vida apaga em 7 dias | Planejada (M4) |
 | I5 | Source map expõe o código original do cliente | 4 | Upload autenticado; resolução só na exibição da issue, para quem tem permissão | Planejada (M4) |
-| I6 | IP do usuário final guardado junto do log (LGPD) | 1 | **IP nunca é gravado** — só o país, resolvido na ingestão | Planejada (M1) |
+| I6 | IP do usuário final guardado junto do log (LGPD) | 1 | **IP nunca é gravado** — a linha é montada só com o país, lido do `CF-IPCountry` e validado como duas letras; nenhum header de IP é consultado em lugar nenhum do caminho, e tem teste que manda `CF-Connecting-IP` e `X-Forwarded-For` e confere que a linha gravada não contém o endereço | **Implementada** (etapa 1.9) |
 | I7 | Mensagem de erro revelando estrutura interna ou existência de conta | 3 | Mensagens genéricas ("e-mail ou senha inválidos"); verificação argon2 de mentira quando o e-mail não existe, para o tempo de resposta não denunciar | Planejada (M2) |
 | I8 | Segredo de webhook ou token do Slack em claro no banco | 4 | AES-256-GCM com `ENCRYPTION_KEY` fora do banco | Planejada (M5) |
 | I9 | Segredo commitado por engano | 6 | Secret scanning com push protection e padrões próprios para `nekolog_sk_`/`nekolog_pk_`; `.env` fora do Git | **Parcial** — scanning ativo; padrões próprios pendentes |

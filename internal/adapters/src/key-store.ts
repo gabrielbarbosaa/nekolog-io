@@ -4,6 +4,7 @@ export interface KeyRecord {
   scopes: ReadonlyArray<'logs:write' | 'logs:read'>
   originAllowlist: ReadonlyArray<string> | null
   blocked: boolean
+  retentionDays?: number
 }
 
 export interface KeyStore {

@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./log-store": "./src/log-store.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
@@ -12,6 +14,7 @@
     "ch": "node src/cli.ts"
   },
   "dependencies": {
+    "@internal/adapters": "workspace:*",
     "@internal/config": "workspace:*"
   },
   "devDependencies": {

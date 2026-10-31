@@ -1,5 +1,5 @@
 import { hashApiKey, type KeyRecord, type KeyStore, originAllowed } from '@internal/adapters'
-import type { Authenticator, AuthOutcome } from './app.ts'
+import type { Authenticator, AuthOutcome, IngestPrincipal } from './app.ts'
 import { keyFromRequest } from './keys.ts'
 
 export const WRITE_SCOPE = 'logs:write'
@@ -46,15 +46,18 @@ export function createKeyAuthenticator(options: KeyAuthenticatorOptions): Authen
       }
     }
 
-    return {
-      ok: true,
-      principal: {
-        projectId: record.projectId,
-        environmentId: record.environmentId,
-        keyKind: key.kind,
-        keyLocation: location,
-        allowedOrigin: key.kind === 'public' ? origin : null,
-      },
+    const principal: IngestPrincipal = {
+      projectId: record.projectId,
+      environmentId: record.environmentId,
+      keyKind: key.kind,
+      keyLocation: location,
+      allowedOrigin: key.kind === 'public' ? origin : null,
     }
+
+    if (record.retentionDays !== undefined) {
+      principal.retentionDays = record.retentionDays
+    }
+
+    return { ok: true, principal }
   }
 }
