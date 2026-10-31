@@ -12,7 +12,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { createIngestApp } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
 import { createLogStoreSink, type LogStoreSinkOptions, type SpooledBatch } from './sink.ts'
-import { assertEnv, buildIngestApp } from './worker.ts'
+import {
+  assertEnv,
+  buildIngestApp,
+  DEFAULT_EVENTS_PER_MINUTE,
+  eventsPerMinuteFrom,
+} from './worker.ts'
 
 const KEY = generateApiKey('secret')
 
@@ -358,6 +363,21 @@ describe('the worker entry', () => {
 
   it('treats an empty string as missing', () => {
     expect(() => assertEnv({ ...ENV, CLICKHOUSE_URL: '' })).toThrow(/CLICKHOUSE_URL/)
+  })
+
+  it.each(['nope', '0', '-1', '2.5'])(
+    'refuses to boot on the rate limit %s rather than guess one',
+    (limit) => {
+      expect(() => assertEnv({ ...ENV, INGEST_EVENTS_PER_MINUTE: limit })).toThrow(
+        /INGEST_EVENTS_PER_MINUTE/,
+      )
+    },
+  )
+
+  it('falls back to the shipped rate limit when none is configured', () => {
+    expect(eventsPerMinuteFrom(undefined)).toBe(DEFAULT_EVENTS_PER_MINUTE)
+    expect(eventsPerMinuteFrom('')).toBe(DEFAULT_EVENTS_PER_MINUTE)
+    expect(eventsPerMinuteFrom('750')).toBe(750)
   })
 
   it('builds an app that refuses an unknown key', async () => {

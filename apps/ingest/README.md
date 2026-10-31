@@ -11,11 +11,11 @@ GET  /health       responde se o processo está de pé
 
 ## O que esta etapa entrega, e o que não
 
-As etapas 1.7, 1.8 e 1.9 entregam a **camada HTTP**, as **keys** e a
-**gravação no ClickHouse**. O caminho completo existe: `log.info()` no SDK vira
-linha na tabela.
+As etapas 1.7 a 1.12 entregam a **camada HTTP**, as **keys**, a **gravação no
+ClickHouse**, a **contingência** e os **limites**. O caminho completo existe:
+`log.info()` no SDK vira linha na tabela.
 
-Falta a contingência (1.11), o rate limit e a cota (1.12), e o deploy (1.18).
+Falta o deploy (1.18).
 
 ```ts
 export default {
@@ -55,8 +55,12 @@ A busca é **pelo hash SHA-256**, nunca pela key. A key em claro não chega ao
 armazenamento, e é por isso que ela aparece uma vez só, na criação
 (ADR [0006](../../docs/adr/0006-keys-por-ambiente.md)).
 
-Depois da key vêm, nesta ordem: escopo `logs:write`, bloqueio por cota
-(`quota_exceeded`) e origem.
+Depois da key vêm, nesta ordem: escopo `logs:write`, revogação manual, bloqueio
+por cota (`quota_exceeded`) e origem.
+
+A `blocked` do registro da key é a **revogação manual**, decidida pelo
+dashboard. O bloqueio por cota é uma lista separada no KV, escrita pelos jobs.
+Duas decisões diferentes, de donos diferentes, com a mesma resposta ao cliente.
 
 ### Origens permitidas
 
@@ -135,6 +139,59 @@ terminar de encher a memória — tem teste com um fluxo infinito, que só termi
 porque a leitura corta. Ameaça D3 do
 [modelo de ameaças](../../docs/security/threat-model.md).
 
+## Rate limit e cota
+
+São dois freios diferentes, e só o segundo é uma garantia.
+
+**O rate limit é por ambiente e por instância do Worker.** O Cloudflare roda
+vários *isolates*, cada um com seu contador, então o teto real é o configurado
+vezes o número de instâncias. Ele serve para segurar rajada e proteger o
+ClickHouse de um pico — não para controlar volume. Quem controla volume é a
+cota diária.
+
+Ele **conta eventos, não requests**, e é consultado depois da validação: um
+request traz até 500 eventos, e um limite por request não teria relação nenhuma
+com o que de fato é gravado. O lote recusado não é cobrado, e um lote maior que
+a janela inteira nunca passa — por isso o limite tem que ser confortavelmente
+maior que 500.
+
+Quando o limitador em si falha, a ingestão **continua aceitando** e o erro vai
+para o `onError`. Derrubar a ingestão porque o freio quebrou troca um problema
+de custo por um de perda de dados.
+
+**A cota diária vem do KV**, escrita pelo `quota-block` do `apps/jobs`. A
+ingestão só lê, com cache de 60 s por isolate — mesmo caminho do cache das
+keys, mesmo atraso de ~60 s para valer. Se a leitura falhar, vale **a última
+lista que deu certo**; só quando nunca houve uma é que o tráfego passa.
+
+O `Retry-After` de uma recusa por cota é de 60 s, não "até a meia-noite UTC". O
+bloqueio pode cair a qualquer minuto (o operador sobe a cota, o dia vira), e
+mandar um cliente dormir por horas com base no nosso relógio erraria feio
+quando ele voltasse antes.
+
+## Limite de atributos por projeto
+
+No máximo 500 chaves distintas em `attributes` por projeto. Passando disso, a
+**chave nova é descartada** e o evento é gravado do mesmo jeito — perder a linha
+inteira por causa de um atributo seria o pior dos dois mundos. O que isso
+protege é a coluna `Map(LowCardinality(String), String)` do ClickHouse, que
+degrada quando a cardinalidade das chaves cresce sem limite.
+
+Isso é um **teto por isolate**, não um número global: um isolate novo reaprende
+as primeiras 500 chaves que vê. Ele limita o estrago de uma integração que gera
+chave dinâmica (`user_42`, `user_43`…); não é uma garantia de 500 no banco. A
+lista por projeto no KV, que tornaria o teto exato, depende do dashboard saber
+quais chaves existem — fica para quando houver dashboard.
+
+O registro em si também é limitado: 50 projetos por isolate, o mais antigo sai
+quando chega um novo. Esse número não é estético — ele é o que mantém o pior
+caso dentro da memória de um Worker. Com 500 chaves de até 128 caracteres por
+projeto, 50 projetos dão uns 8 MB; 200 dariam uns 33 MB, que é muito para um
+limite de 128 MB compartilhado com todo o resto. Tem teste fazendo essa conta.
+
+O atributo `error.message` que a própria ingestão acrescenta **não gasta
+orçamento**: ele é nosso, é um só, e não é por ele que a cardinalidade cresce.
+
 ## O corpo que ele aceita
 
 `application/json` e `text/plain`. O segundo não é frescura: o `sendBeacon`
@@ -159,7 +216,6 @@ de coisa que faz as pessoas desligarem o logging.
 |---|---|
 | `invalid_payload`, `unsupported_schema_version` | 400 |
 | `invalid_key`, `secret_key_in_url` | 401 |
-| `quota_exceeded` | 429 |
 | `origin_not_allowed` | 403 |
 | `payload_too_large` | 413 |
 | `rate_limited`, `quota_exceeded` | 429 |
@@ -248,7 +304,7 @@ coluna nova. É a ordem que o runner forward-only já impõe.
 É sinal de vida do processo, não do ClickHouse. Um health check que falha
 quando o banco cai tira o Worker de rotação justamente quando ele ainda
 conseguiria guardar o lote na contingência (R2) para reenviar depois.
-Prontidão de dependência é outra coisa, e entra com a contingência na 1.11.
+Prontidão de dependência é outra coisa.
 
 ## O que o cliente não decide
 

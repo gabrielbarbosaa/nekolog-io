@@ -44,8 +44,11 @@ function headers(config: ClickHouseConfig): Record<string, string> {
 export type ExecuteOptions = {
   database?: string | null
   settings?: Record<string, string>
+  params?: Record<string, string>
   fetch?: typeof fetch
 }
+
+const PARAM_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 export async function execute(
   config: ClickHouseConfig,
@@ -59,6 +62,12 @@ export async function execute(
   }
   for (const [name, value] of Object.entries(options.settings ?? {})) {
     url.searchParams.set(name, value)
+  }
+  for (const [name, value] of Object.entries(options.params ?? {})) {
+    if (!PARAM_NAME_PATTERN.test(name)) {
+      throw new Error(`Refusing to send a query parameter named ${JSON.stringify(name)}`)
+    }
+    url.searchParams.set(`param_${name}`, value)
   }
 
   const send = options.fetch ?? fetch

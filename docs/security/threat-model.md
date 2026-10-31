@@ -66,6 +66,7 @@
 | T4 | Dependência comprometida injetando código no build | 6 | pnpm sem install scripts por padrão (`allowBuilds` explícito); `minimumReleaseAge` de 3 dias; `--frozen-lockfile`; Dependabot, Renovate, `dependency-review`, CodeQL | **Implementada** (0.3, 0.6) |
 | T5 | Action do GitHub trocada sob uma tag móvel | 6 | Actions fixadas por **SHA**; `permissions` mínimas; harden-runner | **Implementada** (0.5, 0.6) |
 | T6 | Push direto reescrevendo história em branch protegida | 6 | Rulesets sem bypass para ninguém; sem force push; commits assinados em `main` e `qa` | **Implementada** (0.7) |
+| T7 | Cliente foge da cota datando os eventos fora do dia corrente | 1 | O uso é contado pela `usage_per_minute`, agrupada por `received_at` (carimbado pelo servidor), e não pela `logs_per_minute`, agrupada pelo `timestamp` que o cliente escolhe. Teste de integração manda um evento datado de 2020 e confere que ele entra na contagem de hoje | **Implementada** (etapa 1.12) |
 | **T7** | **Cliente grava log no projeto de outra organização** mandando `projectId`/`environmentId` no corpo | 1 | Esses campos vêm **só da key**, pelo `principal`, e nunca do payload; campos desconhecidos no corpo são ignorados pelo esquema. É o espelho de escrita da I1 | **Implementada** (etapa 1.7) |
 
 ## R — Repudiation (repúdio)
@@ -94,9 +95,9 @@
 
 | # | Ameaça | Fronteira | Mitigação | Status |
 |---|---|---|---|---|
-| D1 | Volume de logs estoura a cota gratuita e derruba a plataforma para todos | 1 | Cota diária por organização, calculada pelos jobs a partir da `logs_per_minute`, com bloqueio gravado no KV; rate limit em memória no Worker para rajada | Planejada (M1) |
+| D1 | Volume de logs estoura a cota gratuita e derruba a plataforma para todos | 1 | Cota diária por ambiente, calculada a cada minuto pelo `quota-block` a partir da `usage_per_minute`, com a lista de bloqueados num documento do KV que a ingestão lê e responde `429 quota_exceeded`; rate limit em memória no Worker para rajada | **Implementada** (etapa 1.12); a soma por organização depende do `internal/db` (M2) |
 | D2 | Bots criando conta esgotam os 100 e-mails/dia da Resend | 3 | Instância **só por convite**; Turnstile no cadastro, login e recuperação; espera de 60 s e máximo de 5 envios por hora por conta | Planejada (M2) |
-| D3 | Lote gigante ou bomba de descompressão gzip | 1 | Três tetos em `apps/ingest`: `Content-Length` declarado, leitura do corpo e **saída do descompressor**, todos em 512 KB, com `413` e código estável. A leitura para no primeiro byte acima do limite em vez de terminar de encher a memória. Máximo de 500 eventos pelo esquema | **Implementada** (etapa 1.7); falta só o rate limit da D1 |
+| D3 | Lote gigante ou bomba de descompressão gzip | 1 | Três tetos em `apps/ingest`: `Content-Length` declarado, leitura do corpo e **saída do descompressor**, todos em 512 KB, com `413` e código estável. A leitura para no primeiro byte acima do limite em vez de terminar de encher a memória. Máximo de 500 eventos pelo esquema | **Implementada** (etapa 1.7) |
 | D4 | Query de busca cara travando o ClickHouse | 4 | Limites na linguagem: 1.000 caracteres, 20 condições, 5 níveis de parênteses | Planejada (M4) |
 | D5 | Disco da VM enche e o ClickHouse para | 2 | TTL por linha (`retention_days`); alerta de disco acima de 80%; monitor externo | Planejada (M2) |
 | D6 | ClickHouse fora do ar faz perder logs recebidos | 2 | Contingência no R2 (`spool/`) e reenvio pelos jobs, com `<ambiente>:<batchId>` como token de deduplicação. O binding `SPOOL` é obrigatório: o Worker de ingestão não sobe sem ele. Lote que o ClickHouse nunca vai aceitar (`400`) vai para `quarantine/` em vez de travar a fila | **Implementada** (etapa 1.11); falta o alerta de acúmulo (2.24) |
@@ -116,7 +117,7 @@
 | E8 | Nome de arquivo de source map com `../` escrevendo fora do destino | 4 | Tamanho máximo, tipo validado e nome normalizado | Planejada (M4) |
 | E9 | VM invadida por porta exposta | 2 | **Nenhuma porta de entrada**: tudo pelo Cloudflare Tunnel, lista de segurança da Oracle nega entrada; SSH só por chave, via Cloudflare Access; `unattended-upgrades` | Planejada (M1) |
 | E10 | Credencial do ClickHouse vazada de um app faz mais do que aquele app precisa | 2 | Um usuário por papel, com *grant* mínimo: leitura, ingestão, jobs e migrations são credenciais distintas, e só a de migrations tem DDL — e ela existe só nos *secrets* do CI | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
-| E11 | Credencial de ingestão lê o conteúdo dos logs | 1 | O usuário de ingestão tem `INSERT` em `logs` e `SELECT` **só nas cinco colunas** que a *materialized view* lê (`project_id`, `environment_id`, `timestamp`, `level`, `service`); `message`, `stacktrace`, `attributes` e `user_id` ficam fora do alcance | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
+| E11 | Credencial de ingestão lê o conteúdo dos logs | 1 | O usuário de ingestão tem `INSERT` em `logs` e `SELECT` **só nas seis colunas** que as *materialized views* leem (`project_id`, `environment_id`, `timestamp`, `received_at`, `level`, `service`); `message`, `stacktrace`, `attributes` e `user_id` ficam fora do alcance. O `received_at` entrou na etapa 1.12, com a *materialized view* de uso | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
 | E12 | Qualquer um dispara as tarefas agendadas pela URL pública do Worker de jobs | 5 | O app de jobs expõe **só** `GET /health`; nenhuma rota executa tarefa, e um teste falha se alguém adicionar uma. O gatilho é o Cron Trigger do Cloudflare, que não chega pela internet | Implementada (`apps/jobs/src/app.ts`) |
 
 ---

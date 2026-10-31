@@ -3,22 +3,25 @@
 O Worker agendado do NekoLog. Um único cron por ambiente acorda este app a cada
 minuto e ele decide quais tarefas rodam naquele minuto.
 
-Tarefas registradas hoje: **`spool-resend`** (1.11). Faltam o bloqueio por cota
-(1.12), o *heartbeat* e os alertas de infraestrutura (2.24) e as regras de
+Tarefas registradas hoje: **`spool-resend`** (1.11) e **`quota-block`** (1.12).
+Faltam o *heartbeat* e os alertas de infraestrutura (2.24) e as regras de
 alerta (5.1).
 
 ## Bindings
 
 | Binding | Para quê |
 |---|---|
+| `KEYS` (KV, escrita) | onde o `quota-block` grava o bloqueio que a ingestão lê |
 | `SPOOL` (R2) | a contingência que o `spool-resend` esvazia |
-| `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | destino do reenvio |
+| `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | destino do reenvio e origem do uso |
 | `CLICKHOUSE_JOBS_USER`, `CLICKHOUSE_JOBS_PASSWORD` | credencial dos jobs |
+| `DAILY_EVENT_QUOTA` | cota diária por ambiente; o padrão vale se não for definida |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | só quando o ClickHouse está atrás do Access |
 | `JOBS_VERSION` | aparece no `/health` |
 
 Faltando qualquer um dos obrigatórios, o Worker não sobe e diz todos os que
-faltam de uma vez.
+faltam de uma vez. Um `DAILY_EVENT_QUOTA` que não seja um inteiro positivo
+também impede o boot, em vez de virar um padrão silencioso.
 
 ## `spool-resend`
 
@@ -50,6 +53,47 @@ O que cada execução fez aparece no `detail` do resumo:
 
 Nada apaga a `quarantine/` sozinho — é o operador que olha (runbook de
 incidente) e decide. O alerta de acúmulo é a etapa 2.24.
+
+## `quota-block`
+
+Roda a cada minuto. Soma o uso do dia de cada ambiente, compara com a cota e
+mantém no KV a lista de quem está bloqueado. A ingestão lê essa lista e passa a
+responder `429 quota_exceeded`.
+
+**O uso é contado por `received_at`, não por `timestamp`.** O `timestamp` de um
+evento é escolhido por quem envia: um cliente que mandasse tudo datado de ontem
+nunca apareceria na contagem de hoje e a cota não valeria nada. Por isso existe
+a `usage_per_minute`, agrupada pelo horário em que o lote **chegou**, que é do
+servidor. A `logs_per_minute` continua agrupada por `timestamp` — ela responde
+"quando isso aconteceu", que é a pergunta certa para os gráficos.
+
+- **Só grava no KV quando o conjunto de bloqueados muda.** O plano gratuito dá
+  1.000 escritas por dia e o cron acorda 1.440 vezes; gravar todo minuto
+  estouraria sozinho. Pelo mesmo motivo tudo cabe num documento só
+  (`quota:blocks`) em vez de uma chave por ambiente: listar prefixo no KV custa
+  uma operação de *list*, e o limite dessas é 1.000 por dia.
+- **O `blockedAt` é de quando bloqueou**, não do último minuto em que continuou
+  bloqueado — é o que serve para explicar o incidente depois.
+- **Se não consegue medir, não mexe em nada.** Com o ClickHouse fora, a consulta
+  falha e a tarefa volta sem tocar no KV. O contrário — tratar "não sei" como
+  "ninguém passou da cota" — desbloquearia todo mundo exatamente durante uma
+  queda.
+- **Desbloqueio é automático.** Virado o dia UTC, o uso recomeça do zero, o
+  ambiente deixa de aparecer acima da cota e sai da lista. Um ambiente que ficou
+  calado o dia inteiro também sai, porque nem aparece na contagem.
+
+Quem cuida da cota é esta tarefa; a `blocked` que já existia no registro da key
+continua sendo a revogação manual, decidida pelo dashboard. São duas coisas
+diferentes com a mesma resposta.
+
+A cota é **por ambiente**. O plano fala em cota por organização, e é isso que
+vai valer quando o `internal/db` existir (M2): a tarefa já aceita um
+`quotaFor(environmentId)` no lugar do valor fixo, que é onde a soma por
+organização vai entrar. Inventar uma organização agora, sem banco que a guarde,
+seria pior que o recorte menor.
+
+O que cada execução fez aparece no `detail` do resumo:
+`{ environments, blocked, unblocked, stillBlocked, written, stopped }`.
 
 ## Por que um cron só
 
@@ -150,6 +194,12 @@ ficou na contingência, reenvia, e confere que a linha apareceu — e que reenvi
 o mesmo arquivo de novo não duplica. É por isso que `@apps/ingest` está aqui
 como dependência de desenvolvimento: o que não pode divergir é o formato que um
 grava e o outro lê, e o jeito de garantir isso é usar os dois no mesmo teste.
+
+`tests/quota.integration.test.ts` faz o mesmo com a cota: manda lotes de
+verdade pela ingestão, confere que um evento datado de 2020 **entra na contagem
+de hoje** (e não entra na dos gráficos), roda a varredura, e confere que a
+mesma API passa a responder `429 quota_exceeded` — e volta a aceitar quando a
+cota sobe.
 
 Sem um ClickHouse acessível esses testes são pulados, com aviso no stderr; no
 CI, `CLICKHOUSE_TEST_REQUIRED=1` transforma o skip em erro.

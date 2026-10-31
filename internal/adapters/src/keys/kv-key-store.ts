@@ -1,10 +1,5 @@
 import type { KeyRecord, KeyStore } from '../key-store'
-
-export type KvNamespace = {
-  get(key: string, type: 'text'): Promise<string | null>
-  put(key: string, value: string): Promise<void>
-  delete(key: string): Promise<void>
-}
+import type { KvNamespace } from '../kv'
 
 export const KEY_PREFIX = 'key:'
 

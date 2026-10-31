@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./log-store": "./src/log-store.ts"
+    "./log-store": "./src/log-store.ts",
+    "./usage-store": "./src/usage-store.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",

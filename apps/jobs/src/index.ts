@@ -8,6 +8,19 @@ export { gridMinute, msUntilNextMinute, SELF_HOST_CRON, startScheduler } from '.
 export type { Task, TaskContext } from './task.ts'
 export { assertTask, DEFAULT_TASK_TIMEOUT_MS } from './task.ts'
 export type {
+  QuotaBlockEvent,
+  QuotaBlockOptions,
+  QuotaBlockReport,
+  QuotaBlockStop,
+} from './tasks/quota-block.ts'
+export {
+  DAY_MS,
+  DEFAULT_DAILY_EVENT_QUOTA,
+  QUOTA_BLOCK_TASK,
+  quotaBlockTask,
+  startOfUtcDay,
+} from './tasks/quota-block.ts'
+export type {
   SpoolResendEvent,
   SpoolResendOptions,
   SpoolResendReport,
@@ -27,7 +40,9 @@ export {
   assertEnv,
   assertNoFailures,
   buildJobTasks,
+  dailyQuotaFrom,
   runScheduled,
+  writeQuotaEvent,
   writeSpoolEvent,
   writeSummary,
 } from './worker.ts'

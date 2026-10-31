@@ -17,7 +17,7 @@
       <quota>default</quota>
       <grants>
         <query>GRANT INSERT ON nekolog_dev.logs</query>
-        <query>GRANT SELECT(project_id, environment_id, timestamp, level, service) ON nekolog_dev.logs</query>
+        <query>GRANT SELECT(project_id, environment_id, timestamp, received_at, level, service) ON nekolog_dev.logs</query>
       </grants>
     </nekolog_ingest>
 
