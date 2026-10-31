@@ -1,0 +1,19 @@
+{
+  "name": "@apps/ingest",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@internal/schema": "workspace:*",
+    "hono": "^4.10.6"
+  },
+  "devDependencies": {
+    "@nekolog-io/node": "workspace:*",
+    "@types/node": "^24.0.0",
+    "vitest": "^5.0.5"
+  }
+}

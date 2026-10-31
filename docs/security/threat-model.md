@@ -66,6 +66,7 @@
 | T4 | Dependência comprometida injetando código no build | 6 | pnpm sem install scripts por padrão (`allowBuilds` explícito); `minimumReleaseAge` de 3 dias; `--frozen-lockfile`; Dependabot, Renovate, `dependency-review`, CodeQL | **Implementada** (0.3, 0.6) |
 | T5 | Action do GitHub trocada sob uma tag móvel | 6 | Actions fixadas por **SHA**; `permissions` mínimas; harden-runner | **Implementada** (0.5, 0.6) |
 | T6 | Push direto reescrevendo história em branch protegida | 6 | Rulesets sem bypass para ninguém; sem force push; commits assinados em `main` e `qa` | **Implementada** (0.7) |
+| **T7** | **Cliente grava log no projeto de outra organização** mandando `projectId`/`environmentId` no corpo | 1 | Esses campos vêm **só da key**, pelo `principal`, e nunca do payload; campos desconhecidos no corpo são ignorados pelo esquema. É o espelho de escrita da I1 | **Implementada** (etapa 1.7) |
 
 ## R — Repudiation (repúdio)
 
@@ -95,7 +96,7 @@
 |---|---|---|---|---|
 | D1 | Volume de logs estoura a cota gratuita e derruba a plataforma para todos | 1 | Cota diária por organização, calculada pelos jobs a partir da `logs_per_minute`, com bloqueio gravado no KV; rate limit em memória no Worker para rajada | Planejada (M1) |
 | D2 | Bots criando conta esgotam os 100 e-mails/dia da Resend | 3 | Instância **só por convite**; Turnstile no cadastro, login e recuperação; espera de 60 s e máximo de 5 envios por hora por conta | Planejada (M2) |
-| D3 | Lote gigante ou bomba de descompressão gzip | 1 | Limite de 512 KB **depois de descomprimido**; máximo de 500 eventos; `413` com código estável | Planejada (M1) |
+| D3 | Lote gigante ou bomba de descompressão gzip | 1 | Três tetos em `apps/ingest`: `Content-Length` declarado, leitura do corpo e **saída do descompressor**, todos em 512 KB, com `413` e código estável. A leitura para no primeiro byte acima do limite em vez de terminar de encher a memória. Máximo de 500 eventos pelo esquema | **Implementada** (etapa 1.7); falta só o rate limit da D1 |
 | D4 | Query de busca cara travando o ClickHouse | 4 | Limites na linguagem: 1.000 caracteres, 20 condições, 5 níveis de parênteses | Planejada (M4) |
 | D5 | Disco da VM enche e o ClickHouse para | 2 | TTL por linha (`retention_days`); alerta de disco acima de 80%; monitor externo | Planejada (M2) |
 | D6 | ClickHouse fora do ar faz perder logs recebidos | 2 | Contingência no R2 (`spool/`) e reenvio pelos jobs, com `batchId` como token de deduplicação | Planejada (M1) |
