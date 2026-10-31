@@ -117,6 +117,7 @@
 | E9 | VM invadida por porta exposta | 2 | **Nenhuma porta de entrada**: tudo pelo Cloudflare Tunnel, lista de segurança da Oracle nega entrada; SSH só por chave, via Cloudflare Access; `unattended-upgrades` | Planejada (M1) |
 | E10 | Credencial do ClickHouse vazada de um app faz mais do que aquele app precisa | 2 | Um usuário por papel, com *grant* mínimo: leitura, ingestão, jobs e migrations são credenciais distintas, e só a de migrations tem DDL — e ela existe só nos *secrets* do CI | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
 | E11 | Credencial de ingestão lê o conteúdo dos logs | 1 | O usuário de ingestão tem `INSERT` em `logs` e `SELECT` **só nas cinco colunas** que a *materialized view* lê (`project_id`, `environment_id`, `timestamp`, `level`, `service`); `message`, `stacktrace`, `attributes` e `user_id` ficam fora do alcance | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
+| E12 | Qualquer um dispara as tarefas agendadas pela URL pública do Worker de jobs | 5 | O app de jobs expõe **só** `GET /health`; nenhuma rota executa tarefa, e um teste falha se alguém adicionar uma. O gatilho é o Cron Trigger do Cloudflare, que não chega pela internet | Implementada (`apps/jobs/src/app.ts`) |
 
 ---
 
