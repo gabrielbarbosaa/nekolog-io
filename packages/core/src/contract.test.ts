@@ -260,4 +260,48 @@ describe('events this logger produces, run through the real ingest parser', () =
     expect(sink.events[0]?.message).not.toBe('')
     expect(acceptAll(sink.events, logger).rejected).toEqual([])
   })
+
+  it('accepts what redaction produces, even where it makes the text longer', () => {
+    const sink = memorySink()
+    const logger = createLogger({ sink })
+
+    const grows = (limit: number) => 'Bearer a '.repeat(Math.ceil(limit / 9))
+
+    logger.info(grows(limits.MAX_MESSAGE_BYTES), {
+      note: grows(limits.MAX_ATTRIBUTE_VALUE_BYTES),
+    })
+
+    const batch = acceptAll(sink.events, logger)
+    expect(batch.rejected).toEqual([])
+    expect(batch.accepted[0]?.messageTruncated).toBe(false)
+  })
+
+  it('accepts an event a hostile beforeSend handed back outside the contract', () => {
+    const sink = memorySink()
+    const wide: Record<string, unknown> = {}
+    for (let i = 0; i < limits.MAX_ATTRIBUTE_KEYS * 2; i++) {
+      wide[`bad key ${i}!`] = i
+    }
+
+    const logger = createLogger({
+      sink,
+      beforeSend: () =>
+        ({
+          timestamp: 'yesterday',
+          level: 'error',
+          message: 'y'.repeat(limits.MAX_MESSAGE_BYTES * 2),
+          attributes: wide,
+          trace: { traceId: 'nope', spanId: 'nope' },
+          session: { id: 's'.repeat(limits.MAX_SESSION_ID_CHARS * 2), userId: 42 },
+          error: { type: 'E'.repeat(500), stack: 'z'.repeat(limits.MAX_ERROR_STACK_BYTES * 2) },
+          fingerprint: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        }) as unknown as LogEvent,
+    })
+
+    logger.info('hello')
+
+    const batch = acceptAll(sink.events, logger)
+    expect(batch.rejected).toEqual([])
+    expect(batch.accepted[0]?.event.trace).toBeUndefined()
+  })
 })

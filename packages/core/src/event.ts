@@ -1,5 +1,6 @@
 import { flattenAttributes, mergeAttributeInputs } from './attributes.ts'
-import { describe, errorInfoOf, isErrorLike } from './errors.ts'
+import { describe, errorInfoOf, isErrorLike, sanitiseErrorInfo } from './errors.ts'
+import { isLogLevel } from './levels.ts'
 import {
   EMPTY_MESSAGE_PLACEHOLDER,
   MAX_FINGERPRINT_ITEMS,
@@ -140,6 +141,59 @@ export function buildEvent(input: BuildEventInput): LogEvent {
   }
 
   const fingerprint = normaliseFingerprint(context.fingerprint)
+  if (fingerprint !== undefined) {
+    event.fingerprint = fingerprint
+  }
+
+  return event
+}
+
+function timestampText(value: unknown, fallback: string): string {
+  if (typeof value !== 'string' || value === '') {
+    return fallback
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString()
+}
+
+export function sanitiseEvent(value: unknown, fallback: LogEvent): LogEvent | null {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const candidate = value as Record<string, unknown>
+  if (!isLogLevel(candidate.level)) {
+    return null
+  }
+
+  const event: LogEvent = {
+    timestamp: timestampText(candidate.timestamp, fallback.timestamp),
+    level: candidate.level,
+    message: normaliseMessage(
+      typeof candidate.message === 'string' ? candidate.message : describe(candidate.message),
+    ),
+  }
+
+  const attributes = flattenAttributes(candidate.attributes as AttributeInput | undefined)
+  if (attributes !== undefined) {
+    event.attributes = attributes
+  }
+
+  const trace = normaliseTrace(candidate.trace as TraceContext | undefined)
+  if (trace !== undefined) {
+    event.trace = trace
+  }
+
+  const session = normaliseSession(candidate.session as SessionContext | undefined)
+  if (session !== undefined) {
+    event.session = session
+  }
+
+  const error = sanitiseErrorInfo(candidate.error)
+  if (error !== undefined) {
+    event.error = error
+  }
+
+  const fingerprint = normaliseFingerprint(candidate.fingerprint as string[] | undefined)
   if (fingerprint !== undefined) {
     event.fingerprint = fingerprint
   }

@@ -1,8 +1,8 @@
 # @nekolog-io/core
 
-Núcleo do SDK do NekoLog: níveis, `child()`, contexto e a montagem do evento no
-formato que a ingestão aceita. **Zero dependências**, roda em browser, Node,
-Bun, Deno e edge.
+Núcleo do SDK do NekoLog: níveis, `child()`, contexto, remoção de dados
+sensíveis, amostragem, envio em lote e a montagem do evento no formato que a
+ingestão aceita. **Zero dependências**, roda em browser, Node, Bun, Deno e edge.
 
 ```ts
 import { createLogger } from '@nekolog-io/core'
@@ -17,8 +17,8 @@ await log.flush()
 
 ## O que esta etapa entrega, e o que não
 
-As etapas 1.3 e 1.4 entregam o **logger** e o **transporte**. Falta a 1.5:
-amostragem, `beforeSend` e remoção de dados sensíveis.
+As etapas 1.3, 1.4 e 1.5 entregam o **logger**, o **transporte** e o
+**pipeline de privacidade**. O pacote está completo.
 
 Com `apiKey`, o logger usa o transporte em lote. Sem `apiKey` e sem `sink`, ele
 escreve no `console`.
@@ -89,6 +89,95 @@ Já `invalid_payload` e `payload_too_large` descartam **aquele lote** e seguem.
 E eventos recusados dentro de um lote aceito (`202` com `rejected`) chegam no
 `onReject`, sem reenviar o lote.
 
+## O que sai antes de o evento existir
+
+Todo evento passa por **amostragem → `beforeSend` → remoção**, nessa ordem, e
+isso vale para qualquer `sink` — inclusive o `console`, porque a senha também
+não deveria aparecer no terminal de quem desenvolve. O porquê da ordem está no
+ADR [0014](../../docs/adr/0014-ordem-do-pipeline-de-privacidade-do-sdk.md).
+
+### Remoção de dados sensíveis
+
+Ligada por padrão. Nada precisa ser configurado.
+
+Por **chave**, em qualquer segmento do caminho achatado — `user.password`,
+`headers.authorization`, `card.cvv`, `customer.cpf`, `apiKey`, `set-cookie`,
+`sessionId`, e as variações deles, já que a comparação ignora maiúsculas,
+`_`, `-` e `.`. Como a comparação é por conteúdo, `passwordHash` também sai.
+
+Por **valor**, dentro de qualquer texto — mensagem, `error.message`,
+`error.stack` e atributos de texto:
+
+| O quê | Como é reconhecido |
+|---|---|
+| número de cartão | 13 a 19 dígitos **validados por Luhn** |
+| CPF | formatado ou não, pelos **dois dígitos verificadores** |
+| JWT | três segmentos base64url começando em `eyJ` |
+| `Authorization` | `Bearer …` e `Basic …`, mantendo o esquema |
+| credencial em URL | `https://user:senha@host` |
+| key do NekoLog | `nekolog_sk_…`, mantendo o prefixo |
+
+A validação é o ponto: um regex de 16 dígitos apagaria todo id de pedido do seu
+log. Com Luhn, `4111111111111111` sai e `4111111111111112` fica.
+
+```ts
+createLogger({
+  privacy: {
+    extraKeys: ['prontuario'],
+    extraPatterns: [/INT-\d+/],
+    skipKeys: ['tokenCount'],
+  },
+})
+```
+
+`skipKeys` existe porque a busca por conteúdo erra para o lado de remover:
+`tokenCount` casa com `token`. Tirar uma chave exata do caminho não desarma o
+resto da lista.
+
+`privacy: { scrubText: false }` mantém só a remoção por chave, se as cinco
+varreduras de regex por evento pesarem. `privacy: { enabled: false }` desliga
+tudo.
+
+### Amostragem
+
+```ts
+createLogger({ sampling: { rate: 0.1 } })
+```
+
+Duas coisas que ela **não** faz:
+
+- **Não quebra uma request ao meio.** Com `trace.traceId` no contexto, a decisão
+  vem de um hash do trace, não de um sorteio: ou todos os logs daquela request
+  entram, ou nenhum. Meia request no dashboard não ajuda ninguém a depurar.
+- **Não descarta erro.** O piso `sampling.alwaysFrom` começa em `error`, então
+  `rate: 0.01` vale para `info` e deixa `error` e `fatal` passarem inteiros.
+  Alerta e issue contam erro — se a amostragem pudesse derrubá-los em silêncio,
+  toda contagem precisaria dividir pela taxa. Quem quiser amostrar erro também
+  passa `alwaysFrom: false`.
+
+### `beforeSend`
+
+```ts
+createLogger({
+  beforeSend(event) {
+    if (event.attributes?.route === '/health') return null
+    return { ...event, message: `[checkout] ${event.message}` }
+  },
+})
+```
+
+Recebe o evento **cru**, antes da remoção, e devolve o evento, ou `null` para
+descartar. Três comportamentos que valem conhecer:
+
+- **Ele não desfaz a remoção.** O que ele devolve ainda passa pelo filtro. É de
+  propósito: a garantia de privacidade não pode depender do gancho estar certo.
+- **O que ele devolve é revalidado** contra o contrato da ingestão — nível,
+  timestamp, tamanho da mensagem, atributos, trace, sessão, fingerprint. Um
+  gancho não consegue produzir um evento que a API recusaria.
+- **Esquecer o `return` descarta o log**, como no Sentry. Para o engano não ser
+  silencioso, o SDK avisa uma vez pelo `onError` dizendo exatamente isso. Se ele
+  lançar, aquele evento é descartado em vez de ir cru — é onde a PII ia sair.
+
 ## Níveis
 
 `trace`, `debug`, `info`, `warn`, `error`, `fatal`, nessa ordem. O padrão é
@@ -128,7 +217,9 @@ dentro dos limites, então a ingestão não precisa cortar nada:
 
 Isso não é confiança no papel: `src/contract.test.ts` roda os eventos que este
 pacote produz pelo **parser real da ingestão** (`@internal/schema`) e exige zero
-rejeições, inclusive nos casos limite. E compara, uma a uma, as constantes de
+rejeições, inclusive nos casos limite — e inclusive quando um `beforeSend`
+hostil devolve um evento fora do contrato, ou quando a remoção deixa o texto
+maior do que era (`Bearer x` vira `Bearer [redacted]`). E compara, uma a uma, as constantes de
 limite dos dois pacotes — se a ingestão mudar um limite e o SDK não, o teste
 quebra.
 
