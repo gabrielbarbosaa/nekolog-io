@@ -18,6 +18,7 @@ import type { LogEvent } from './types.ts'
 import { utf8ByteLength } from './utf8.ts'
 
 const SHORT_TOKEN = 'Bearer a '
+const REDACTION_BUDGET_MS = 250
 
 function policy(overrides: Partial<RedactionPolicy> = {}): RedactionPolicy {
   return { matchesKey: createKeyMatcher(), patterns: [], scrubText: true, ...overrides }
@@ -188,6 +189,23 @@ describe('text redaction', () => {
   it('leaves ordinary text untouched', () => {
     const text = 'GET /orders/42 took 18ms for user 7 on 2026-10-31'
     expect(redactText(text)).toBe(text)
+  })
+
+  it.each([
+    ['colons without an at sign', `//${'a:'.repeat(MAX_MESSAGE_BYTES / 2)}`],
+    ['colons and slashes', `//${'a:b'.repeat(MAX_MESSAGE_BYTES / 3)}`],
+    ['one long run of digits', '9'.repeat(MAX_MESSAGE_BYTES)],
+    ['digits split by separators', '1 '.repeat(MAX_MESSAGE_BYTES / 2)],
+    ['repeated JWT prefixes', 'eyJ'.repeat(MAX_MESSAGE_BYTES / 3)],
+    ['repeated auth schemes', 'bearer '.repeat(MAX_MESSAGE_BYTES / 7)],
+    ['mixed punctuation', 'a:b@c/d.'.repeat(MAX_MESSAGE_BYTES / 8)],
+  ])('stays fast on a full-size message of %s', (_name, input) => {
+    const start = performance.now()
+    const out = redactText(input)
+    const elapsed = performance.now() - start
+
+    expect(out.length).toBeGreaterThan(0)
+    expect(elapsed).toBeLessThan(REDACTION_BUDGET_MS)
   })
 })
 

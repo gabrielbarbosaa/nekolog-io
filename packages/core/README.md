@@ -138,6 +138,13 @@ resto da lista.
 varreduras de regex por evento pesarem. `privacy: { enabled: false }` desliga
 tudo.
 
+O texto varrido costuma vir de fora — corpo de request, header, erro de
+terceiro. Nenhum dos padrões tem quantificador aninhado, e as classes de
+caractere excluem o delimitador que vem depois delas, que é o que impede
+retrocesso catastrófico. Sete entradas hostis de 16 KB levam menos de 1 ms, e
+isso está num teste. Se você passar um `extraPatterns` seu, a conta é sua: um
+regex que trava, trava o app de quem usa o SDK.
+
 ### Amostragem
 
 ```ts

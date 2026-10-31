@@ -70,6 +70,19 @@ tamanho da mensagem, atributos, trace, sessão, fingerprint.
 - **Custo de CPU por evento.** São cinco varreduras de regex sobre a mensagem e
   sobre cada atributo de texto. Em lote de 500 eventos isso é medível, e é por
   isso que `privacy.scrubText: false` existe, mantendo só a remoção por chave.
+- **O texto que a remoção varre pode vir do atacante.** O cliente loga corpo de
+  request, header, mensagem de erro de terceiro. Um regex com retrocesso
+  catastrófico ali travaria o app do cliente — o oposto do princípio "o SDK
+  nunca atrapalha quem o usa". Por isso os padrões não têm quantificador
+  aninhado, e as classes de caractere excluem o delimitador que vem depois
+  delas, que é o que impede o retrocesso. Medido no artefato construído: menos
+  de 1 ms para uma mensagem de 16 KB em sete entradas hostis.
+  **A medição está num teste, mas o teste tem um limite conhecido:** regex é
+  síncrono, então um caso verdadeiramente catastrófico *trava* o processo em vez
+  de estourar o orçamento de tempo e falhar. O teste pega regressão lenta de
+  forma limpa; a exponencial ele pega travando o CI, o que bloqueia o merge, mas
+  sem dizer o porquê. Não há como limitar um regex síncrono de dentro da mesma
+  thread; o que resta é revisar padrão novo antes de ele entrar.
 
 ## Alternativas consideradas
 
