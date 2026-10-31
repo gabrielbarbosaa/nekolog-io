@@ -155,8 +155,12 @@ publica no Security tab. Estes achados ficam abertos de propósito:
 | `MaintainedID` — repositório com menos de 90 dias | Resolve sozinho com o tempo. |
 | `FuzzingID` — sem fuzzing | Planejado: etapa 1.14 inclui fuzzing do validador de payload. |
 | `CIIBestPracticesID` — sem selo OpenSSF | Não perseguido por enquanto. |
+| `TokenPermissionsID` — `release.yml` | **O achado está errado.** Ele diz "topLevel 'contents' permission set to 'write'", mas o topo do arquivo é `contents: read`, tanto na `main` quanto na `dev`. O `write` é **do job**, e o `changesets/action` precisa dele para criar a branch e abrir o PR de versão, junto com `pull-requests: write`. Já é o mínimo: escopo de um job, não do workflow. Conferido em 31/10/2026. |
 
-Desde 30/10/2026 esse SARIF sobe com `category: scorecard`. Sem isso ele caía na
+Desde 30/10/2026 esse SARIF sobe com `category: scorecard`. O efeito só aparece
+depois que a correção chegar na `main` ou o cron semanal rodar, porque o
+`scorecard.yml` dispara em `push` para `main` e no agendamento — até lá os
+alertas antigos continuam na faixa padrão. Sem isso ele caía na
 faixa padrão do code scanning e era reportado pelo check `CodeQL`, que então
 falhava em PRs por motivos que **não são vulnerabilidade no código** — "o projeto
 não tem selo OpenSSF" num PR de SDK. Um CI que fica vermelho por algo que não dá
