@@ -80,10 +80,25 @@ type Shared = {
   sdk: Sdk
   sink: Sink
   pipeline: Pipeline
+  contextProvider?: () => LogContext | undefined
   enabled: boolean
   level: LogLevel
   onError: (error: unknown) => void
   now: () => number
+}
+
+function effectiveContext(shared: Shared, context: LogContext): LogContext {
+  if (!shared.contextProvider) {
+    return context
+  }
+  let ambient: LogContext | undefined
+  try {
+    ambient = shared.contextProvider()
+  } catch (error) {
+    reportFailure(shared.onError, error)
+    return context
+  }
+  return ambient ? mergeContexts(ambient, context) : context
 }
 
 function createChild(shared: Shared, context: LogContext): Logger {
@@ -92,7 +107,13 @@ function createChild(shared: Shared, context: LogContext): Logger {
       if (!shared.enabled || !isLogLevel(level) || !passesThreshold(level, shared.level)) {
         return
       }
-      const built = buildEvent({ level, subject, attributes, context, timestamp: shared.now() })
+      const built = buildEvent({
+        level,
+        subject,
+        attributes,
+        context: effectiveContext(shared, context),
+        timestamp: shared.now(),
+      })
       const event = shared.pipeline(built)
       if (event === null) {
         return
@@ -183,6 +204,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
       random: options.random ?? Math.random,
       onError: (error) => reportFailure(onError, error),
     }),
+    contextProvider: options.contextProvider,
     enabled: options.enabled !== false,
     level: isLogLevel(options.level) ? options.level : DEFAULT_LEVEL,
     onError,

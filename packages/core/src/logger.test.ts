@@ -11,6 +11,43 @@ function setup(options: Partial<LoggerOptions> = {}) {
   return { logger, sink }
 }
 
+describe('contextProvider', () => {
+  it('puts the ambient context under the logger own context', () => {
+    let ambient: LoggerOptions['context']
+    const { logger, sink } = setup({ contextProvider: () => ambient })
+
+    ambient = { attributes: { requestId: 'r-1', step: 'ambient' } }
+    logger.child({ attributes: { step: 'child' } }).info('hello')
+
+    expect(sink.events[0]?.attributes).toEqual({ requestId: 'r-1', step: 'child' })
+  })
+
+  it('is read at every call, not captured once', () => {
+    let ambient: LoggerOptions['context'] = { attributes: { requestId: 'r-1' } }
+    const { logger, sink } = setup({ contextProvider: () => ambient })
+
+    logger.info('first')
+    ambient = { attributes: { requestId: 'r-2' } }
+    logger.info('second')
+
+    expect(sink.events.map((event) => event.attributes?.requestId)).toEqual(['r-1', 'r-2'])
+  })
+
+  it('keeps the log when the provider throws', () => {
+    const onError = vi.fn()
+    const { logger, sink } = setup({
+      onError,
+      contextProvider: () => {
+        throw new Error('no store')
+      },
+    })
+
+    expect(() => logger.info('kept')).not.toThrow()
+    expect(sink.events.map((event) => event.message)).toEqual(['kept'])
+    expect(onError).toHaveBeenCalled()
+  })
+})
+
 describe('levels', () => {
   it('writes an event for every level at or above the threshold', () => {
     const { logger, sink } = setup({ level: 'warn' })

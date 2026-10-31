@@ -208,6 +208,21 @@ O filho herda o contexto do pai e acrescenta ao dele:
 
 O pai nunca é alterado por um filho.
 
+### Contexto ambiente
+
+`contextProvider` é um gancho lido **a cada log**, não capturado uma vez. É o
+que permite a um SDK de plataforma injetar contexto sem o logger ser recriado
+por request — o `@nekolog-io/node` liga o `AsyncLocalStorage` nele.
+
+```ts
+createLogger({ contextProvider: () => currentRequestContext() })
+```
+
+O contexto ambiente fica **embaixo** do contexto do logger: o que você passou em
+`child()` ou na chamada ganha. Se o provider lançar, o log vai assim mesmo, sem
+o contexto, e o `onError` fica sabendo — perder o `requestId` é ruim, perder o
+log é pior.
+
 ## O evento que ele monta
 
 Segue a [especificação 1](../../docs/ESPECIFICACOES.md). O SDK já entrega

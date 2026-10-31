@@ -92,6 +92,7 @@ export type LoggerOptions = {
   privacy?: PrivacyTuning
   beforeSend?: BeforeSend
   random?: () => number
+  contextProvider?: () => LogContext | undefined
   service?: string
   release?: string
   runtime?: Runtime
