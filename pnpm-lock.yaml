@@ -251,6 +251,9 @@ importers:
       '@internal/adapters':
         specifier: workspace:*
         version: link:../../internal/adapters
+      '@internal/clickhouse':
+        specifier: workspace:*
+        version: link:../../internal/clickhouse
       '@internal/schema':
         specifier: workspace:*
         version: link:../../internal/schema
@@ -331,6 +334,9 @@ importers:
 
   internal/clickhouse:
     dependencies:
+      '@internal/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@internal/config':
         specifier: workspace:*
         version: link:../config

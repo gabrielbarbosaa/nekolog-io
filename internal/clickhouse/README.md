@@ -6,6 +6,39 @@ e cria as tabelas da [seção 7 do plano](../../docs/PLANO.md#7-modelo-de-dados)
 
 Pacote interno: não vai para o npm.
 
+## Pontos de entrada
+
+| Import | O que traz | Roda em |
+|---|---|---|
+| `@internal/clickhouse` | tudo, inclusive o runner | Node |
+| `@internal/clickhouse/client` | só o cliente HTTP | qualquer runtime |
+| `@internal/clickhouse/log-store` | o `LogStore` da ingestão | qualquer runtime |
+
+A separação existe porque o runner lê arquivos do disco (`node:fs`), e a
+ingestão roda em Cloudflare Workers, onde isso não existe. Quem importa a raiz
+num Worker arrisca puxar `node:fs` junto; os subcaminhos tiram o risco da mesa
+em vez de depender de *tree shaking*.
+
+## `LogStore`
+
+```ts
+const store = clickHouseLogStore(config)
+await store.insert(rows, { deduplicationToken: batchId })
+```
+
+- `async_insert=1` com **`wait_for_async_insert=1`**: o agrupamento sem perder
+  a garantia de que gravou. Dentro do `waitUntil` da ingestão a espera não
+  custa latência ao cliente, e sem ela uma falha viraria silêncio.
+- `insert_deduplication_token` com o `batchId` — é o que torna o reenvio da
+  contingência (1.11) seguro. O mesmo lote duas vezes grava uma vez só, e isso
+  tem teste contra o servidor de verdade.
+- **`input_format_skip_unknown_fields=0`**. Sem isso o ClickHouse aceita uma
+  linha com coluna inexistente, grava o resto com defaults e responde sucesso.
+  Descobri isso testando contra o servidor, não lendo documentação.
+- Nome de banco e de tabela passam por `assertIdentifier` antes de entrar no
+  SQL. Eles não vêm do usuário, mas valor em SQL é sempre parametrizado neste
+  repositório, e identificador não dá para parametrizar — então vai validado.
+
 ## Comandos
 
 ```bash

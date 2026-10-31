@@ -4,6 +4,7 @@ export type {
   BatchSink,
   IngestDeps,
   IngestPrincipal,
+  SinkContext,
 } from './app.ts'
 export { createIngestApp, DENIED_WITHOUT_A_KEY_STORE, denyAll } from './app.ts'
 export type { KeyAuthenticatorOptions } from './authenticate.ts'
@@ -28,3 +29,16 @@ export type { ErrorBody } from './errors.ts'
 export { errorBody, STATUS_FOR_CODE, statusFor } from './errors.ts'
 export type { FoundKey, KeyLocation, KeyLookup } from './keys.ts'
 export { KEY_QUERY_PARAM, keyFromRequest } from './keys.ts'
+export type { RowContext } from './rows.ts'
+export {
+  clickHouseTimestamp,
+  countryOf,
+  DEFAULT_RETENTION_DAYS,
+  ERROR_MESSAGE_ATTRIBUTE,
+  rowsFor,
+  UNRESOLVED_FINGERPRINT,
+} from './rows.ts'
+export type { LogStoreSinkOptions } from './sink.ts'
+export { createLogStoreSink } from './sink.ts'
+export type { ExecutionContextLike, IngestEnv } from './worker.ts'
+export { assertEnv, buildIngestApp } from './worker.ts'

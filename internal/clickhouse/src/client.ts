@@ -41,18 +41,28 @@ function headers(config: ClickHouseConfig): Record<string, string> {
   return result
 }
 
+export type ExecuteOptions = {
+  database?: string | null
+  settings?: Record<string, string>
+  fetch?: typeof fetch
+}
+
 export async function execute(
   config: ClickHouseConfig,
   sql: string,
-  options: { database?: string | null } = {},
+  options: ExecuteOptions = {},
 ): Promise<string> {
   const target = options.database === undefined ? config.database : options.database
   const url = new URL(config.url)
   if (target) {
     url.searchParams.set('database', target)
   }
+  for (const [name, value] of Object.entries(options.settings ?? {})) {
+    url.searchParams.set(name, value)
+  }
 
-  const response = await fetch(url, { method: 'POST', headers: headers(config), body: sql })
+  const send = options.fetch ?? fetch
+  const response = await send(url, { method: 'POST', headers: headers(config), body: sql })
   const body = await response.text()
 
   if (!response.ok) {
@@ -64,7 +74,7 @@ export async function execute(
 export async function queryRows<T>(
   config: ClickHouseConfig,
   sql: string,
-  options: { database?: string | null } = {},
+  options: ExecuteOptions = {},
 ): Promise<T[]> {
   const body = await execute(
     config,

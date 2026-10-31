@@ -19,9 +19,15 @@ export type AuthOutcome =
 
 export type Authenticator = (request: Request) => AuthOutcome | Promise<AuthOutcome>
 
+export type SinkContext = {
+  request: Request
+  receivedAt: number
+}
+
 export type BatchSink = (
   batch: ParsedBatch,
   principal: IngestPrincipal,
+  context: SinkContext,
 ) => Promise<unknown> | undefined
 
 export type IngestDeps = {
@@ -29,6 +35,7 @@ export type IngestDeps = {
   sink: BatchSink
   defer?: (work: Promise<unknown>) => void
   onError?: (error: unknown) => void
+  now?: () => number
   body?: ReadBodyOptions
 }
 
@@ -40,6 +47,21 @@ export const DENIED_WITHOUT_A_KEY_STORE: AuthOutcome = {
 
 export function denyAll(): AuthOutcome {
   return DENIED_WITHOUT_A_KEY_STORE
+}
+
+type DeferFn = (work: Promise<unknown>) => void
+
+function platformDefer(c: { executionCtx?: unknown }): DeferFn | undefined {
+  let ctx: unknown
+  try {
+    ctx = c.executionCtx
+  } catch {
+    return undefined
+  }
+  const waitUntil = (ctx as { waitUntil?: unknown } | undefined)?.waitUntil
+  return typeof waitUntil === 'function'
+    ? (work) => (waitUntil as (work: Promise<unknown>) => void).call(ctx, work)
+    : undefined
 }
 
 function report(deps: IngestDeps, error: unknown): void {
@@ -94,16 +116,22 @@ export function createIngestApp(deps: IngestDeps): Hono {
       return refuse(parsed.code, parsed.message)
     }
 
+    const context: SinkContext = {
+      request: c.req.raw,
+      receivedAt: (deps.now ?? Date.now)(),
+    }
+
     const written = (async () => {
       try {
-        await deps.sink(parsed.batch, auth.principal)
+        await deps.sink(parsed.batch, auth.principal, context)
       } catch (error) {
         report(deps, error)
       }
     })()
 
-    if (deps.defer) {
-      deps.defer(written)
+    const deferred = platformDefer(c) ?? deps.defer
+    if (deferred) {
+      deferred(written)
     } else {
       await written
     }

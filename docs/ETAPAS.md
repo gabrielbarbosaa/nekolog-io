@@ -66,7 +66,7 @@
 - [x] **1.6** `feat/node-sdk` — `@nekolog-io/node`: `AsyncLocalStorage`, hooks do `process` e flush no `SIGTERM`.
 - [x] **1.7** `feat/ingest-app` — `apps/ingest` com Hono: `POST /v1/logs`, validação, limites de tamanho e `/health`.
 - [x] **1.8** `feat/ingest-keys` — `KeyStore` (KV e memória), hash das keys, origens permitidas, CORS e key na URL para o `sendBeacon`.
-- [ ] **1.9** `feat/ingest-storage` — `LogStore` para o ClickHouse, com `async_insert` e `waitUntil`.
+- [x] **1.9** `feat/ingest-storage` — `LogStore` para o ClickHouse, com `async_insert` e `waitUntil`.
 - [ ] **1.10** `feat/jobs-worker` — `apps/jobs` com um cron por ambiente que dispara todas as tarefas agendadas.
 - [ ] **1.11** `feat/ingest-spool` — contingência no R2, com token de deduplicação e reenvio pelos jobs.
 - [ ] **1.12** `feat/ingest-limits` — rate limit em memória, limite de atributos por projeto e bloqueio por cota via KV.

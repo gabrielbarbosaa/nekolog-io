@@ -23,7 +23,7 @@ export { KEY_PREFIX, kvKeyFor, kvKeyStore, parseKeyRecord } from './keys/kv-key-
 export type { MemoryKeyStore } from './keys/memory-key-store'
 export { memoryKeyStore } from './keys/memory-key-store'
 export { normaliseOrigin, originAllowed, originMatches } from './keys/origins'
-export type { LogStore, LogStoreInsertResult } from './log-store'
+export type { LogStore, LogStoreInsertOptions, LogStoreInsertResult } from './log-store'
 export type { EmailMessage, Mailer } from './mailer'
 export type { RateLimiter, RateLimitResult } from './rate-limiter'
 export type { RedisClient } from './redis-client'

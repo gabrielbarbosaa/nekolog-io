@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@internal/adapters": "workspace:*",
+    "@internal/clickhouse": "workspace:*",
     "@internal/schema": "workspace:*",
     "hono": "^4.10.6"
   },

@@ -11,25 +11,27 @@ GET  /health       responde se o processo está de pé
 
 ## O que esta etapa entrega, e o que não
 
-As etapas 1.7 e 1.8 entregam a **camada HTTP** (rota, validação, limites de
-tamanho, gzip, formato de erro) e as **keys** (autenticação, origens, CORS).
-Falta a 1.9: gravação no ClickHouse.
+As etapas 1.7, 1.8 e 1.9 entregam a **camada HTTP**, as **keys** e a
+**gravação no ClickHouse**. O caminho completo existe: `log.info()` no SDK vira
+linha na tabela.
+
+Falta a contingência (1.11), o rate limit e a cota (1.12), e o deploy (1.18).
 
 ```ts
-const app = createIngestApp({
-  authenticate: createKeyAuthenticator({
-    keyStore: cachedKeyStore(kvKeyStore(env.KEYS)),
-  }),
-  sink: (batch, principal) => logStore.insert(rowsFor(batch, principal)),
-  defer: (work) => ctx.waitUntil(work),
-  onError: (error) => report(error),
-})
+export default {
+  fetch(request, env, ctx) {
+    return buildIngestApp(assertEnv(env)).fetch(request, env, ctx)
+  },
+}
 ```
 
 `createIngestApp` exige um autenticador e um destino. Não dá para montar um app
 que aceite qualquer um ou que jogue log fora em silêncio — a assinatura não
 permite. `denyAll` existe para quem ainda não tem `KeyStore`: recusa tudo com
 `invalid_key`.
+
+`assertEnv` recusa um Worker sem binding e **diz todos os que faltam de uma
+vez**, em vez de o primeiro request morrer com `undefined is not a function`.
 
 ## Keys
 
@@ -166,6 +168,62 @@ Um erro inesperado responde `500` com mensagem genérica. O `message` do erro
 **nunca** vai para a resposta — ele pode carregar uma key, um caminho de
 arquivo ou uma string de conexão. Vai para o `onError`, e tem teste que
 procura o segredo no corpo da resposta.
+
+## A gravação
+
+O `202` sai assim que o lote é validado. A escrita vai para o `waitUntil` do
+Worker, então uma ida ao ClickHouse não entra no tempo de resposta do SDK. Fora
+de um Worker — self-host em Node, teste — não há `waitUntil`, e aí a escrita é
+esperada mesmo; o app descobre isso sozinho pelo contexto do Hono.
+
+Um erro na escrita **não muda o `202`**. O lote já foi aceito; o que falha vai
+para o `onError` e, a partir da 1.11, para a contingência no R2.
+
+### O que o servidor carimba
+
+| Coluna | De onde vem |
+|---|---|
+| `project_id`, `environment_id` | da **key**, nunca do corpo |
+| `received_at` | do servidor, o mesmo para o lote inteiro |
+| `country` | do `CF-IPCountry`, validado como duas letras |
+| `retention_days` | da configuração do ambiente |
+| `fingerprint` | `0` por enquanto — quem calcula é a etapa 4.5 |
+
+**Nenhum header de IP é lido em lugar nenhum.** Só o país. Tem teste que manda
+`CF-Connecting-IP` e `X-Forwarded-For` e confere que o endereço não aparece na
+linha gravada (ameaça I6).
+
+O `error.message` que difere da `message` do log vai para o atributo
+`error.message` em vez de sumir — a tabela não tem coluna para ele, e descartar
+dado do cliente em silêncio é pior do que guardá-lo num lugar previsível.
+
+As colunas que a linha escreve são conferidas **contra a própria migration**:
+`rows.test.ts` lê `0001_create_logs.sql` e exige que o conjunto bata. Renomear
+uma coluna sem ajustar o mapeamento quebra o teste.
+
+### `async_insert`, e por que ele espera
+
+O insert usa `async_insert=1` com **`wait_for_async_insert=1`**. O primeiro dá
+o agrupamento que o ClickHouse precisa para não sofrer com lote pequeno; o
+segundo mantém a garantia de que a linha foi gravada.
+
+Não esperar seria tentador — mas estamos dentro do `waitUntil`, depois do
+`202`, então a latência não custa nada ao cliente, e sem a espera uma falha
+viraria silêncio. A contingência da 1.11 depende de saber que falhou.
+
+O `batchId` vai como `insert_deduplication_token`. É isso que torna o reenvio
+da contingência seguro: o mesmo lote duas vezes grava uma vez só. Tem teste
+contra o ClickHouse de verdade, mandando o mesmo lote duas vezes e contando.
+
+### Drift de schema não passa em silêncio
+
+`input_format_skip_unknown_fields=0`. Sem isso o ClickHouse **aceita** uma
+linha com coluna que não existe, grava o resto com defaults e devolve sucesso —
+foi o que aconteceu quando testei contra o servidor de verdade. Com a opção, um
+descompasso entre código e tabela falha alto.
+
+O custo: durante um deploy, migration tem que vir antes do código que usa a
+coluna nova. É a ordem que o runner forward-only já impõe.
 
 ## `/health` não consulta nada
 
