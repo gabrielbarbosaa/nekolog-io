@@ -11,26 +11,102 @@ GET  /health       responde se o processo está de pé
 
 ## O que esta etapa entrega, e o que não
 
-A etapa 1.7 entrega a **camada HTTP**: rota, validação, limites de tamanho,
-gzip e o formato estável de erro. Falta a 1.8 (keys, CORS, origens) e a 1.9
-(gravação no ClickHouse).
-
-Por isso **não existe um worker publicável ainda**, e isso é de propósito:
-`createIngestApp` exige um autenticador e um destino. Não dá para montar um app
-que aceite qualquer um ou que jogue log fora em silêncio — a assinatura não
-permite.
+As etapas 1.7 e 1.8 entregam a **camada HTTP** (rota, validação, limites de
+tamanho, gzip, formato de erro) e as **keys** (autenticação, origens, CORS).
+Falta a 1.9: gravação no ClickHouse.
 
 ```ts
 const app = createIngestApp({
-  authenticate: (request) => keyStore.check(request),
+  authenticate: createKeyAuthenticator({
+    keyStore: cachedKeyStore(kvKeyStore(env.KEYS)),
+  }),
   sink: (batch, principal) => logStore.insert(rowsFor(batch, principal)),
   defer: (work) => ctx.waitUntil(work),
   onError: (error) => report(error),
 })
 ```
 
-`denyAll` existe para o caso em que ainda não há `KeyStore`: recusa tudo com
-`invalid_key`. É o único padrão seguro.
+`createIngestApp` exige um autenticador e um destino. Não dá para montar um app
+que aceite qualquer um ou que jogue log fora em silêncio — a assinatura não
+permite. `denyAll` existe para quem ainda não tem `KeyStore`: recusa tudo com
+`invalid_key`.
+
+## Keys
+
+Duas formas de mandar a key, e elas não são intercambiáveis:
+
+| Onde | Quem usa | Qual key |
+|---|---|---|
+| `Authorization: Bearer …` | back-end | `nekolog_sk_` ou `nekolog_pk_` |
+| `?key=…` | browser, via `sendBeacon` | **só** `nekolog_pk_` |
+
+Uma `sk` na query é recusada com `secret_key_in_url` **antes de qualquer
+consulta** — nem o hash dela é calculado. URL aparece em log de proxy, em
+histórico e em referer, então uma key secreta que passou por ali já deve ser
+considerada vazada.
+
+Isso vale **mesmo que o header traga uma key boa**. A query é conferida
+primeiro de propósito: a `sk` já vazou para o log do proxy, e aceitar a request
+porque o header estava certo só esconderia o problema de quem precisa saber.
+
+A busca é **pelo hash SHA-256**, nunca pela key. A key em claro não chega ao
+armazenamento, e é por isso que ela aparece uma vez só, na criação
+(ADR [0006](../../docs/adr/0006-keys-por-ambiente.md)).
+
+Depois da key vêm, nesta ordem: escopo `logs:write`, bloqueio por cota
+(`quota_exceeded`) e origem.
+
+### Origens permitidas
+
+Valem **só para key pública** — é ela que fica visível no código do site. Uma
+key secreta é responsabilidade de quem a guarda, e um header `Origin` numa
+chamada de servidor não quer dizer nada.
+
+| Lista | O que acontece |
+|---|---|
+| `null` | qualquer origem |
+| `[]` | nenhuma |
+| `['https://app.example.com']` | exata, sem diferenciar maiúsculas |
+| `['https://*.example.com']` | qualquer subdomínio |
+| `['*']` | qualquer origem, explicitamente |
+
+Com lista configurada, **request sem `Origin` é recusado**. Sem isso a lista não
+protegeria nada: quem copia a `pk` do seu site manda por `curl`, sem `Origin`
+nenhum.
+
+O curinga confere esquema e sufixo de verdade: `https://*.example.com` aceita
+`a.example.com` e `a.b.example.com`, e recusa `example.com`, `aexample.com`,
+`app.example.com.attacker.test` e `http://app.example.com`. É o erro clássico
+de CORS, e tem teste para cada um desses casos.
+
+Porta faz parte da origem: `*.example.com` não casa `a.example.com:3000`.
+
+## CORS
+
+O preflight responde `204` e ecoa a origem que perguntou. Ele **não decide
+nada** — quem decide é o POST, que é autenticado e passa pela lista. Recusar o
+preflight só trocaria um `403 origin_not_allowed` legível por um erro de rede
+opaco no console de quem está integrando.
+
+`Access-Control-Allow-Credentials` nunca é enviado. Esta API não tem cookie
+para proteger, e ecoar origem com credenciais ligadas é exatamente o buraco que
+se abre sem querer.
+
+Os erros também levam os headers de CORS. Sem isso o SDK de browser veria falha
+de rede em vez de `invalid_key`, e ficaria tentando de novo para sempre em vez
+de parar.
+
+`traceparent` e `tracestate` estão liberados, que é o que permite o trace sair
+do front e continuar no back (PLANO seção 8).
+
+## Cache das keys
+
+`cachedKeyStore` segura a resposta do KV por 60 s na memória do Worker, e
+guarda também a **ausência** — key inválida não vira consulta a cada request.
+Escrever ou apagar pelo próprio cache invalida na hora.
+
+O custo está no ADR 0006: **revogação leva até ~60 s** para valer em todo
+lugar. É o preço de não depender do KV no caminho quente.
 
 ## A ordem importa
 
@@ -81,6 +157,7 @@ de coisa que faz as pessoas desligarem o logging.
 |---|---|
 | `invalid_payload`, `unsupported_schema_version` | 400 |
 | `invalid_key`, `secret_key_in_url` | 401 |
+| `quota_exceeded` | 429 |
 | `origin_not_allowed` | 403 |
 | `payload_too_large` | 413 |
 | `rate_limited`, `quota_exceeded` | 429 |

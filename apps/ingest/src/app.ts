@@ -1,12 +1,16 @@
 import { type BatchErrorCode, type ParsedBatch, parseBatch } from '@internal/schema'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
+import { corsHeadersFor, preflightHeadersFor, withCors } from './cors.ts'
 import { errorBody, statusFor } from './errors.ts'
 
 export type IngestPrincipal = {
   projectId: string
   environmentId: string
   retentionDays?: number
+  keyKind?: 'public' | 'secret'
+  keyLocation?: 'header' | 'query'
+  allowedOrigin?: string | null
 }
 
 export type AuthOutcome =
@@ -66,20 +70,28 @@ export function createIngestApp(deps: IngestDeps): Hono {
 
   app.get('/health', (c) => c.json({ status: 'ok' }))
 
+  app.options('/v1/logs', (c) =>
+    c.body(null, 204, preflightHeadersFor(c.req.header('origin') ?? null)),
+  )
+
   app.post('/v1/logs', async (c) => {
+    const origin = c.req.header('origin') ?? null
+    const refuse = (code: BatchErrorCode, message: string, retryAfter: number | null = null) =>
+      withCors(fail(code, message, retryAfter), origin)
+
     const auth = await deps.authenticate(c.req.raw)
     if (!auth.ok) {
-      return fail(auth.code, auth.message, auth.retryAfter ?? null)
+      return refuse(auth.code, auth.message, auth.retryAfter ?? null)
     }
 
     const body = await readBatchBody(c.req.raw, deps.body)
     if (!body.ok) {
-      return fail(body.code, body.message)
+      return refuse(body.code, body.message)
     }
 
     const parsed = parseBatch(body.value)
     if (!parsed.ok) {
-      return fail(parsed.code, parsed.message)
+      return refuse(parsed.code, parsed.message)
     }
 
     const written = (async () => {
@@ -96,7 +108,11 @@ export function createIngestApp(deps: IngestDeps): Hono {
       await written
     }
 
-    return c.json({ accepted: parsed.batch.accepted.length, rejected: parsed.batch.rejected }, 202)
+    return c.json(
+      { accepted: parsed.batch.accepted.length, rejected: parsed.batch.rejected },
+      202,
+      corsHeadersFor(origin),
+    )
   })
 
   app.notFound(() =>
