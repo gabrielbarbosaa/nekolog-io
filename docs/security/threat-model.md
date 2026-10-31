@@ -143,6 +143,27 @@ Registrar o que **não** está coberto é tão importante quanto o que está.
 - **Uma pessoa só revisa os PRs.** O GitHub não permite aprovar o próprio PR,
   então não há revisão obrigatória até entrar um segundo mantenedor.
 
+### Achados do Scorecard aceitos
+
+O [OpenSSF Scorecard](../../.github/workflows/scorecard.yml) roda semanalmente e
+publica no Security tab. Estes achados ficam abertos de propósito:
+
+| Achado | Por que fica aberto |
+|---|---|
+| `CodeReviewID` — 0 changesets aprovados | Projeto de uma pessoa; o GitHub não deixa aprovar o próprio PR. Mesmo motivo do item acima. |
+| `BranchProtectionID` — `main` não exige aprovadores | Exigir aprovador travaria o único mantenedor. O que **dá** para proteger está protegido: sem deleção, sem force-push, PR e status checks obrigatórios, assinatura exigida, ninguém com bypass. |
+| `MaintainedID` — repositório com menos de 90 dias | Resolve sozinho com o tempo. |
+| `FuzzingID` — sem fuzzing | Planejado: etapa 1.14 inclui fuzzing do validador de payload. |
+| `CIIBestPracticesID` — sem selo OpenSSF | Não perseguido por enquanto. |
+
+Desde 30/10/2026 esse SARIF sobe com `category: scorecard`. Sem isso ele caía na
+faixa padrão do code scanning e era reportado pelo check `CodeQL`, que então
+falhava em PRs por motivos que **não são vulnerabilidade no código** — "o projeto
+não tem selo OpenSSF" num PR de SDK. Um CI que fica vermelho por algo que não dá
+para resolver ensina a ignorar CI vermelho, que é o oposto do que se quer. A
+análise de código do CodeQL continua obrigatória para o merge; os achados de
+maturidade do Scorecard, não.
+
 ## Próxima revisão
 
 **M1**, quando ingestão, keys e ClickHouse existirem de verdade. Nessa revisão:
