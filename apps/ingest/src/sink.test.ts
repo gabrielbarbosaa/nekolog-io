@@ -4,12 +4,14 @@ import {
   type KeyRecord,
   type LogStore,
   type LogStoreInsertOptions,
+  memoryBlobStore,
   memoryKeyStore,
 } from '@internal/adapters'
+import { decodeSpoolEnvelope, SPOOL_PREFIX, spoolKey } from '@internal/spool'
 import { describe, expect, it, vi } from 'vitest'
 import { createIngestApp } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
-import { createLogStoreSink } from './sink.ts'
+import { createLogStoreSink, type LogStoreSinkOptions, type SpooledBatch } from './sink.ts'
 import { assertEnv, buildIngestApp } from './worker.ts'
 
 const KEY = generateApiKey('secret')
@@ -37,14 +39,20 @@ function recordingStore(behaviour: () => Promise<void> = async () => undefined) 
   return { logStore, inserts }
 }
 
-async function setup(logStore: LogStore, extra: Record<string, unknown> = {}) {
+const RECEIVED_AT = Date.UTC(2026, 9, 31, 15, 30, 45, 125)
+
+async function setup(
+  logStore: LogStore,
+  extra: Record<string, unknown> = {},
+  sink: Partial<LogStoreSinkOptions> = {},
+) {
   const keyStore = memoryKeyStore({ [await hashApiKey(KEY)]: RECORD })
   const onError = vi.fn()
   const app = createIngestApp({
     authenticate: createKeyAuthenticator({ keyStore }),
-    sink: createLogStoreSink({ logStore }),
+    sink: createLogStoreSink({ logStore, now: () => RECEIVED_AT, ...sink }),
     onError,
-    now: () => Date.UTC(2026, 9, 31, 15, 30, 45, 125),
+    now: () => RECEIVED_AT,
     ...extra,
   })
   return { app, onError }
@@ -91,14 +99,14 @@ describe('the log store sink', () => {
     })
   })
 
-  it('uses the batch id as the deduplication token', async () => {
+  it('scopes the deduplication token to the environment, not just the batch id', async () => {
     const { logStore, inserts } = recordingStore()
     const { app } = await setup(logStore)
 
     await app.request(post())
 
     expect(inserts[0]?.options).toEqual({
-      deduplicationToken: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b10',
+      deduplicationToken: 'e_1:01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b10',
     })
   })
 
@@ -138,6 +146,122 @@ describe('the log store sink', () => {
 
     expect(response.status).toBe(202)
     expect(onError).toHaveBeenCalledWith(boom)
+  })
+})
+
+describe('the spool, when ClickHouse refuses', () => {
+  const BATCH_ID = '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b10'
+  const refuses = () =>
+    recordingStore(async () => {
+      throw new Error('Code: 210. DB::NetException: Connection refused')
+    })
+
+  async function spooling(extra: Partial<LogStoreSinkOptions> = {}) {
+    const spool = memoryBlobStore()
+    const spooled: SpooledBatch[] = []
+    const { logStore } = refuses()
+    const { app, onError } = await setup(
+      logStore,
+      {},
+      { spool, onSpooled: (event) => spooled.push(event), ...extra },
+    )
+    return { app, onError, spool, spooled }
+  }
+
+  it('keeps the batch instead of losing it, and still answers 202', async () => {
+    const { app, onError, spool } = await spooling()
+
+    const response = await app.request(post({ 'cf-ipcountry': 'BR' }))
+
+    expect(response.status).toBe(202)
+    expect(onError).not.toHaveBeenCalled()
+    expect(await spool.list(SPOOL_PREFIX)).toEqual([spoolKey(RECEIVED_AT, BATCH_ID)])
+  })
+
+  it('writes the mapped rows and the token the live insert would have used', async () => {
+    const { app, spool } = await spooling()
+
+    await app.request(post({ 'cf-ipcountry': 'BR' }))
+
+    const written = await spool.get(spoolKey(RECEIVED_AT, BATCH_ID))
+    const envelope = decodeSpoolEnvelope(written ?? new Uint8Array())
+
+    expect(envelope).toMatchObject({
+      batchId: BATCH_ID,
+      projectId: 'p_1',
+      environmentId: 'e_1',
+      deduplicationToken: `e_1:${BATCH_ID}`,
+      spooledAt: RECEIVED_AT,
+    })
+    expect(envelope.rows[0]).toMatchObject({ project_id: 'p_1', message: 'hello', country: 'BR' })
+  })
+
+  it('carries no IP into the spool either', async () => {
+    const { app, spool } = await spooling()
+
+    await app.request(post({ 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '203.0.113.9' }))
+
+    const written = await spool.get(spoolKey(RECEIVED_AT, BATCH_ID))
+    expect(new TextDecoder().decode(written ?? new Uint8Array())).not.toContain('203.0.113')
+  })
+
+  it('says what it kept, and how much', async () => {
+    const { app, spooled } = await spooling()
+
+    await app.request(post())
+
+    expect(spooled).toHaveLength(1)
+    expect(spooled[0]).toMatchObject({ key: spoolKey(RECEIVED_AT, BATCH_ID), rows: 1 })
+  })
+
+  it('reports both failures when the spool is down too', async () => {
+    const broken = {
+      ...memoryBlobStore(),
+      async put() {
+        throw new Error('R2 is unreachable')
+      },
+    }
+    const { logStore } = refuses()
+    const { app, onError } = await setup(logStore, {}, { spool: broken })
+
+    const response = await app.request(post())
+
+    expect(response.status).toBe(202)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const reported = String(onError.mock.calls[0]?.[0])
+    expect(reported).toContain('Connection refused')
+    expect(reported).toContain('R2 is unreachable')
+  })
+
+  it('reports the failure when there is no spool configured at all', async () => {
+    const { logStore } = refuses()
+    const { app, onError } = await setup(logStore)
+
+    expect((await app.request(post())).status).toBe(202)
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('writes nothing to the spool when the insert works', async () => {
+    const spool = memoryBlobStore()
+    const { logStore } = recordingStore()
+    const { app } = await setup(logStore, {}, { spool })
+
+    await app.request(post())
+
+    expect(spool.size).toBe(0)
+  })
+
+  it('survives a reporter that throws, because the batch is already safe', async () => {
+    const { app, spool, onError } = await spooling({
+      onSpooled: () => {
+        throw new Error('the log sink is down')
+      },
+    })
+
+    await app.request(post())
+
+    expect(await spool.list(SPOOL_PREFIX)).toHaveLength(1)
+    expect(onError).not.toHaveBeenCalled()
   })
 })
 
@@ -193,6 +317,18 @@ describe('the worker entry', () => {
       async put() {},
       async delete() {},
     },
+    SPOOL: {
+      async put() {
+        return undefined
+      },
+      async get() {
+        return null
+      },
+      async delete() {},
+      async list() {
+        return { objects: [], truncated: false }
+      },
+    },
     CLICKHOUSE_URL: 'http://clickhouse.test:8123',
     CLICKHOUSE_DB: 'nekolog_dev',
     CLICKHOUSE_INSERT_USER: 'nekolog_ingest',
@@ -205,6 +341,7 @@ describe('the worker entry', () => {
 
   it.each([
     'KEYS',
+    'SPOOL',
     'CLICKHOUSE_URL',
     'CLICKHOUSE_DB',
     'CLICKHOUSE_INSERT_USER',

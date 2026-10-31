@@ -176,8 +176,23 @@ Worker, então uma ida ao ClickHouse não entra no tempo de resposta do SDK. For
 de um Worker — self-host em Node, teste — não há `waitUntil`, e aí a escrita é
 esperada mesmo; o app descobre isso sozinho pelo contexto do Hono.
 
-Um erro na escrita **não muda o `202`**. O lote já foi aceito; o que falha vai
-para o `onError` e, a partir da 1.11, para a contingência no R2.
+Um erro na escrita **não muda o `202`**. O lote já foi aceito.
+
+### Quando o ClickHouse recusa: a contingência
+
+O lote vai para o bucket `SPOOL` no R2, com as linhas já mapeadas e o mesmo
+token de deduplicação que o insert teria usado. O `spool-resend` do `apps/jobs`
+reenvia no minuto seguinte, e o token garante que nada entre duas vezes. O
+formato está em [`@internal/spool`](../../internal/spool/README.md).
+
+O `onError` só é chamado quando **as duas** coisas falham — ClickHouse e R2 —, e
+aí a mensagem traz as duas causas, porque "falhou a gravação" sem dizer que a
+contingência também caiu manda o operador para o lado errado. Quando o lote é
+guardado, sai um aviso dizendo qual arquivo e quantas linhas.
+
+O binding `SPOOL` é **obrigatório**: sem ele o Worker não sobe. Subir sem a
+contingência é rodar com uma promessa de durabilidade a menos sem ninguém
+perceber (ameaça D6).
 
 ### O que o servidor carimba
 
@@ -211,9 +226,12 @@ Não esperar seria tentador — mas estamos dentro do `waitUntil`, depois do
 `202`, então a latência não custa nada ao cliente, e sem a espera uma falha
 viraria silêncio. A contingência da 1.11 depende de saber que falhou.
 
-O `batchId` vai como `insert_deduplication_token`. É isso que torna o reenvio
-da contingência seguro: o mesmo lote duas vezes grava uma vez só. Tem teste
-contra o ClickHouse de verdade, mandando o mesmo lote duas vezes e contando.
+O token de deduplicação é `<environmentId>:<batchId>`. É isso que torna o
+reenvio da contingência seguro: o mesmo lote duas vezes grava uma vez só. Tem
+teste contra o ClickHouse de verdade, mandando o mesmo lote duas vezes e
+contando. O ambiente entra no token porque o `batchId` é escolhido pelo cliente
+e a deduplicação do ClickHouse é por partição, compartilhada entre projetos —
+ver [`@internal/spool`](../../internal/spool/README.md).
 
 ### Drift de schema não passa em silêncio
 

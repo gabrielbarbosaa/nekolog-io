@@ -257,6 +257,9 @@ importers:
       '@internal/schema':
         specifier: workspace:*
         version: link:../../internal/schema
+      '@internal/spool':
+        specifier: workspace:*
+        version: link:../../internal/spool
       hono:
         specifier: ^4.10.6
         version: 4.13.14
@@ -273,10 +276,22 @@ importers:
 
   apps/jobs:
     dependencies:
+      '@internal/adapters':
+        specifier: workspace:*
+        version: link:../../internal/adapters
+      '@internal/clickhouse':
+        specifier: workspace:*
+        version: link:../../internal/clickhouse
+      '@internal/spool':
+        specifier: workspace:*
+        version: link:../../internal/spool
       hono:
         specifier: ^4.10.6
         version: 4.13.14
     devDependencies:
+      '@apps/ingest':
+        specifier: workspace:*
+        version: link:../ingest
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -379,6 +394,15 @@ importers:
       valibot:
         specifier: ^1.5.0
         version: 1.5.0(typescript@7.0.2)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  internal/spool:
     devDependencies:
       '@types/node':
         specifier: ^24.0.0

@@ -38,7 +38,7 @@ export {
   rowsFor,
   UNRESOLVED_FINGERPRINT,
 } from './rows.ts'
-export type { LogStoreSinkOptions } from './sink.ts'
+export type { LogStoreSinkOptions, SpooledBatch } from './sink.ts'
 export { createLogStoreSink } from './sink.ts'
 export type { ExecutionContextLike, IngestEnv } from './worker.ts'
 export { assertEnv, buildIngestApp } from './worker.ts'
