@@ -63,7 +63,7 @@
 - [x] **1.3** `feat/core-logger` — `@nekolog-io/core`: níveis, `child()` e contexto.
 - [x] **1.4** `feat/core-transport` — envio em lote, retry com backoff, respeito ao `429 Retry-After`, `flush()` e fila com limite.
 - [x] **1.5** `feat/core-privacy` — remoção de dados sensíveis, amostragem e `beforeSend`.
-- [ ] **1.6** `feat/node-sdk` — `@nekolog-io/node`: `AsyncLocalStorage`, hooks do `process` e flush no `SIGTERM`.
+- [x] **1.6** `feat/node-sdk` — `@nekolog-io/node`: `AsyncLocalStorage`, hooks do `process` e flush no `SIGTERM`.
 - [ ] **1.7** `feat/ingest-app` — `apps/ingest` com Hono: `POST /v1/logs`, validação, limites de tamanho e `/health`.
 - [ ] **1.8** `feat/ingest-keys` — `KeyStore` (KV e memória), hash das keys, origens permitidas, CORS e key na URL para o `sendBeacon`.
 - [ ] **1.9** `feat/ingest-storage` — `LogStore` para o ClickHouse, com `async_insert` e `waitUntil`.
