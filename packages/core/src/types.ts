@@ -70,9 +70,28 @@ export type TransportTuning = {
   maxRetryDelayMs?: number
 }
 
+export type SamplingTuning = {
+  rate?: number
+  alwaysFrom?: LogLevel | false
+}
+
+export type PrivacyTuning = {
+  enabled?: boolean
+  extraKeys?: string[]
+  skipKeys?: string[]
+  extraPatterns?: RegExp[]
+  scrubText?: boolean
+}
+
+export type BeforeSend = (event: LogEvent) => LogEvent | null | false | undefined
+
 export type LoggerOptions = {
   apiKey?: string
   transport?: TransportTuning
+  sampling?: SamplingTuning
+  privacy?: PrivacyTuning
+  beforeSend?: BeforeSend
+  random?: () => number
   service?: string
   release?: string
   runtime?: Runtime

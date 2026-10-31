@@ -62,7 +62,7 @@
 - [x] **1.2** `feat/clickhouse-migrations` — runner de migrations (especificação 3), tabela `logs`, *materialized view* `logs_per_minute` e usuários só com `INSERT` e só com `SELECT`.
 - [x] **1.3** `feat/core-logger` — `@nekolog-io/core`: níveis, `child()` e contexto.
 - [x] **1.4** `feat/core-transport` — envio em lote, retry com backoff, respeito ao `429 Retry-After`, `flush()` e fila com limite.
-- [ ] **1.5** `feat/core-privacy` — remoção de dados sensíveis, amostragem e `beforeSend`.
+- [x] **1.5** `feat/core-privacy` — remoção de dados sensíveis, amostragem e `beforeSend`.
 - [ ] **1.6** `feat/node-sdk` — `@nekolog-io/node`: `AsyncLocalStorage`, hooks do `process` e flush no `SIGTERM`.
 - [ ] **1.7** `feat/ingest-app` — `apps/ingest` com Hono: `POST /v1/logs`, validação, limites de tamanho e `/health`.
 - [ ] **1.8** `feat/ingest-keys` — `KeyStore` (KV e memória), hash das keys, origens permitidas, CORS e key na URL para o `sendBeacon`.

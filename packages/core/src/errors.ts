@@ -17,10 +17,15 @@ export function isErrorLike(value: unknown): value is Error {
   return typeof candidate.message === 'string' && typeof candidate.name === 'string'
 }
 
-export function errorInfoOf(value: Error): ErrorInfo | undefined {
-  const type = text(value.name)?.slice(0, MAX_ERROR_TYPE_CHARS)
-  const message = text(value.message)
-  const stack = text(value.stack)
+export function sanitiseErrorInfo(value: unknown): ErrorInfo | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const candidate = value as { type?: unknown; message?: unknown; stack?: unknown }
+
+  const type = text(candidate.type)?.slice(0, MAX_ERROR_TYPE_CHARS)
+  const message = text(candidate.message)
+  const stack = text(candidate.stack)
 
   const info: ErrorInfo = {}
   if (type !== undefined) {
@@ -34,6 +39,10 @@ export function errorInfoOf(value: Error): ErrorInfo | undefined {
   }
 
   return Object.keys(info).length === 0 ? undefined : info
+}
+
+export function errorInfoOf(value: Error): ErrorInfo | undefined {
+  return sanitiseErrorInfo({ type: value.name, message: value.message, stack: value.stack })
 }
 
 export function describe(value: unknown): string {

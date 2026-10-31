@@ -9,7 +9,7 @@ export {
 } from './backoff.ts'
 export type { BatchErrorCode, DeliveryDecision } from './codes.ts'
 export { BATCH_ERROR_CODES, decisionForCode, decisionForStatus, isBatchErrorCode } from './codes.ts'
-export { describe, errorInfoOf, isErrorLike } from './errors.ts'
+export { describe, errorInfoOf, isErrorLike, sanitiseErrorInfo } from './errors.ts'
 export {
   buildEvent,
   isoTimestamp,
@@ -18,6 +18,7 @@ export {
   normaliseMessage,
   normaliseSession,
   normaliseTrace,
+  sanitiseEvent,
 } from './event.ts'
 export { isLogLevel, levelRank, passesThreshold } from './levels.ts'
 export {
@@ -35,9 +36,30 @@ export {
   SCHEMA_VERSION,
 } from './limits.ts'
 export { createLogger, DEFAULT_LEVEL } from './logger.ts'
+export type { Pipeline, PipelineOptions } from './pipeline.ts'
+export { createPipeline, redactionPolicyFrom, samplingPolicyFrom } from './pipeline.ts'
 export type { BoundedQueue } from './queue.ts'
 export { boundedQueue, DEFAULT_MAX_QUEUE_EVENTS } from './queue.ts'
+export type { KeyMatcher, RedactionPolicy } from './redact.ts'
+export {
+  cpfValid,
+  createKeyMatcher,
+  DEFAULT_SENSITIVE_KEYS,
+  luhnValid,
+  REDACTED,
+  redactText,
+  scrubEvent,
+} from './redact.ts'
 export { detectRuntime, isRuntime } from './runtime.ts'
+export type { SamplingPolicy } from './sampling.ts'
+export {
+  DEFAULT_ALWAYS_SAMPLE_FROM,
+  DEFAULT_SAMPLE_RATE,
+  normaliseAlwaysSampleFrom,
+  normaliseSampleRate,
+  shouldSample,
+  traceRatio,
+} from './sampling.ts'
 export type { ConsoleLike } from './sinks.ts'
 export { consoleSink, memorySink, nullSink } from './sinks.ts'
 export type {
@@ -64,14 +86,17 @@ export type {
   AttributeInput,
   Attributes,
   AttributeValue,
+  BeforeSend,
   ErrorInfo,
   LogContext,
   LogEvent,
   Logger,
   LoggerOptions,
   LogLevel,
+  PrivacyTuning,
   Resource,
   Runtime,
+  SamplingTuning,
   Sdk,
   SessionContext,
   Sink,

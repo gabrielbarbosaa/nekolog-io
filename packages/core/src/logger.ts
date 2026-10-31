@@ -1,6 +1,12 @@
 import { buildEvent, mergeContexts } from './event.ts'
 import { isLogLevel, passesThreshold } from './levels.ts'
 import { DEFAULT_SERVICE, MAX_RELEASE_CHARS, MAX_SERVICE_CHARS } from './limits.ts'
+import {
+  createPipeline,
+  type Pipeline,
+  redactionPolicyFrom,
+  samplingPolicyFrom,
+} from './pipeline.ts'
 import { detectRuntime, isRuntime } from './runtime.ts'
 import { consoleSink, globalConsole } from './sinks.ts'
 import { createTransport } from './transport.ts'
@@ -73,6 +79,7 @@ type Shared = {
   resource: Resource
   sdk: Sdk
   sink: Sink
+  pipeline: Pipeline
   enabled: boolean
   level: LogLevel
   onError: (error: unknown) => void
@@ -85,7 +92,12 @@ function createChild(shared: Shared, context: LogContext): Logger {
       if (!shared.enabled || !isLogLevel(level) || !passesThreshold(level, shared.level)) {
         return
       }
-      shared.sink.emit(buildEvent({ level, subject, attributes, context, timestamp: shared.now() }))
+      const built = buildEvent({ level, subject, attributes, context, timestamp: shared.now() })
+      const event = shared.pipeline(built)
+      if (event === null) {
+        return
+      }
+      shared.sink.emit(event)
     } catch (error) {
       reportFailure(shared.onError, error)
     }
@@ -158,14 +170,22 @@ function sinkFrom(options: LoggerOptions, resource: Resource, sdk: Sdk): Sink {
 export function createLogger(options: LoggerOptions = {}): Logger {
   const resource = resourceFrom(options)
   const sdk = sdkFrom(options)
+  const onError = options.onError ?? defaultOnError
 
   const shared: Shared = {
     resource,
     sdk,
     sink: sinkFrom(options, resource, sdk),
+    pipeline: createPipeline({
+      sampling: samplingPolicyFrom(options),
+      redaction: redactionPolicyFrom(options),
+      beforeSend: options.beforeSend,
+      random: options.random ?? Math.random,
+      onError: (error) => reportFailure(onError, error),
+    }),
     enabled: options.enabled !== false,
     level: isLogLevel(options.level) ? options.level : DEFAULT_LEVEL,
-    onError: options.onError ?? defaultOnError,
+    onError,
     now: options.now ?? Date.now,
   }
 
