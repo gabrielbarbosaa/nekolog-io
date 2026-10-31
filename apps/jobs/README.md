@@ -3,9 +3,53 @@
 O Worker agendado do NekoLog. Um único cron por ambiente acorda este app a cada
 minuto e ele decide quais tarefas rodam naquele minuto.
 
-Nesta etapa (1.10) existe só o despachante. As tarefas de verdade chegam depois:
-reenvio da contingência do R2 (1.11), bloqueio por cota (1.12), *heartbeat* e
-alertas de infraestrutura (2.24) e as regras de alerta (5.1).
+Tarefas registradas hoje: **`spool-resend`** (1.11). Faltam o bloqueio por cota
+(1.12), o *heartbeat* e os alertas de infraestrutura (2.24) e as regras de
+alerta (5.1).
+
+## Bindings
+
+| Binding | Para quê |
+|---|---|
+| `SPOOL` (R2) | a contingência que o `spool-resend` esvazia |
+| `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | destino do reenvio |
+| `CLICKHOUSE_JOBS_USER`, `CLICKHOUSE_JOBS_PASSWORD` | credencial dos jobs |
+| `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | só quando o ClickHouse está atrás do Access |
+| `JOBS_VERSION` | aparece no `/health` |
+
+Faltando qualquer um dos obrigatórios, o Worker não sobe e diz todos os que
+faltam de uma vez.
+
+## `spool-resend`
+
+Roda a cada minuto. Pega os arquivos mais antigos de `spool/` (50 por vez, para
+caber no tique), reenvia cada um com o token de deduplicação gravado no próprio
+arquivo e só então apaga.
+
+- **Insert primeiro, `delete` depois.** Se o `delete` falhar, o arquivo volta no
+  minuto seguinte e o token faz o ClickHouse gravar uma vez só. A ordem
+  contrária perderia o lote numa falha de rede.
+- **Para no primeiro erro que pode passar.** Se o ClickHouse está fora, os
+  outros 49 arquivos vão falhar igual: insistir só queima o orçamento do tique.
+  A varredura para e volta no minuto seguinte.
+- **Não para no erro que nunca vai passar.** Um `400` do ClickHouse significa
+  que aqueles bytes nunca serão aceitos (coluna que não existe, por exemplo).
+  Esse arquivo vai para `quarantine/` e a varredura continua — senão um único
+  lote envenenado travaria a fila para sempre. Qualquer outro código
+  (`403`, `5xx`, falha de rede) é tratado como temporário: credencial errada e
+  servidor fora voltam a funcionar, e quarentenar tudo nesses casos seria pior
+  que esperar.
+- **Também vão para a quarentena** o arquivo que não dá para ler, a chave que
+  não é uma chave de spool e o lote mais velho que a janela de retenção (7
+  dias), que o TTL apagaria assim que fosse gravado.
+- **Quarentena é cópia e só depois remoção.** Se a cópia falhar, o arquivo fica
+  onde está.
+
+O que cada execução fez aparece no `detail` do resumo:
+`{ resent, rows, quarantined, undeleted, stopped }`.
+
+Nada apaga a `quarantine/` sozinho — é o operador que olha (runbook de
+incidente) e decide. O alerta de acúmulo é a etapa 2.24.
 
 ## Por que um cron só
 
@@ -100,6 +144,12 @@ existe — vem junto com o empacotamento dos apps.
 pnpm --filter @apps/jobs test
 ```
 
-Não há teste de integração aqui ainda porque não há tarefa que fale com serviço
-externo. Quando a 1.11 chegar, o reenvio da contingência é testado contra o
-Garage e o ClickHouse de verdade, como manda a filosofia de testes do projeto.
+`tests/spool.integration.test.ts` roda contra um ClickHouse **de verdade**: ele
+manda um lote para a ingestão com o ClickHouse fora do ar, confere que o lote
+ficou na contingência, reenvia, e confere que a linha apareceu — e que reenviar
+o mesmo arquivo de novo não duplica. É por isso que `@apps/ingest` está aqui
+como dependência de desenvolvimento: o que não pode divergir é o formato que um
+grava e o outro lê, e o jeito de garantir isso é usar os dois no mesmo teste.
+
+Sem um ClickHouse acessível esses testes são pulados, com aviso no stderr; no
+CI, `CLICKHOUSE_TEST_REQUIRED=1` transforma o skip em erro.

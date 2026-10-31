@@ -12,6 +12,7 @@ export type TaskOutcome = {
   status: TaskStatus
   durationMs: number
   error?: string
+  detail?: Record<string, unknown>
 }
 
 export type RunSummary = {
@@ -37,6 +38,12 @@ function describe(error: unknown): string {
   return single.length > MAX_ERROR_CHARS ? `${single.slice(0, MAX_ERROR_CHARS)}…` : single
 }
 
+function asDetail(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
 async function runOne(
   task: Task,
   context: Omit<TaskContext, 'signal'>,
@@ -57,15 +64,22 @@ async function runOne(
   const started = (async () => task.run({ ...context, signal: controller.signal }))()
 
   try {
-    const status = await Promise.race([started.then((): 'ok' => 'ok'), expired])
-    return status === 'ok'
-      ? { name: task.name, status, durationMs: now() - startedAt }
-      : {
-          name: task.name,
-          status,
-          durationMs: now() - startedAt,
-          error: `No answer within ${timeoutMs} ms`,
-        }
+    const finished = await Promise.race([started.then((value) => ({ value })), expired])
+    if (finished === 'timed_out') {
+      return {
+        name: task.name,
+        status: 'timed_out',
+        durationMs: now() - startedAt,
+        error: `No answer within ${timeoutMs} ms`,
+      }
+    }
+    const detail = asDetail(finished.value)
+    return {
+      name: task.name,
+      status: 'ok',
+      durationMs: now() - startedAt,
+      ...(detail === undefined ? {} : { detail }),
+    }
   } catch (error) {
     return {
       name: task.name,

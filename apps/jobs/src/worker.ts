@@ -1,10 +1,20 @@
+import { type R2BucketLike, r2BlobStore } from '@internal/adapters'
+import { clickHouseLogStore } from '@internal/clickhouse/log-store'
 import type { Hono } from 'hono'
 import { createJobsApp } from './app.ts'
 import { type RunSummary, runDueTasks } from './run.ts'
 import type { Task } from './task.ts'
-import { SCHEDULED_TASKS } from './tasks.ts'
+import type { SpoolResendEvent } from './tasks/spool-resend.ts'
+import { buildTasks } from './tasks.ts'
 
 export type JobsEnv = {
+  SPOOL: R2BucketLike
+  CLICKHOUSE_URL: string
+  CLICKHOUSE_DB: string
+  CLICKHOUSE_JOBS_USER: string
+  CLICKHOUSE_JOBS_PASSWORD: string
+  CF_ACCESS_CLIENT_ID?: string
+  CF_ACCESS_CLIENT_SECRET?: string
   JOBS_VERSION?: string
 }
 
@@ -17,13 +27,66 @@ export type ExecutionContextLike = {
   waitUntil: (work: Promise<unknown>) => void
 }
 
-export function writeSummary(summary: RunSummary): void {
-  const target = (globalThis as { console?: { log?: (...args: unknown[]) => void } }).console
+const REQUIRED: ReadonlyArray<keyof JobsEnv> = [
+  'SPOOL',
+  'CLICKHOUSE_URL',
+  'CLICKHOUSE_DB',
+  'CLICKHOUSE_JOBS_USER',
+  'CLICKHOUSE_JOBS_PASSWORD',
+]
+
+export function assertEnv(env: Partial<JobsEnv>): JobsEnv {
+  const missing = REQUIRED.filter((name) => {
+    const value = env[name]
+    return value === undefined || value === null || value === ''
+  })
+  if (missing.length > 0) {
+    throw new Error(`The jobs worker is missing bindings: ${missing.join(', ')}`)
+  }
+  return env as JobsEnv
+}
+
+function write(level: 'log' | 'warn', ...args: unknown[]): void {
+  const target = (
+    globalThis as unknown as {
+      console?: Record<string, ((...args: unknown[]) => void) | undefined>
+    }
+  ).console
   try {
-    target?.log?.(JSON.stringify({ app: 'nekolog/jobs', ...summary }))
+    target?.[level]?.(...args)
   } catch {
     return
   }
+}
+
+export function writeSummary(summary: RunSummary): void {
+  write('log', JSON.stringify({ app: 'nekolog/jobs', ...summary }))
+}
+
+export function writeSpoolEvent(event: SpoolResendEvent): void {
+  if (event.kind === 'resent') {
+    return
+  }
+  write('warn', '[nekolog/jobs] spool', JSON.stringify({ kind: event.kind, key: event.key }))
+}
+
+export function buildJobTasks(env: JobsEnv): readonly Task[] {
+  return buildTasks({
+    spool: r2BlobStore(env.SPOOL),
+    logStore: clickHouseLogStore({
+      url: env.CLICKHOUSE_URL,
+      database: env.CLICKHOUSE_DB,
+      user: env.CLICKHOUSE_JOBS_USER,
+      password: env.CLICKHOUSE_JOBS_PASSWORD,
+      ...(env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET
+        ? {
+            accessClientId: env.CF_ACCESS_CLIENT_ID,
+            accessClientSecret: env.CF_ACCESS_CLIENT_SECRET,
+          }
+        : {}),
+    }),
+    onSpoolEvent: writeSpoolEvent,
+  })
 }
 
 export function assertNoFailures(summary: RunSummary): RunSummary {
@@ -38,15 +101,15 @@ export function assertNoFailures(summary: RunSummary): RunSummary {
 }
 
 export type RunScheduledOptions = {
-  tasks?: readonly Task[]
+  tasks: readonly Task[]
   onSummary?: (summary: RunSummary) => void
 }
 
 export async function runScheduled(
   event: ScheduledEventLike,
-  options: RunScheduledOptions = {},
+  options: RunScheduledOptions,
 ): Promise<RunSummary> {
-  const summary = await runDueTasks(options.tasks ?? SCHEDULED_TASKS, {
+  const summary = await runDueTasks(options.tasks, {
     scheduledAt: event.scheduledTime,
     cron: event.cron,
     onSummary: options.onSummary ?? writeSummary,
@@ -54,23 +117,33 @@ export async function runScheduled(
   return assertNoFailures(summary)
 }
 
-let cached: Hono | undefined
+let cachedTasks: readonly Task[] | undefined
+let cachedApp: Hono | undefined
+
+function tasksFor(env: Partial<JobsEnv>): readonly Task[] {
+  cachedTasks ??= buildJobTasks(assertEnv(env))
+  return cachedTasks
+}
 
 export default {
-  fetch(request: Request, env: JobsEnv, ctx: ExecutionContextLike): Response | Promise<Response> {
-    cached ??= createJobsApp({
-      taskCount: SCHEDULED_TASKS.length,
+  fetch(
+    request: Request,
+    env: Partial<JobsEnv>,
+    ctx: ExecutionContextLike,
+  ): Response | Promise<Response> {
+    cachedApp ??= createJobsApp({
+      taskCount: tasksFor(env).length,
       ...(env?.JOBS_VERSION ? { version: env.JOBS_VERSION } : {}),
     })
-    return cached.fetch(request, env, ctx as Parameters<Hono['fetch']>[2])
+    return cachedApp.fetch(request, env, ctx as Parameters<Hono['fetch']>[2])
   },
 
   scheduled(
     event: ScheduledEventLike,
-    _env: JobsEnv,
+    env: Partial<JobsEnv>,
     ctx: ExecutionContextLike,
   ): Promise<RunSummary> {
-    const work = runScheduled(event)
+    const work = runScheduled(event, { tasks: tasksFor(env) })
     ctx.waitUntil(work)
     return work
   },

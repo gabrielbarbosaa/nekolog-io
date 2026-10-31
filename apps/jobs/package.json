@@ -8,9 +8,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@internal/adapters": "workspace:*",
+    "@internal/clickhouse": "workspace:*",
+    "@internal/spool": "workspace:*",
     "hono": "^4.10.6"
   },
   "devDependencies": {
+    "@apps/ingest": "workspace:*",
     "@types/node": "^24.0.0",
     "vitest": "^5.0.5"
   }

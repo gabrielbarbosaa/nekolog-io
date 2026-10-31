@@ -1,4 +1,8 @@
 export type { BlobStore } from './blob-store'
+export type { MemoryBlobStore } from './blobs/memory-blob-store'
+export { memoryBlobStore } from './blobs/memory-blob-store'
+export type { R2BucketLike, R2ListedLike, R2ObjectBodyLike } from './blobs/r2-blob-store'
+export { R2_LIST_PAGE, r2BlobStore } from './blobs/r2-blob-store'
 export type { KeyRecord, KeyStore } from './key-store'
 export type { CachedKeyStoreOptions } from './keys/cached-key-store'
 export {

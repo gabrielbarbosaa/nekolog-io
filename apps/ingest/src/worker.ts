@@ -1,12 +1,19 @@
-import { cachedKeyStore, type KvNamespace, kvKeyStore } from '@internal/adapters'
+import {
+  cachedKeyStore,
+  type KvNamespace,
+  kvKeyStore,
+  type R2BucketLike,
+  r2BlobStore,
+} from '@internal/adapters'
 import { clickHouseLogStore } from '@internal/clickhouse/log-store'
 import type { Hono } from 'hono'
 import { createIngestApp } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
-import { createLogStoreSink } from './sink.ts'
+import { createLogStoreSink, type SpooledBatch } from './sink.ts'
 
 export type IngestEnv = {
   KEYS: KvNamespace
+  SPOOL: R2BucketLike
   CLICKHOUSE_URL: string
   CLICKHOUSE_DB: string
   CLICKHOUSE_INSERT_USER: string
@@ -21,6 +28,7 @@ export type ExecutionContextLike = {
 
 const REQUIRED: ReadonlyArray<keyof IngestEnv> = [
   'KEYS',
+  'SPOOL',
   'CLICKHOUSE_URL',
   'CLICKHOUSE_DB',
   'CLICKHOUSE_INSERT_USER',
@@ -47,6 +55,19 @@ function reportToConsole(error: unknown): void {
   }
 }
 
+function reportSpooled(spooled: SpooledBatch): void {
+  const target = (globalThis as { console?: { warn?: (...args: unknown[]) => void } }).console
+  try {
+    target?.warn?.(
+      '[nekolog/ingest] spooled',
+      JSON.stringify({ key: spooled.key, rows: spooled.rows }),
+      spooled.reason,
+    )
+  } catch {
+    return
+  }
+}
+
 export function buildIngestApp(env: IngestEnv): Hono {
   const logStore = clickHouseLogStore({
     url: env.CLICKHOUSE_URL,
@@ -63,7 +84,11 @@ export function buildIngestApp(env: IngestEnv): Hono {
 
   return createIngestApp({
     authenticate: createKeyAuthenticator({ keyStore: cachedKeyStore(kvKeyStore(env.KEYS)) }),
-    sink: createLogStoreSink({ logStore }),
+    sink: createLogStoreSink({
+      logStore,
+      spool: r2BlobStore(env.SPOOL),
+      onSpooled: reportSpooled,
+    }),
     onError: reportToConsole,
   })
 }

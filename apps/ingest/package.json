@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run"
@@ -11,6 +14,7 @@
     "@internal/adapters": "workspace:*",
     "@internal/clickhouse": "workspace:*",
     "@internal/schema": "workspace:*",
+    "@internal/spool": "workspace:*",
     "hono": "^4.10.6"
   },
   "devDependencies": {
