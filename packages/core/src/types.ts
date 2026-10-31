@@ -59,8 +59,20 @@ export type Sink = {
   flush?(): Promise<void>
 }
 
+export type TransportTuning = {
+  endpoint?: string
+  maxQueueEvents?: number
+  maxBatchEvents?: number
+  maxBatchBytes?: number
+  flushIntervalMs?: number
+  maxRetries?: number
+  baseRetryDelayMs?: number
+  maxRetryDelayMs?: number
+}
+
 export type LoggerOptions = {
   apiKey?: string
+  transport?: TransportTuning
   service?: string
   release?: string
   runtime?: Runtime

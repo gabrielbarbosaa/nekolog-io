@@ -4,6 +4,10 @@ export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] a
 
 export const RUNTIMES = ['browser', 'node', 'edge', 'bun', 'deno'] as const
 
+export const MIN_EVENTS_PER_BATCH = 1
+export const MAX_EVENTS_PER_BATCH = 500
+export const MAX_BATCH_BYTES: number = 512 * 1024
+
 export const DEFAULT_SERVICE = 'default'
 export const MAX_SERVICE_CHARS = 128
 export const MAX_RELEASE_CHARS = 64

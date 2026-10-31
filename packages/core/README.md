@@ -17,15 +17,77 @@ await log.flush()
 
 ## O que esta etapa entrega, e o que não
 
-A etapa 1.3 é o **logger**. O envio ainda não existe: o transporte em lote, o
-retry com backoff e o `flush()` de verdade chegam na 1.4; amostragem,
-`beforeSend` e remoção de dados sensíveis, na 1.5.
+As etapas 1.3 e 1.4 entregam o **logger** e o **transporte**. Falta a 1.5:
+amostragem, `beforeSend` e remoção de dados sensíveis.
 
-Por isso, sem um `sink`, o logger escreve no `console`. É a única opção honesta
-hoje — não existe para onde mandar. Quando a 1.4 chegar, um logger criado com
-`apiKey` vai usar o transporte em lote, e o `console` volta a ser o que é: um
-`sink` entre outros. A opção `apiKey` já existe na assinatura para a API
-pública não mudar de forma, mas **hoje ela não é usada**.
+Com `apiKey`, o logger usa o transporte em lote. Sem `apiKey` e sem `sink`, ele
+escreve no `console`.
+
+Compressão gzip do corpo ainda não é feita — a API aceita, mas é opcional, e
+entra junto com o SDK de browser.
+
+## Transporte
+
+```ts
+const log = createLogger({
+  apiKey: process.env.NEKOLOG_KEY,
+  service: 'core-service',
+  transport: { flushIntervalMs: 2000, maxQueueEvents: 5000 },
+})
+
+await log.flush()
+```
+
+Os eventos entram numa fila e saem em lote: quando a fila atinge o tamanho do
+lote, quando o timer dispara, ou quando alguém chama `flush()`. Em serverless,
+`flush()` antes de devolver a resposta é obrigatório.
+
+A key vai no header `Authorization: Bearer`, **nunca na URL** — URL aparece em
+log de proxy, e a própria API recusa uma key secreta na query. Tem teste para
+isso.
+
+### O lote
+
+| Regra | Valor |
+|---|---|
+| eventos por lote | no máximo 500 |
+| tamanho do lote | no máximo 512 KB |
+| fila | 1.000 eventos por padrão |
+
+Um lote grande demais é partido ao meio até caber, sem perder nem reordenar
+evento. Um evento que sozinho não cabe é descartado e **contado** — `onDrop`
+recebe `('event_too_large')`, porque perder log em silêncio é pior do que
+perder log.
+
+O `batchId` é um UUID v7 gerado sem dependência, e é o **mesmo em todas as
+tentativas** do mesmo lote. É isso que deixa o servidor deduplicar um reenvio.
+
+Fila cheia descarta o **mais antigo**: o que importa num incidente é o estado
+agora. Os descartes são contados em `transport.dropped` e avisados pelo
+`onDrop`.
+
+### Retry
+
+Exponencial com *jitter*, começando em 500 ms, teto de 30 s, 5 tentativas.
+Repete em 5xx, 408, 429 e falha de rede.
+
+O `Retry-After` é respeitado ao pé da letra, em segundos ou em data HTTP.
+**Se o servidor pedir mais do que o teto do backoff**, o transporte não
+espera bloqueando nem volta antes da hora: ele guarda os eventos, se declara
+pausado até aquele instante e não manda mais nada até lá. Pedir 300 s por cota
+estourada e receber uma tentativa em 30 s é exatamente o que o servidor queria
+evitar.
+
+### Quando ele desiste de vez
+
+Alguns erros não mudam de ideia com insistência: `invalid_key`,
+`origin_not_allowed`, `secret_key_in_url` e `unsupported_schema_version`. Neles
+o transporte **para**, esvazia a fila, avisa pelo `onError` e passa a descartar
+o que chegar. Ficar martelando uma key inválida só gera ruído e custo.
+
+Já `invalid_payload` e `payload_too_large` descartam **aquele lote** e seguem.
+E eventos recusados dentro de um lote aceito (`202` com `rejected`) chegam no
+`onReject`, sem reenviar o lote.
 
 ## Níveis
 
@@ -96,6 +158,9 @@ Esta é a regra mais importante do SDK. Toda entrada pública é envolvida: se o
 `sink` lança, se o relógio lança, se um getter de atributo lança, se o próprio
 `onError` lança — o app não vê nada. O `onError` padrão escreve um aviso no
 console; dá para trocar ou silenciar.
+
+Vale igualmente para o transporte: rede caindo, corpo que não é JSON, `onDrop`
+que lança, runtime sem `fetch`. Nada disso sobe para o app.
 
 Os testes provam isso quebrando cada uma dessas peças de propósito.
 
