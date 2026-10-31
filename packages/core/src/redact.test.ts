@@ -191,6 +191,86 @@ describe('text redaction', () => {
     expect(redactText(text)).toBe(text)
   })
 
+  describe('key=value inside free text', () => {
+    const matches = createKeyMatcher()
+    const redact = (text: string) => redactText(text, [], matches)
+
+    it.each([
+      ['password=hunter2', `password=${REDACTED}`],
+      ['password: hunter2', `password: ${REDACTED}`],
+      ['API_KEY = abc123', `API_KEY = ${REDACTED}`],
+      ['{"password":"hunter2"}', `{"password":${REDACTED}}`],
+      ["{'secret': 'shh'}", `{'secret': ${REDACTED}}`],
+      ['/login?token=abc123&user=ana', `/login?token=${REDACTED}&user=ana`],
+      ['authorization: Bearer abc.def', `authorization: ${REDACTED}`],
+      ['x-api-key: Token zzz', `x-api-key: ${REDACTED}`],
+    ])('redacts %s', (input, expected) => {
+      expect(redact(input)).toBe(expected)
+    })
+
+    it.each([
+      'user=ana',
+      'orderId=42',
+      'took=18ms',
+      'time: 12:30',
+      'url=https://nekolog.io/docs',
+      'author: Gabriel',
+    ])('leaves %s alone', (input) => {
+      expect(redact(input)).toBe(input)
+    })
+
+    it('redacts only the sensitive pair in a line of many', () => {
+      expect(redact('user=ana password=hunter2 step=login')).toBe(
+        `user=ana password=${REDACTED} step=login`,
+      )
+    })
+
+    it('does not let an innocent key swallow the sensitive pair after it', () => {
+      expect(redact('callback failed: ?secret=zzz&id=9')).toBe(
+        `callback failed: ?secret=${REDACTED}&id=9`,
+      )
+      expect(redact('note: see token=abc for details')).toBe(
+        `note: see token=${REDACTED} for details`,
+      )
+      expect(redact('a=1 b=2 c=3 password=x')).toBe(`a=1 b=2 c=3 password=${REDACTED}`)
+    })
+
+    it('finds every sensitive pair, not just the first', () => {
+      expect(redact('token=a user=ana secret=b')).toBe(
+        `token=${REDACTED} user=ana secret=${REDACTED}`,
+      )
+    })
+
+    it('does not match a sensitive word that is part of a longer key', () => {
+      expect(redact('not_a_password_field_here=1')).toBe(`not_a_password_field_here=${REDACTED}`)
+      expect(redact('username=ana')).toBe('username=ana')
+    })
+
+    it('is off when no key matcher is given, which is the old signature', () => {
+      expect(redactText('password=hunter2')).toBe('password=hunter2')
+    })
+
+    it('reaches the message and the attributes through the policy', () => {
+      const scrubbed = scrubEvent(
+        event({
+          message: 'POST /login?token=abc123 failed',
+          attributes: { note: 'tried password=hunter2' },
+        }),
+        policy(),
+      )
+
+      expect(scrubbed.message).toBe(`POST /login?token=${REDACTED} failed`)
+      expect(scrubbed.attributes?.note).toBe(`tried password=${REDACTED}`)
+    })
+
+    it('respects skipKeys and extraKeys', () => {
+      const custom = createKeyMatcher(['prontuario'], ['tokenCount'])
+
+      expect(redactText('tokenCount=12', [], custom)).toBe('tokenCount=12')
+      expect(redactText('prontuario=p-1', [], custom)).toBe(`prontuario=${REDACTED}`)
+    })
+  })
+
   it.each([
     ['colons without an at sign', `//${'a:'.repeat(MAX_MESSAGE_BYTES / 2)}`],
     ['colons and slashes', `//${'a:b'.repeat(MAX_MESSAGE_BYTES / 3)}`],
@@ -199,9 +279,14 @@ describe('text redaction', () => {
     ['repeated JWT prefixes', 'eyJ'.repeat(MAX_MESSAGE_BYTES / 3)],
     ['repeated auth schemes', 'bearer '.repeat(MAX_MESSAGE_BYTES / 7)],
     ['mixed punctuation', 'a:b@c/d.'.repeat(MAX_MESSAGE_BYTES / 8)],
+    ['sensitive pairs back to back', 'password='.repeat(MAX_MESSAGE_BYTES / 9)],
+    ['ordinary pairs back to back', 'x=1 '.repeat(MAX_MESSAGE_BYTES / 4)],
+    ['quotes that never close', 'secret:"'.repeat(MAX_MESSAGE_BYTES / 8)],
+    ['nothing but quotes', '"'.repeat(MAX_MESSAGE_BYTES)],
+    ['long keys that nearly match', `${'token_'.repeat(20)}=1 `.repeat(120)],
   ])('stays fast on a full-size message of %s', (_name, input) => {
     const start = performance.now()
-    const out = redactText(input)
+    const out = redactText(input, [], createKeyMatcher())
     const elapsed = performance.now() - start
 
     expect(out.length).toBeGreaterThan(0)

@@ -229,7 +229,7 @@ log.child({ requestId }).error(err, { step: 'pagamento' })
 await log.flush() // essencial em serverless
 ```
 
-- Remoção de dados sensíveis por padrão: `password`, `token`, `authorization`, `cpf`, números de cartão. A busca é por **chave** (qualquer segmento do caminho achatado) e por **valor** no texto: cartão validado por Luhn, CPF pelos dígitos verificadores, JWT, `Bearer`/`Basic`, credencial dentro de URL e a própria key do NekoLog. A validação existe para não apagar um id de pedido só porque tem 16 dígitos.
+- Remoção de dados sensíveis por padrão: `password`, `token`, `authorization`, `cpf`, números de cartão. A busca é por **chave** (qualquer segmento do caminho achatado) e por **valor** no texto: par `chave=valor` com chave sensível (`?token=abc`, `{"password":"x"}`), cartão validado por Luhn, CPF pelos dígitos verificadores, JWT, `Bearer`/`Basic`, credencial dentro de URL e a própria key do NekoLog. A validação existe para não apagar um id de pedido só porque tem 16 dígitos.
 - **A remoção é a última etapa do pipeline**, depois do `beforeSend`: o gancho vê o evento cru e pode rotear por ele, mas não consegue desfazer a remoção. O que o `beforeSend` devolve é revalidado contra o contrato da ingestão. A amostragem é **consistente por trace** (hash do `traceId`), para uma request não ficar pela metade, e `error`/`fatal` não são amostrados por padrão, porque alerta e issue contam erro. Detalhes e alternativas descartadas no ADR [0014](adr/0014-ordem-do-pipeline-de-privacidade-do-sdk.md).
 - SDK de browser com meta de menos de 5 KB gzip, verificada no CI com `size-limit`.
 - Para o `traceparent` ir do front ao back, o back-end precisa liberar esse header no CORS; isso entra no guia de cada framework.

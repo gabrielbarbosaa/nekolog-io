@@ -71,6 +71,9 @@ export function createKeyMatcher(
   }
 }
 
+const PAIR_HEAD = /(^|[^A-Za-z0-9_.-])([A-Za-z][A-Za-z0-9_.-]{0,63})(['"]?\s*[=:]\s*)/g
+const PAIR_VALUE =
+  /(?:(?:[Bb]earer|[Bb]asic|[Tt]oken|[Dd]igest)\s+)?(?:"[^"\n]{0,4096}"|'[^'\n]{0,4096}'|[^\s,;&)}\]"']{1,4096})/y
 const URL_CREDENTIALS = /\/\/[^\s/:@]{1,128}:[^\s/@]{1,256}@/g
 const JWT = /\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]*/g
 const HTTP_AUTH_SCHEME = /\b(bearer|basic)\s+[A-Za-z0-9\-._~+/]+=*/gi
@@ -134,12 +137,45 @@ export function toGlobalPattern(pattern: RegExp): RegExp {
   return pattern.global ? pattern : new RegExp(pattern.source, `${pattern.flags}g`)
 }
 
-export function redactText(value: string, extraPatterns: readonly RegExp[] = []): string {
+function redactPairs(value: string, matchesKey: KeyMatcher): string {
+  PAIR_HEAD.lastIndex = 0
+  let out = ''
+  let copied = 0
+  let found = false
+
+  let head = PAIR_HEAD.exec(value)
+  while (head !== null) {
+    const [whole, prefix = '', key = '', separator = ''] = head
+
+    if (matchesKey(key)) {
+      PAIR_VALUE.lastIndex = head.index + whole.length
+      const tail = PAIR_VALUE.exec(value)
+      if (tail !== null) {
+        found = true
+        out += `${value.slice(copied, head.index)}${prefix}${key}${separator}${REDACTED}`
+        copied = PAIR_VALUE.lastIndex
+        PAIR_HEAD.lastIndex = copied
+      }
+    }
+
+    head = PAIR_HEAD.exec(value)
+  }
+
+  return found ? out + value.slice(copied) : value
+}
+
+export function redactText(
+  value: string,
+  extraPatterns: readonly RegExp[] = [],
+  matchesKey?: KeyMatcher,
+): string {
   if (value === '') {
     return value
   }
 
-  let out = value
+  let out = matchesKey ? redactPairs(value, matchesKey) : value
+
+  out = out
     .replace(URL_CREDENTIALS, `//${REDACTED}@`)
     .replace(JWT, REDACTED)
     .replace(HTTP_AUTH_SCHEME, (_match, scheme: string) => `${scheme} ${REDACTED}`)
@@ -170,7 +206,7 @@ function scrubValue(policy: RedactionPolicy, value: string, limit: number): stri
   if (!policy.scrubText) {
     return value
   }
-  return truncateToUtf8Bytes(redactText(value, policy.patterns), limit).value
+  return truncateToUtf8Bytes(redactText(value, policy.patterns, policy.matchesKey), limit).value
 }
 
 function scrubAttributes(policy: RedactionPolicy, attributes: Attributes): Attributes {

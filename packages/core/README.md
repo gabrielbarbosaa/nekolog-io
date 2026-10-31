@@ -110,6 +110,7 @@ Por **valor**, dentro de qualquer texto — mensagem, `error.message`,
 
 | O quê | Como é reconhecido |
 |---|---|
+| par `chave=valor` | a chave é sensível pela **mesma lista** usada nos atributos |
 | número de cartão | 13 a 19 dígitos **validados por Luhn** |
 | CPF | formatado ou não, pelos **dois dígitos verificadores** |
 | JWT | três segmentos base64url começando em `eyJ` |
@@ -119,6 +120,20 @@ Por **valor**, dentro de qualquer texto — mensagem, `error.message`,
 
 A validação é o ponto: um regex de 16 dígitos apagaria todo id de pedido do seu
 log. Com Luhn, `4111111111111111` sai e `4111111111111112` fica.
+
+O par `chave=valor` cobre o caso mais comum de vazamento acidental, que é
+segredo que caiu no meio de uma string em vez de virar atributo:
+
+| Entra | Sai |
+|---|---|
+| `POST /login?token=abc123&user=ana` | `POST /login?token=[redacted]&user=ana` |
+| `{"password":"hunter2"}` | `{"password":[redacted]}` |
+| `authorization: Bearer abc.def` | `authorization: [redacted]` |
+| `user=ana orderId=42` | igual — nenhuma chave é sensível |
+
+A lista de chaves é **a mesma** dos atributos, então `extraKeys` e `skipKeys`
+valem aqui também. O valor termina no primeiro espaço, vírgula, `;`, `&`, `)`,
+`}` ou `]` — é o que separa `?token=abc&user=ana` certo.
 
 ```ts
 createLogger({
