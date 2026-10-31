@@ -248,6 +248,9 @@ importers:
 
   apps/ingest:
     dependencies:
+      '@internal/adapters':
+        specifier: workspace:*
+        version: link:../../internal/adapters
       '@internal/schema':
         specifier: workspace:*
         version: link:../../internal/schema
@@ -317,7 +320,14 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
 
-  internal/adapters: {}
+  internal/adapters:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
 
   internal/clickhouse:
     dependencies:

@@ -1,11 +1,21 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { generateApiKey, hashApiKey, type KeyRecord, memoryKeyStore } from '@internal/adapters'
 import { createLogger } from '@nekolog-io/node'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createIngestApp, type IngestPrincipal } from '../src/index.ts'
+import { createIngestApp, createKeyAuthenticator } from '../src/index.ts'
 
-const KEY = 'nekolog_sk_0123456789abcdef'
-const PRINCIPAL: IngestPrincipal = { projectId: 'p_demo', environmentId: 'e_dev' }
+const KEY = generateApiKey('secret')
+const PUBLIC_KEY = generateApiKey('public')
+const BROWSER_ORIGIN = 'https://app.example.com'
+
+const RECORD: KeyRecord = {
+  projectId: 'p_demo',
+  environmentId: 'e_dev',
+  scopes: ['logs:write'],
+  originAllowlist: null,
+  blocked: false,
+}
 
 type StoredRow = {
   projectId: string
@@ -20,11 +30,10 @@ const stored: StoredRow[] = []
 let endpoint = ''
 let server: Server
 
+const keyStore = memoryKeyStore()
+
 const app = createIngestApp({
-  authenticate: (request) =>
-    request.headers.get('authorization') === `Bearer ${KEY}`
-      ? { ok: true, principal: PRINCIPAL }
-      : { ok: false, code: 'invalid_key', message: 'Unknown key' },
+  authenticate: createKeyAuthenticator({ keyStore }),
   sink: (batch, principal) => {
     for (const accepted of batch.accepted) {
       stored.push({
@@ -77,6 +86,12 @@ function send(body: string | ArrayBuffer, headers: Record<string, string> = {}):
 }
 
 beforeAll(async () => {
+  await keyStore.set(await hashApiKey(KEY), RECORD)
+  await keyStore.set(await hashApiKey(PUBLIC_KEY), {
+    ...RECORD,
+    originAllowlist: [BROWSER_ORIGIN],
+  })
+
   server = createServer((incoming, outgoing) => {
     void (async () => {
       const response = await app.fetch(await toRequest(incoming))
@@ -147,7 +162,7 @@ describe('the sdk talking to the ingest app over real http', () => {
     const response = await fetch(`${endpoint}/v1/logs`, {
       method: 'POST',
       headers: {
-        authorization: 'Bearer nekolog_sk_wrong',
+        authorization: `Bearer ${generateApiKey('secret')}`,
         'content-type': 'application/json',
       },
       body: '{}',
@@ -155,6 +170,62 @@ describe('the sdk talking to the ingest app over real http', () => {
 
     expect(response.status).toBe(401)
     expect(await response.json()).toMatchObject({ error: { code: 'invalid_key' } })
+  })
+
+  it('takes a browser-shaped request: key in the query, text/plain, no preflight', async () => {
+    const before = stored.length
+
+    const response = await fetch(`${endpoint}/v1/logs?key=${PUBLIC_KEY}`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain', origin: BROWSER_ORIGIN },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b30',
+        sdk: { name: '@nekolog-io/browser', version: '0.0.0' },
+        resource: { service: 'checkout-web', runtime: 'browser' },
+        events: [{ timestamp: '2026-10-31T12:00:00.000Z', level: 'info', message: 'from a tab' }],
+      }),
+    })
+
+    expect(response.status).toBe(202)
+    expect(response.headers.get('access-control-allow-origin')).toBe(BROWSER_ORIGIN)
+    expect(stored.slice(before).map((row) => row.message)).toEqual(['from a tab'])
+  })
+
+  it('refuses the same request from an origin not on the list', async () => {
+    const before = stored.length
+
+    const response = await fetch(`${endpoint}/v1/logs?key=${PUBLIC_KEY}`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain', origin: 'https://evil.test' },
+      body: '{}',
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ error: { code: 'origin_not_allowed' } })
+    expect(stored.slice(before)).toEqual([])
+  })
+
+  it('refuses a secret key that travelled in the URL', async () => {
+    const response = await fetch(`${endpoint}/v1/logs?key=${KEY}`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: '{}',
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toMatchObject({ error: { code: 'secret_key_in_url' } })
+  })
+
+  it('answers a real preflight', async () => {
+    const response = await fetch(`${endpoint}/v1/logs`, {
+      method: 'OPTIONS',
+      headers: { origin: BROWSER_ORIGIN },
+    })
+
+    expect(response.status).toBe(204)
+    expect(response.headers.get('access-control-allow-origin')).toBe(BROWSER_ORIGIN)
+    expect(response.headers.get('access-control-allow-headers')).toContain('traceparent')
   })
 
   it('accepts a really gzipped request', async () => {

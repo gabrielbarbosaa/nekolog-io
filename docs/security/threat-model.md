@@ -48,7 +48,7 @@
 
 | # | Ameaça | Fronteira | Mitigação | Status |
 |---|---|---|---|---|
-| S1 | Alguém usa uma key roubada para gravar logs falsos num projeto | 1 | Hash SHA-256 da key no servidor; origens permitidas por ambiente; revogação pelo dashboard | Planejada (M1) |
+| S1 | Alguém usa uma key roubada para gravar logs falsos num projeto | 1 | Só o hash SHA-256 é guardado e é por ele que a busca acontece — a key em claro nunca chega ao armazenamento; lista de origens por ambiente para as keys públicas, com curinga de subdomínio que **não** casa domínio parecido (`aexample.com` não entra por `*.example.com`); escopo `logs:write` exigido; revogação pelo dashboard | **Implementada** (etapa 1.8); revogação depende do dashboard (M2) |
 | S2 | Sessão sequestrada por cookie roubado | 3 | Cookies `__Host-`, `HttpOnly`, `Secure`, `SameSite=Lax`; nunca `localStorage` | Planejada (M2) |
 | S3 | Refresh token copiado e usado em paralelo | 3 | Rotação a cada uso com detecção de reuso: a sessão inteira cai e a pessoa é avisada (ADR [0008](../adr/0008-jwt-curto-com-refresh-rotativo.md)) | Planejada (M2) |
 | S4 | Alguém derruba a sessão alheia só conhecendo o `sid` | 3 | Token **desconhecido** é só recusado; só token **já usado** encerra a sessão | Planejada (M2) |
@@ -82,7 +82,7 @@
 |---|---|---|---|---|
 | **I1** | **Uma organização lê os logs de outra (IDOR)** — o risco mais grave da plataforma | 4 | Permissão checada **no servidor em toda rota e toda query**; filtro de projeto e ambiente injetado pelo servidor; testes de IDOR entre organizações e de isolamento no ClickHouse | Planejada (M2) |
 | I2 | Cliente envia segredo dentro do log sem perceber | 1 | Remoção por padrão no SDK **antes de sair do processo**: por chave (`password`, `token`, `authorization`, `cpf`, cartão e mais) e por valor no texto (par `chave=valor` com chave sensível, cartão com Luhn, CPF com dígito verificador, JWT, `Bearer`/`Basic`, credencial em URL, key do NekoLog). Roda **depois** do `beforeSend`, então um gancho do cliente não desfaz a remoção (ADR [0014](../adr/0014-ordem-do-pipeline-de-privacidade-do-sdk.md)). Regras extras por ambiente, no servidor, ficam para M5 | **Parcial** — SDK feito (etapa 1.5); servidor pendente (M5) |
-| I3 | Key secreta na URL aparece em log de proxy, histórico e referer | 1 | `sk` só em header; `sk` na URL é recusada com erro próprio (`secret_key_in_url`) | Planejada (M1) |
+| I3 | Key secreta na URL aparece em log de proxy, histórico e referer | 1 | `sk` só em header; `sk` na URL é recusada com `secret_key_in_url` **antes de qualquer consulta**, então nem o hash dela é calculado | **Implementada** (etapa 1.8) |
 | I4 | Arquivo de exportação no R2 acessível por quem tiver o link | 4 | E-mail leva ao dashboard, não ao arquivo; download exige login e permissão no ambiente; ciclo de vida apaga em 7 dias | Planejada (M4) |
 | I5 | Source map expõe o código original do cliente | 4 | Upload autenticado; resolução só na exibição da issue, para quem tem permissão | Planejada (M4) |
 | I6 | IP do usuário final guardado junto do log (LGPD) | 1 | **IP nunca é gravado** — só o país, resolvido na ingestão | Planejada (M1) |

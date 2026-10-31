@@ -8,6 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@internal/adapters": "workspace:*",
     "@internal/schema": "workspace:*",
     "hono": "^4.10.6"
   },
