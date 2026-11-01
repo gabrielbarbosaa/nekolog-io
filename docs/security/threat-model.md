@@ -91,6 +91,8 @@
 | I8 | Segredo de webhook ou token do Slack em claro no banco | 4 | AES-256-GCM com `ENCRYPTION_KEY` fora do banco | Planejada (M5) |
 | I9 | Segredo commitado por engano | 6 | Secret scanning com push protection e padrões próprios para `nekolog_sk_`/`nekolog_pk_`; `.env` fora do Git | **Parcial** — scanning ativo; padrões próprios pendentes |
 
+| I10 | Estado do OpenTofu guarda o segredo do túnel e o *client secret* do Access em claro | 2 | Criptografia nativa do OpenTofu com `enforced = true` para estado **e** plano, nas quatro raízes; a chave vem de `TF_ENCRYPTION`, nunca do código, e os jobs de `plan` e `apply` falham de cara se ela estiver vazia. Uma guarda no workflow recusa um `backend.tf` que deixe de exigir | **Código escrito** (etapa 1.16); vale a partir do primeiro `apply` |
+
 ## D — Denial of service
 
 | # | Ameaça | Fronteira | Mitigação | Status |
@@ -120,6 +122,7 @@
 | E10 | Credencial do ClickHouse vazada de um app faz mais do que aquele app precisa | 2 | Um usuário por papel, com *grant* mínimo: leitura, ingestão, jobs e migrations são credenciais distintas, e só a de migrations tem DDL — e ela existe só nos *secrets* do CI | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
 | E11 | Credencial de ingestão lê o conteúdo dos logs | 1 | O usuário de ingestão tem `INSERT` em `logs` e `SELECT` **só nas seis colunas** que as *materialized views* leem (`project_id`, `environment_id`, `timestamp`, `received_at`, `level`, `service`); `message`, `stacktrace`, `attributes` e `user_id` ficam fora do alcance. O `received_at` entrou na etapa 1.12, com a *materialized view* de uso | Implementada no dev (`deploy/clickhouse-users.dev.xml`); falta na VM (M1) |
 | E12 | Qualquer um dispara as tarefas agendadas pela URL pública do Worker de jobs | 5 | O app de jobs expõe **só** `GET /health`; nenhuma rota executa tarefa, e um teste falha se alguém adicionar uma. O gatilho é o Cron Trigger do Cloudflare, que não chega pela internet | Implementada (`apps/jobs/src/app.ts`) |
+| E13 | Quem descobrir o hostname do túnel fala direto com o ClickHouse | 2 | O hostname é um CNAME *proxied* para o túnel, e na frente dele fica uma aplicação do Cloudflare Access: a política não-interativa exige o **service token** dos Workers, e a de operador exige um e-mail da lista. Sem um dos dois, a requisição não chega na VM. As duas políticas têm `postcondition` afirmando que o `include` é exatamente o que deveria ser — atributo aninhado escrito errado é descartado em silêncio pelo HCL, e o `validate` não reclama | **Código escrito** (etapa 1.16); vale quando a VM existir (1.17) e o `apply` for ligado |
 
 ---
 
