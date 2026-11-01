@@ -72,7 +72,7 @@
 - [x] **1.11** `feat/ingest-spool` — contingência no R2, com token de deduplicação e reenvio pelos jobs.
 - [x] **1.12** `feat/ingest-limits` — rate limit em memória, limite de atributos por projeto e bloqueio por cota via KV.
 - [x] **1.13** `feat/seed-script` — script que cria org, projeto, ambientes e keys antes de existir o dashboard.
-- [ ] **1.14** `test/ingest-integration` — testes de contrato SDK ↔ ingest, integração com ClickHouse, Postgres e Redis no CI e fuzzing do validador.
+- [x] **1.14** `test/ingest-integration` — testes de contrato SDK ↔ ingest, integração com ClickHouse, Postgres e Redis no CI e fuzzing do validador. *(Postgres e Redis ficam para quando existir quem os leia: `internal/db` é a 2.2 e o adaptador de Redis é a 2.3.)*
 - [ ] **1.15** `feat/example-express` — `examples/express` mandando logs de verdade.
 - [ ] **1.16** `infra/opentofu-base` — OpenTofu em `infra/` com estado criptografado no R2, um diretório por ambiente, `tofu plan` nos PRs e `apply` no merge; DNS, Tunnel, Access, KV, R2 e rulesets do GitHub.
 - [ ] **1.17** `infra/oracle-vm` — VM criada pelo OpenTofu, com cloud-init + compose: ClickHouse com databases `nekolog_dev`, `nekolog_qa` e `nekolog_prod`, Tunnel, nenhuma porta aberta, SSH pelo Cloudflare Access e `unattended-upgrades`.

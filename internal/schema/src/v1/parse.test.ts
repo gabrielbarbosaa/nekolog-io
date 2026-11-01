@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import {
   MAX_ATTRIBUTE_KEYS,
   MAX_EVENTS_PER_BATCH,
   MAX_MESSAGE_BYTES,
   MAX_SERVICE_CHARS,
-} from './limits'
-import { exceedsBatchSizeLimit, parseBatch } from './parse'
-import { utf8ByteLength } from './utf8'
+} from './limits.ts'
+import { exceedsBatchSizeLimit, parseBatch } from './parse.ts'
+import { utf8ByteLength } from './utf8.ts'
 
 const VALID_EVENT = {
   timestamp: '2026-10-29T14:03:12.481Z',
@@ -289,5 +289,60 @@ describe('exceedsBatchSizeLimit', () => {
 
   it('rejects one byte over', () => {
     expect(exceedsBatchSizeLimit(512 * 1024 + 1)).toBe(true)
+  })
+})
+
+describe('a body that is not a JSON object at all', () => {
+  it.each([
+    ['an array', [] as unknown],
+    ['a non-empty array', [{ schemaVersion: 1 }] as unknown],
+    ['a string', 'hello' as unknown],
+    ['a number', 42 as unknown],
+    ['null', null as unknown],
+    ['a boolean', true as unknown],
+  ])('tells the sender plainly that %s is not a batch', (_what, body) => {
+    const result = parseBatch(body)
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_payload' })
+    if (!result.ok) {
+      expect(result.message).toBe('Body must be a JSON object')
+    }
+  })
+})
+
+describe('a value crafted so that converting it to text throws', () => {
+  const hostile = () => JSON.parse('{"schemaVersion":{"toString":""}}')
+
+  it('really would throw if it were coerced the naive way', () => {
+    expect(() => String(hostile().schemaVersion)).toThrow(TypeError)
+  })
+
+  it('answers with the stable code instead of throwing out of the parser', () => {
+    const result = parseBatch(hostile())
+
+    expect(result).toMatchObject({ ok: false, code: 'unsupported_schema_version' })
+  })
+
+  it.each([
+    ['an object', { toString: '' }, 'object'],
+    ['an array', [1, 2], 'array'],
+    ['null inside', null, undefined],
+    ['a number', 99, '99'],
+    ['a string', 'two', 'two'],
+  ])('names %s in the message without ever coercing it blindly', (_what, version, expected) => {
+    const result = parseBatch({ schemaVersion: version })
+
+    if (expected !== undefined && !result.ok) {
+      expect(result.message).toBe(`Unsupported schemaVersion: ${expected}`)
+    }
+    expect(result.ok).toBe(false)
+  })
+
+  it('never echoes back more of the sender text than it has to', () => {
+    const result = parseBatch({ schemaVersion: 'x'.repeat(5_000) })
+
+    if (!result.ok) {
+      expect(result.message.length).toBeLessThan(80)
+    }
   })
 })

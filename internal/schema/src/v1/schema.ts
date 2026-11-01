@@ -1,4 +1,4 @@
-import * as v from 'valibot'
+﻿import * as v from 'valibot'
 import {
   ATTRIBUTE_KEY_PATTERN,
   LOG_LEVELS,
@@ -21,8 +21,8 @@ import {
   SPAN_ID_CHARS,
   SUPPORTED_SCHEMA_VERSIONS,
   TRACE_ID_CHARS,
-} from './limits'
-import { utf8ByteLength } from './utf8'
+} from './limits.ts'
+import { utf8ByteLength } from './utf8.ts'
 
 function maxBytes(limit: number) {
   return v.check((value: string) => utf8ByteLength(value) <= limit, `Exceeds ${limit} bytes`)

@@ -69,6 +69,7 @@ jobs:
           CLICKHOUSE_TEST_URL: http://localhost:8123
           CLICKHOUSE_TEST_USER: default
           CLICKHOUSE_TEST_PASSWORD: nekolog
+          FUZZ_RUNS: "1000"
 
       - name: Build
         run: pnpm run build
