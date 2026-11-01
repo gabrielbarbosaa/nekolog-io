@@ -63,16 +63,19 @@ jobs:
           set -euo pipefail
           for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm; do
             echo "::group::$root"
-            tofu -chdir="$root" init -backend=false -input=false
+            tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
             tofu -chdir="$root" validate
             echo "::endgroup::"
           done
 
-      - name: TEMPORARY print the vm lock file
+      - name: Refuse a provider lock file that drifted
         run: |
-          echo '=====BEGIN infra/vm'
-          cat infra/vm/.terraform.lock.hcl
-          echo '=====END infra/vm'
+          set -euo pipefail
+          if ! git diff --quiet -- '*.terraform.lock.hcl'; then
+            echo 'A provider lock file changed during init. Run tofu init locally and commit the result.'
+            git --no-pager diff -- '*.terraform.lock.hcl'
+            exit 1
+          fi
 
   plan:
     name: Plan (${{ matrix.root }})
@@ -129,6 +132,15 @@ jobs:
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
           TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
           TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+          TF_VAR_tenancy_ocid: ${{ vars.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ vars.OCI_USER_OCID }}
+          TF_VAR_api_key_fingerprint: ${{ vars.OCI_FINGERPRINT }}
+          TF_VAR_api_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ vars.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ vars.OCI_COMPARTMENT_OCID }}
+          TF_VAR_ssh_public_key: ${{ vars.VM_SSH_PUBLIC_KEY }}
+          TF_VAR_state_bucket: ${{ vars.TOFU_STATE_BUCKET }}
+          TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}
 
   apply:
     name: Apply (${{ github.ref_name }})
@@ -197,3 +209,12 @@ jobs:
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
           TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
           TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+          TF_VAR_tenancy_ocid: ${{ vars.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ vars.OCI_USER_OCID }}
+          TF_VAR_api_key_fingerprint: ${{ vars.OCI_FINGERPRINT }}
+          TF_VAR_api_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ vars.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ vars.OCI_COMPARTMENT_OCID }}
+          TF_VAR_ssh_public_key: ${{ vars.VM_SSH_PUBLIC_KEY }}
+          TF_VAR_state_bucket: ${{ vars.TOFU_STATE_BUCKET }}
+          TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}

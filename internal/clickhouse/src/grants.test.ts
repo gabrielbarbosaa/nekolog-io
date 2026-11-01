@@ -80,7 +80,7 @@ describe('the ingestion credential, in both files', () => {
       .split(',')
       .map((column) => column.trim())
 
-    expect(columns.toSorted()).toEqual([...VIEW_COLUMNS].toSorted())
+    expect([...columns].sort()).toEqual([...VIEW_COLUMNS].sort())
     for (const hidden of HIDDEN_COLUMNS) {
       expect(columns).not.toContain(hidden)
     }
