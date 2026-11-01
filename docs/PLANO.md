@@ -58,7 +58,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 
 ## 3. Princípios
 
-1. **Ingestão leve, processamento pesado fora dela.** A API só valida e grava. Agrupamento de erros, source maps e alertas rodam em outro lugar.
+1. **Ingestão sem I/O, processamento pesado fora dela.** A API valida, calcula o que sai do próprio evento e grava. O que precisa de rede ou de banco — resolver source map, avaliar regra de alerta, montar issue — roda nos jobs. O `fingerprint` é a exceção que confirma a regra: ele é CPU pura sobre o evento que já está em mãos (especificação 5), e o ClickHouse não preenche coluna depois do insert sem uma *mutation*, que é cara e assíncrona.
 2. **Mesmo código na nuvem e no self-host.** Tudo que depende de fornecedor fica atrás de uma interface (`KeyStore`, `RateLimiter`, `BlobStore`, `Mailer`, `LogStore`, `RedisClient`).
 3. **O SDK nunca quebra a aplicação** e não tem dependências.
 4. **Padrões abertos:** formato de log do OpenTelemetry e propagação via `traceparent` (W3C).

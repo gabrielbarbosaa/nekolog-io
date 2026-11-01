@@ -23,6 +23,7 @@ consequências que se aceitou conviver.
 | [0012](0012-escolha-de-bibliotecas.md) | Escolha de bibliotecas (ECharts, Valibot, runner próprio) | Aceita |
 | [0013](0013-garage-no-lugar-do-minio.md) | Garage no lugar do MinIO para armazenamento S3 | Aceita |
 | [0014](0014-ordem-do-pipeline-de-privacidade-do-sdk.md) | Ordem do pipeline de privacidade e amostragem no SDK | Aceita |
+| [0015](0015-fingerprint-calculado-na-ingestao.md) | Fingerprint de erro calculado na ingestão | Aceita |
 
 ## O que vira ADR e o que não vira
 
