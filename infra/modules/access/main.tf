@@ -22,7 +22,7 @@ resource "cloudflare_zero_trust_access_policy" "workers" {
 
   include = [
     {
-      service_token = {
+      serivce_token = {
         token_id = cloudflare_zero_trust_access_service_token.workers.id
       }
     }
