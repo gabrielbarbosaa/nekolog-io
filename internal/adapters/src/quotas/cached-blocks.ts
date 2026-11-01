@@ -1,4 +1,4 @@
-import type { QuotaStore } from '../quota-store'
+﻿import type { QuotaStore } from '../quota-store.ts'
 
 export const DEFAULT_BLOCK_CACHE_TTL_MS = 60_000
 export const DEFAULT_BLOCK_RETRY_MS = 5_000

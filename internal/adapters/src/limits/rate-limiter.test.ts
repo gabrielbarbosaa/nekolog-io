@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { DEFAULT_RATE_LIMIT_ENTRIES, memoryRateLimiter } from './memory-rate-limiter'
+﻿import { describe, expect, it } from 'vitest'
+import { DEFAULT_RATE_LIMIT_ENTRIES, memoryRateLimiter } from './memory-rate-limiter.ts'
 
 function clock(start = 0) {
   let at = start

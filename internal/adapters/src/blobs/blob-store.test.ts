@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
-import { memoryBlobStore } from './memory-blob-store'
-import { R2_LIST_PAGE, type R2BucketLike, r2BlobStore } from './r2-blob-store'
+﻿import { describe, expect, it, vi } from 'vitest'
+import { memoryBlobStore } from './memory-blob-store.ts'
+import { R2_LIST_PAGE, type R2BucketLike, r2BlobStore } from './r2-blob-store.ts'
 
 function text(bytes: Uint8Array | null): string | null {
   return bytes === null ? null : new TextDecoder().decode(bytes)

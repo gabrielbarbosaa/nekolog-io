@@ -1,4 +1,4 @@
-import type { QuotaBlock, QuotaStore } from '../quota-store'
+﻿import type { QuotaBlock, QuotaStore } from '../quota-store.ts'
 
 export type MemoryQuotaStore = QuotaStore & {
   readonly size: number

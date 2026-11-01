@@ -1,5 +1,5 @@
-import type { KeyRecord, KeyStore } from '../key-store'
-import type { KvNamespace } from '../kv'
+﻿import type { KeyRecord, KeyStore } from '../key-store.ts'
+import type { KvNamespace } from '../kv.ts'
 
 export const KEY_PREFIX = 'key:'
 

@@ -18,6 +18,7 @@ next-env.d.ts
 
 # Env files
 .env
+.nekolog-seed.json
 .env.local
 .env.*.local
 
