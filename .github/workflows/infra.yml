@@ -50,18 +50,19 @@ jobs:
           set -euo pipefail
           for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
             echo "::group::$root"
-            tofu -chdir="$root" init -backend=false -input=false
+            tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
             tofu -chdir="$root" validate
             echo "::endgroup::"
           done
 
-      - name: TEMPORARY print the lock files
+      - name: Refuse a provider lock file that drifted
         run: |
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
-            echo "=====BEGIN $root"
-            cat "$root/.terraform.lock.hcl"
-            echo "=====END $root"
-          done
+          set -euo pipefail
+          if ! git diff --quiet -- '*.terraform.lock.hcl'; then
+            echo 'A provider lock file changed during init. Run tofu init locally and commit the result.'
+            git --no-pager diff -- '*.terraform.lock.hcl'
+            exit 1
+          fi
 
   plan:
     name: Plan (${{ matrix.root }})

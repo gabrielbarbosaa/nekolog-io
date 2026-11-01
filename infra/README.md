@@ -1,0 +1,170 @@
+# infra
+
+A infraestrutura como código, em OpenTofu
+(ADR [0009](../docs/adr/0009-opentofu-para-infraestrutura.md)).
+
+```
+modules/
+  workers-kv/    namespace KV com as keys que a ingestão lê
+  r2-buckets/    contingência (spool) e source maps
+  tunnel/        Cloudflare Tunnel e o CNAME que aponta para ele
+  access/        service token dos Workers, políticas e a aplicação Access
+  environment/   junta os quatro; é o que cada ambiente chama
+envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
+repo/                 rulesets do GitHub; não é um ambiente, é o repositório
+```
+
+## Nada disso foi aplicado ainda
+
+Esta etapa entrega o **código e o pipeline**, não a infraestrutura. O `apply` só
+roda quando a variável de repositório `INFRA_ENABLED` for `true`, e ela não
+existe. Sem ela o workflow faz só `fmt` e `validate`, que não precisam de
+credencial nenhuma.
+
+Isso é de propósito: não há conta Cloudflare configurada, nem bucket de estado,
+e o `apply` do `infra/repo` mexeria nas proteções de branch deste repositório.
+Ligar isso é uma decisão sua, não um efeito colateral de mergear um PR.
+
+## Antes de ligar
+
+### 1. O bucket do estado existe antes do OpenTofu
+
+Problema do ovo e da galinha: o estado mora no R2, e o R2 é gerenciado pelo
+OpenTofu. O bucket do estado **não** é gerenciado por ele — crie à mão, uma vez:
+
+```bash
+wrangler r2 bucket create nekolog-tfstate
+```
+
+Gere um token de API do R2 (S3) com leitura e escrita nesse bucket. Ele vira
+`TOFU_STATE_ACCESS_KEY_ID` e `TOFU_STATE_SECRET_ACCESS_KEY`.
+
+### 2. A frase secreta do estado
+
+O estado guarda o segredo do túnel e o client secret do service token em claro.
+Por isso a criptografia nativa do OpenTofu é **obrigatória**: cada raiz declara
+`enforced = true` para estado e plano.
+
+A chave em si vem da variável de ambiente `TF_ENCRYPTION`, nunca do código:
+
+```hcl
+key_provider "pbkdf2" "state" {
+  passphrase = "…"
+}
+
+method "aes_gcm" "state" {
+  keys = key_provider.pbkdf2.state
+}
+
+state {
+  method = method.aes_gcm.state
+}
+
+plan {
+  method = method.aes_gcm.state
+}
+```
+
+Guarde esse HCL inteiro no segredo `TF_ENCRYPTION`. **Perder a frase secreta é
+perder o controle do estado** — está no runbook de rotação de segredos.
+
+Os jobs de `plan` e `apply` falham de cara se `TF_ENCRYPTION` estiver vazio.
+
+### 3. O token da Cloudflare
+
+Um token de conta com, no mínimo:
+
+| Permissão | Para quê |
+|---|---|
+| `Workers KV Storage` — edição | o namespace das keys |
+| `Workers R2 Storage` — edição | os buckets |
+| `Cloudflare Tunnel` — edição | o túnel |
+| `Access: Apps and Policies` — edição | a aplicação e as políticas |
+| `Access: Service Tokens` — edição | o token que os Workers usam |
+| `Zone` → `DNS` — edição, na zona `nekolog.io` | o CNAME do túnel |
+
+### 4. O token do GitHub
+
+Só para `infra/repo`: um token com `administration:write` no repositório. O
+`GITHUB_TOKEN` do Actions **não serve** — ele não administra rulesets.
+
+### 5. Variáveis e segredos
+
+Variáveis de repositório: `INFRA_ENABLED`, `TOFU_STATE_BUCKET`,
+`TOFU_STATE_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`),
+`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID` e `OPERATOR_EMAILS` (um JSON de
+lista, porque o tipo da variável é `list(string)`: `["voce@exemplo.com"]`).
+
+Segredos: `TF_ENCRYPTION`, `TOFU_STATE_ACCESS_KEY_ID`,
+`TOFU_STATE_SECRET_ACCESS_KEY`, `CLOUDFLARE_API_TOKEN` e `INFRA_GITHUB_TOKEN`.
+
+Crie os *environments* `dev`, `qa` e `prod` no GitHub, com aprovação manual no
+`prod`. O `apply` usa o environment da branch; é o que dá o passo manual que o
+plano pede para produção.
+
+## O fluxo
+
+| Quando | O que roda |
+|---|---|
+| PR que toca `infra/` | `fmt -check` e `validate` nas quatro raízes |
+| mesmo PR, com `INFRA_ENABLED` | `plan` nas quatro raízes |
+| merge na `dev` | `apply` em `envs/dev` |
+| merge na `qa` | `apply` em `envs/qa` |
+| merge na `main` | `apply` em `envs/prod` **e** em `repo` |
+
+Os rulesets do repositório só mudam pela `main`, de propósito: são a proteção
+que impede qualquer uma das outras branches de fazer o que quiser.
+
+## Os rulesets já existem
+
+Eles foram criados à mão no M0. O `infra/repo` **adota** os três por bloco
+`import`, com os ids em `adopt_ruleset_ids`, em vez de criar. Criar daria
+"name already in use", e apagar e recriar abriria uma janela sem proteção
+nenhuma.
+
+Antes do primeiro `apply` aqui, **leia o plano com atenção**. Se o provider não
+souber reproduzir algum campo que a interface do GitHub escreveu, o plano vai
+propor removê-lo — e aí o `apply` enfraqueceria a proteção em vez de registrá-la.
+O campo `require_extra_approval_for_unattributed_changes`, que hoje está ligado
+nos três, é o candidato mais provável. O `plan` existe exatamente para essa
+conferência.
+
+## Rodando na mão
+
+```bash
+export TF_ENCRYPTION='key_provider "pbkdf2" "state" { … }'
+export AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=…
+export TF_VAR_cloudflare_api_token=… TF_VAR_cloudflare_account_id=…
+export TF_VAR_cloudflare_zone_id=… TF_VAR_operator_emails='["voce@exemplo.com"]'
+
+cat > backend.hcl <<'EOF'
+bucket    = "nekolog-tfstate"
+endpoints = { s3 = "https://<account>.r2.cloudflarestorage.com" }
+EOF
+
+tofu -chdir=infra/envs/dev init -backend-config=../../../backend.hcl
+tofu -chdir=infra/envs/dev plan
+```
+
+`backend.hcl` e qualquer `*.tfvars` estão no `.gitignore`. Os
+`.terraform.lock.hcl` **não** estão: eles fixam o hash de cada provider, e o CI
+falha se um deles mudar sozinho.
+
+## O que ainda não está aqui
+
+- **VM da Oracle e a configuração do `cloudflared`** — etapa 1.17. O túnel é
+  `config_src = "local"`: o mapeamento de hostname para serviço é um arquivo na
+  VM, e sai junto com o cloud-init.
+- **Aplicação Access para SSH** — também 1.17; não faz sentido criar DNS e
+  política para uma máquina que não existe.
+- **Rotas e deploy dos Workers** — etapa 1.18.
+- **Vercel, Turnstile, Email Routing, Neon e Upstash** — o plano os prevê
+  (seção 15.5); entram quando houver o que configurar.
+
+## Saídas
+
+Cada ambiente devolve o que os Workers e a VM precisam: `kv_namespace_id`,
+`spool_bucket`, `sourcemaps_bucket`, `clickhouse_url`, `tunnel_id`,
+`tunnel_account_tag`, `tunnel_secret`, `access_client_id` e
+`access_client_secret`. As três últimas são `sensitive` — saem com `tofu output
+-raw`, e vão para os segredos do Worker, nunca para um arquivo.
