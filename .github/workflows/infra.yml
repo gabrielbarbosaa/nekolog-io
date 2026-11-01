@@ -45,6 +45,19 @@ jobs:
       - name: Check formatting
         run: tofu fmt -check -recursive -diff infra
 
+      - name: Every root must enforce state encryption
+        run: |
+          set -euo pipefail
+          failed=0
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+            found=$(grep -cE '^[[:space:]]*enforced[[:space:]]*=[[:space:]]*true$' "$root/backend.tf" || true)
+            if [ "$found" -ne 2 ]; then
+              echo "$root/backend.tf enforces encryption $found time(s); state and plan both have to."
+              failed=1
+            fi
+          done
+          test "$failed" -eq 0
+
       - name: Validate every root module
         run: |
           set -euo pipefail
