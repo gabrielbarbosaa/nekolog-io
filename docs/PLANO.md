@@ -762,6 +762,7 @@ internal/       # não publicados
   db/           # Drizzle + migrations (orgs, projetos, alert_rules…) — fica
                 # aqui porque o apps/jobs também lê e grava neste banco
   clickhouse/   # migrations, query builder, parser da busca
+  seed/         # cria org, projeto, ambientes e keys antes de existir o dashboard
   tracking/     # projeta o docs/ETAPAS.md no GitHub (milestones e issues)
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
                 # (consumidos por ingest/jobs aqui; o nekolog-dashboard usa

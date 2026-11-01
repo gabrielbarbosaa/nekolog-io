@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { KeyRecord } from '../key-store'
-import type { KvNamespace } from '../kv'
-import { cachedKeyStore } from './cached-key-store'
+﻿import { describe, expect, it, vi } from 'vitest'
+import type { KeyRecord } from '../key-store.ts'
+import type { KvNamespace } from '../kv.ts'
+import { cachedKeyStore } from './cached-key-store.ts'
 import {
   generateApiKey,
   hashApiKey,
@@ -10,9 +10,9 @@ import {
   PUBLIC_KEY_PREFIX,
   parseApiKey,
   SECRET_KEY_PREFIX,
-} from './format'
-import { kvKeyFor, kvKeyStore, parseKeyRecord } from './kv-key-store'
-import { memoryKeyStore } from './memory-key-store'
+} from './format.ts'
+import { kvKeyFor, kvKeyStore, parseKeyRecord } from './kv-key-store.ts'
+import { memoryKeyStore } from './memory-key-store.ts'
 
 const RECORD: KeyRecord = {
   projectId: 'p_1',

@@ -1,4 +1,4 @@
-import type { BlobStore } from '../blob-store'
+﻿import type { BlobStore } from '../blob-store.ts'
 
 export type MemoryBlobStore = BlobStore & {
   readonly size: number

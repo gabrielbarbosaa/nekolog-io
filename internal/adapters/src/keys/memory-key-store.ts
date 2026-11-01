@@ -1,4 +1,4 @@
-import type { KeyRecord, KeyStore } from '../key-store'
+﻿import type { KeyRecord, KeyStore } from '../key-store.ts'
 
 export type MemoryKeyStore = KeyStore & {
   readonly size: number

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { normaliseOrigin, originAllowed, originMatches } from './origins'
+﻿import { describe, expect, it } from 'vitest'
+import { normaliseOrigin, originAllowed, originMatches } from './origins.ts'
 
 describe('normaliseOrigin', () => {
   it.each([

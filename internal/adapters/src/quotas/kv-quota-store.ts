@@ -1,5 +1,5 @@
-import type { KvNamespace } from '../kv'
-import type { QuotaBlock, QuotaStore } from '../quota-store'
+﻿import type { KvNamespace } from '../kv.ts'
+import type { QuotaBlock, QuotaStore } from '../quota-store.ts'
 
 export const QUOTA_BLOCKS_KEY = 'quota:blocks'
 

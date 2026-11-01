@@ -1,14 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { KvNamespace } from '../kv'
-import type { QuotaBlock, QuotaStore } from '../quota-store'
-import { cachedBlockedEnvironments } from './cached-blocks'
+﻿import { describe, expect, it, vi } from 'vitest'
+import type { KvNamespace } from '../kv.ts'
+import type { QuotaBlock, QuotaStore } from '../quota-store.ts'
+import { cachedBlockedEnvironments } from './cached-blocks.ts'
 import {
   kvQuotaStore,
   parseQuotaBlocks,
   QUOTA_BLOCKS_KEY,
   serialiseQuotaBlocks,
-} from './kv-quota-store'
-import { memoryQuotaStore } from './memory-quota-store'
+} from './kv-quota-store.ts'
+import { memoryQuotaStore } from './memory-quota-store.ts'
 
 const BLOCK: QuotaBlock = {
   environmentId: 'e_1',

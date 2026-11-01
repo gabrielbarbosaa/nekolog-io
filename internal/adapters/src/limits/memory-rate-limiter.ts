@@ -1,4 +1,4 @@
-import type { RateLimiter, RateLimitResult } from '../rate-limiter'
+﻿import type { RateLimiter, RateLimitResult } from '../rate-limiter.ts'
 
 export const DEFAULT_RATE_LIMIT_ENTRIES = 5_000
 

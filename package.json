@@ -23,6 +23,7 @@
     "ch:migrate": "pnpm --filter @internal/clickhouse ch migrate",
     "ch:status": "pnpm --filter @internal/clickhouse ch status",
     "ch:new": "pnpm --filter @internal/clickhouse ch new",
+    "seed": "pnpm --filter @internal/seed seed",
     "tracking": "pnpm --filter @internal/tracking tracking",
     "changeset": "changeset",
     "changeset:status": "changeset status --since=origin/dev",
