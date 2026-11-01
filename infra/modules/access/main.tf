@@ -18,7 +18,7 @@ resource "cloudflare_zero_trust_access_service_token" "workers" {
 resource "cloudflare_zero_trust_access_policy" "workers" {
   account_id = var.account_id
   name       = "nekolog-workers-${var.environment}"
-  decsion    = "non_identity"
+  decision   = "non_identity"
 
   include = [
     {
