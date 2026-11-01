@@ -1,0 +1,85 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nekolog-ingest",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "env": {
+    "dev": {
+      "name": "nekolog-ingest-dev",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_dev"
+      }
+    },
+    "qa": {
+      "name": "nekolog-ingest-qa",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_qa"
+      }
+    },
+    "prod": {
+      "name": "nekolog-ingest-prod",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_prod"
+      }
+    }
+  }
+}

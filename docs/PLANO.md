@@ -770,7 +770,9 @@ internal/       # não publicados
                 # internal/auth (senhas, OTP, JWT, sessões) é exclusivo do
                 # dashboard e vive só no nekolog-dashboard, não aqui.
 examples/       # express, nestjs, next, react-vite (também nos testes e2e)
-deploy/         # docker-compose (dev e self-host), cloud-init da VM, wrangler
+deploy/         # docker-compose (dev e self-host), cloud-init da VM, segredos do deploy
+                # O wrangler.json de cada Worker fica junto do app, porque o
+                # caminho do entry point e os tipos são relativos a ele.
 infra/          # OpenTofu: módulos e um diretório por ambiente
 docs/adr/       # registro das decisões de arquitetura
 docs/security/  # modelo de ameaças e checklists

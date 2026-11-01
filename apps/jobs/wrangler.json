@@ -1,0 +1,100 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nekolog-jobs",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "env": {
+    "dev": {
+      "name": "nekolog-jobs-dev",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_dev",
+        "JOBS_VERSION": "${JOBS_VERSION}"
+      }
+    },
+    "qa": {
+      "name": "nekolog-jobs-qa",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_qa",
+        "JOBS_VERSION": "${JOBS_VERSION}"
+      }
+    },
+    "prod": {
+      "name": "nekolog-jobs-prod",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": {
+        "enabled": true
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "kv_namespaces": [
+        {
+          "binding": "KEYS",
+          "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SPOOL",
+          "bucket_name": "${SPOOL_BUCKET}"
+        }
+      ],
+      "vars": {
+        "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
+        "CLICKHOUSE_DB": "nekolog_prod",
+        "JOBS_VERSION": "${JOBS_VERSION}"
+      }
+    }
+  }
+}

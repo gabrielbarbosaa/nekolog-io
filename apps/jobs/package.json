@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
     "@internal/adapters": "workspace:*",
@@ -15,7 +16,9 @@
   },
   "devDependencies": {
     "@apps/ingest": "workspace:*",
+    "@internal/deploy": "workspace:*",
     "@types/node": "^24.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.0"
   }
 }

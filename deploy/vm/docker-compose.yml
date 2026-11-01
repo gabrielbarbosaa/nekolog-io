@@ -103,12 +103,31 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  tunnel-ssh:
+    image: cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    networks:
+      - outside
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./cloudflared/ssh:/etc/cloudflared:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   inside:
     driver: bridge
     ipam:
       config:
         - subnet: 172.28.0.0/16
+
+  outside:
+    driver: bridge
 
 volumes:
   clickhouse_data:

@@ -9,8 +9,10 @@ modules/
   r2-buckets/    contingência (spool) e source maps
   tunnel/        Cloudflare Tunnel e o CNAME que aponta para ele
   access/        service token dos Workers, políticas e a aplicação Access
-  environment/   junta os quatro; é o que cada ambiente chama
+  workers-domain/ o hostname que o Worker de ingestão atende
+  environment/   junta os cinco; é o que cada ambiente chama
   oracle-vm/     a VM, a rede sem entrada e o cloud-init
+  ssh-access/    a aplicação Access na frente do SSH da máquina
 envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
 repo/                 rulesets do GitHub; não é um ambiente, é o repositório
 vm/                   a VM; também não é um ambiente — é uma máquina para os três
@@ -89,6 +91,10 @@ Um token de conta com, no mínimo:
 | `Access: Apps and Policies` — edição | a aplicação e as políticas |
 | `Access: Service Tokens` — edição | o token que os Workers usam |
 | `Zone` → `DNS` — edição, na zona `nekolog.io` | o CNAME do túnel |
+| `Workers Scripts` — edição | o `wrangler deploy` e o domínio do Worker |
+
+O mesmo token serve para o workflow `Workers`. Se preferir separar, o do deploy
+precisa só de `Workers Scripts` — edição.
 
 ### 4. O token do GitHub
 
@@ -142,8 +148,8 @@ conta existir. O `validate` não as executa.
 
 | Quando | O que roda |
 |---|---|
-| PR que toca `infra/` | `fmt -check` e `validate` nas quatro raízes |
-| mesmo PR, com `INFRA_ENABLED` | `plan` nas quatro raízes |
+| PR que toca `infra/` | `fmt -check` e `validate` nas cinco raízes |
+| mesmo PR, com `INFRA_ENABLED` | `plan` nas cinco raízes |
 | merge na `dev` | `apply` em `envs/dev` |
 | merge na `qa` | `apply` em `envs/qa` |
 | merge na `main` | `apply` em `envs/prod`, em `repo` e na `vm` |
@@ -196,22 +202,53 @@ segredo: `OCI_PRIVATE_KEY`.
 A `vm` também precisa de `TOFU_STATE_BUCKET` e `TOFU_STATE_ENDPOINT` como
 variáveis **de entrada** (`TF_VAR_state_bucket` e `TF_VAR_state_endpoint`), além
 de backend: ela lê os três estados de ambiente para montar as credenciais do
-`cloudflared`.
+`cloudflared`. Desde a 1.18 ela também fala com a Cloudflare, para o quarto
+túnel e a aplicação Access do SSH: precisa de `TF_VAR_cloudflare_api_token`,
+`TF_VAR_cloudflare_account_id`, `TF_VAR_cloudflare_zone_id` e
+`TF_VAR_operator_emails`.
+
+## A ordem no primeiro apply
+
+O domínio do Worker aponta para um Worker **pelo nome**, e a Cloudflare recusa
+apontar para um que não existe. Então, da primeira vez, a ordem é:
+
+1. `WORKERS_DEPLOY_ENABLED=true` e um merge: o `wrangler deploy` cria
+   `nekolog-ingest-<ambiente>`. A verificação de `/health` no fim vai falhar,
+   porque ainda não existe hostname — é esperado.
+2. `INFRA_ENABLED=true` e o `apply` do ambiente: aí nasce
+   `ingest-<ambiente>.nekolog.io`.
+3. O próximo deploy passa inteiro, `/health` incluído.
+
+Depois disso a ordem não importa mais. Deixar o `wrangler` criar o domínio
+sozinho evitaria esse passo, mas colocaria duas ferramentas escrevendo na mesma
+zona; a seção 18 do plano diz que as rotas ficam aqui.
+
+## SSH, que não tem porta aberta
+
+A lista de segurança da OCI continua **só com saída**. O caminho até o `sshd` é
+um quarto túnel (`ssh.nekolog.io`), e na frente dele uma aplicação Access cuja
+política só aceita os e-mails de operador:
+
+```bash
+cloudflared access ssh --hostname ssh.nekolog.io
+```
+
+O service token dos Workers **não** alcança essa aplicação: ela é outra, com
+outra política, e uma `postcondition` afirma que ela tem exatamente uma política
+— a dos operadores. Um token de serviço entrar ali seria um robô com shell.
 
 ## O que ainda não está aqui
 
-- **Aplicação Access para SSH.** A VM tem a chave pública do `ubuntu` no
-  cloud-init, mas não há regra de entrada na porta 22 — o caminho é o Cloudflare
-  Access, e a aplicação de SSH entra junto com o deploy dos Workers (1.18), que é
-  quando passa a existir alguém para operar.
-- **Rotas e deploy dos Workers** — etapa 1.18.
 - **Vercel, Turnstile, Email Routing, Neon e Upstash** — o plano os prevê
   (seção 15.5); entram quando houver o que configurar.
 
 ## Saídas
 
 Cada ambiente devolve o que os Workers e a VM precisam: `kv_namespace_id`,
-`spool_bucket`, `sourcemaps_bucket`, `clickhouse_url`, `tunnel_id`,
-`tunnel_account_tag`, `tunnel_secret`, `access_client_id` e
+`spool_bucket`, `sourcemaps_bucket`, `ingest_hostname`, `clickhouse_url`,
+`tunnel_id`, `tunnel_account_tag`, `tunnel_secret`, `access_client_id` e
 `access_client_secret`. As três últimas são `sensitive` — saem com `tofu output
 -raw`, e vão para os segredos do Worker, nunca para um arquivo.
+
+A `vm` devolve `instance_id`, `public_ip`, `ssh_hostname` e
+`clickhouse_passwords` (sensível).

@@ -19,7 +19,7 @@ resource "random_bytes" "tunnel_secret" {
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "this" {
   account_id    = var.account_id
-  name          = "nekolog-${var.environment}"
+  name          = "nekolog-${var.purpose}"
   config_src    = "local"
   tunnel_secret = random_bytes.tunnel_secret.base64
 
@@ -35,5 +35,5 @@ resource "cloudflare_dns_record" "hostname" {
   content = "${cloudflare_zero_trust_tunnel_cloudflared.this.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
-  comment = "Managed by OpenTofu: ${var.environment} tunnel"
+  comment = "Managed by OpenTofu: ${var.purpose} tunnel"
 }

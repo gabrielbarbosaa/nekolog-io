@@ -13,6 +13,11 @@ output "sourcemaps_bucket" {
   value       = module.r2.sourcemaps_bucket
 }
 
+output "ingest_hostname" {
+  description = "Where the SDKs send their batches in this environment."
+  value       = module.ingest_domain.hostname
+}
+
 output "clickhouse_url" {
   description = "CLICKHOUSE_URL for the Workers, reached through the tunnel."
   value       = "https://${module.tunnel.fqdn}"

@@ -9,7 +9,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "serve": "node src/serve.ts"
+    "serve": "node src/serve.ts",
+    "deploy:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
@@ -21,9 +22,11 @@
     "hono": "^4.10.6"
   },
   "devDependencies": {
+    "@internal/deploy": "workspace:*",
     "@nekolog-io/node": "workspace:*",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.0"
   }
 }

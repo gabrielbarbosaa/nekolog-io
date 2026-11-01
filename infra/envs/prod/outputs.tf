@@ -13,6 +13,11 @@ output "sourcemaps_bucket" {
   value       = module.environment.sourcemaps_bucket
 }
 
+output "ingest_hostname" {
+  description = "Where the SDKs send their batches in this environment."
+  value       = module.environment.ingest_hostname
+}
+
 output "clickhouse_url" {
   description = "CLICKHOUSE_URL for the Workers."
   value       = module.environment.clickhouse_url

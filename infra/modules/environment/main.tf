@@ -13,6 +13,10 @@ terraform {
   }
 }
 
+locals {
+  ingest_hostname = var.environment == "prod" ? "ingest.${var.zone_name}" : "ingest-${var.environment}.${var.zone_name}"
+}
+
 module "kv" {
   source = "../workers-kv"
 
@@ -31,11 +35,21 @@ module "r2" {
 module "tunnel" {
   source = "../tunnel"
 
-  account_id  = var.account_id
-  zone_id     = var.zone_id
-  zone_name   = var.zone_name
-  environment = var.environment
-  hostname    = "clickhouse-${var.environment}"
+  account_id = var.account_id
+  zone_id    = var.zone_id
+  zone_name  = var.zone_name
+  purpose    = var.environment
+  hostname   = "clickhouse-${var.environment}"
+}
+
+module "ingest_domain" {
+  source = "../workers-domain"
+
+  account_id = var.account_id
+  zone_id    = var.zone_id
+  zone_name  = var.zone_name
+  hostname   = local.ingest_hostname
+  service    = "nekolog-ingest-${var.environment}"
 }
 
 module "access" {

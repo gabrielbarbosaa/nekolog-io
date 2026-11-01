@@ -76,7 +76,7 @@
 - [x] **1.15** `feat/example-express` — `examples/express` mandando logs de verdade. *(Junto veio o `pnpm --filter @apps/ingest serve`: sem uma ingestão para onde apontar, o exemplo não manda log nenhum.)*
 - [x] **1.16** `infra/opentofu-base` — OpenTofu em `infra/` com estado criptografado no R2, um diretório por ambiente, `tofu plan` nos PRs e `apply` no merge; DNS, Tunnel, Access, KV, R2 e rulesets do GitHub. *(Entrega o código e o pipeline; o `apply` fica desligado até a variável `INFRA_ENABLED` existir — ver `infra/README.md`.)*
 - [x] **1.17** `infra/oracle-vm` — VM criada pelo OpenTofu, com cloud-init + compose: ClickHouse com databases `nekolog_dev`, `nekolog_qa` e `nekolog_prod`, Tunnel, nenhuma porta aberta, SSH pelo Cloudflare Access e `unattended-upgrades`. *(A chave de SSH vai no cloud-init e não há regra de entrada na 22; a aplicação Access para SSH entra na 1.18, com o deploy. Como na 1.16, o `apply` fica desligado.)*
-- [ ] **1.18** `ci/deploy-workers` — `wrangler deploy --env` de ingest e jobs para `dev`, `qa` e `prod`, com environments protegidos no GitHub.
+- [x] **1.18** `ci/deploy-workers` — `wrangler deploy --env` de ingest e jobs para `dev`, `qa` e `prod`, com environments protegidos no GitHub. *(Junto vieram o `internal/deploy`, que separa a configuração versionada dos valores da conta, o domínio do Worker de ingestão no OpenTofu e a aplicação Access do SSH que a 1.17 deixou pendente. Como na 1.16 e na 1.17, o deploy fica desligado até `WORKERS_DEPLOY_ENABLED` existir.)*
 
 **Pronto quando:** um `log.info()` no exemplo Express aparece no ClickHouse do ambiente `dev`.
 

@@ -1,0 +1,19 @@
+{
+  "name": "@internal/deploy",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "render": "node src/render-cli.ts",
+    "secrets": "node src/secrets-cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^5.0.5"
+  }
+}

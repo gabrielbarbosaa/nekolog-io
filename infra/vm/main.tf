@@ -2,6 +2,10 @@ terraform {
   required_version = ">= 1.13.0"
 
   required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.28"
+    }
     oci = {
       source  = "oracle/oci"
       version = "~> 9.11"
@@ -11,6 +15,10 @@ terraform {
       version = "~> 3.7"
     }
   }
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }
 
 provider "oci" {
@@ -32,14 +40,26 @@ locals {
     ["migrator"],
   )
 
-  tunnels = {
-    for environment in local.environments : environment => {
-      id          = data.terraform_remote_state.environment[environment].outputs.tunnel_id
-      account_tag = data.terraform_remote_state.environment[environment].outputs.tunnel_account_tag
-      secret      = data.terraform_remote_state.environment[environment].outputs.tunnel_secret
-      hostname    = replace(data.terraform_remote_state.environment[environment].outputs.clickhouse_url, "https://", "")
+  tunnels = merge(
+    {
+      for environment in local.environments : environment => {
+        id          = data.terraform_remote_state.environment[environment].outputs.tunnel_id
+        account_tag = data.terraform_remote_state.environment[environment].outputs.tunnel_account_tag
+        secret      = data.terraform_remote_state.environment[environment].outputs.tunnel_secret
+        hostname    = replace(data.terraform_remote_state.environment[environment].outputs.clickhouse_url, "https://", "")
+        service     = "http://clickhouse:8123"
+      }
+    },
+    {
+      ssh = {
+        id          = module.ssh_tunnel.tunnel_id
+        account_tag = module.ssh_tunnel.account_tag
+        secret      = module.ssh_tunnel.tunnel_secret
+        hostname    = module.ssh_tunnel.fqdn
+        service     = "ssh://host.docker.internal:22"
+      }
     }
-  }
+  )
 
   init_sql = {
     for file in fileset("${path.module}/../../deploy/vm/clickhouse/init", "*.sql") :
@@ -86,6 +106,24 @@ resource "random_password" "clickhouse" {
 
   length  = 40
   special = false
+}
+
+module "ssh_tunnel" {
+  source = "../modules/tunnel"
+
+  account_id = var.cloudflare_account_id
+  zone_id    = var.cloudflare_zone_id
+  zone_name  = var.zone_name
+  purpose    = "ssh"
+  hostname   = "ssh"
+}
+
+module "ssh_access" {
+  source = "../modules/ssh-access"
+
+  account_id      = var.cloudflare_account_id
+  hostname        = module.ssh_tunnel.fqdn
+  operator_emails = var.operator_emails
 }
 
 module "vm" {

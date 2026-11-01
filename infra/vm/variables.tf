@@ -1,3 +1,30 @@
+variable "cloudflare_api_token" {
+  description = "Token with the scopes listed in infra/README.md. Comes from the GitHub environment, never from a file."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare account id."
+  type        = string
+}
+
+variable "cloudflare_zone_id" {
+  description = "Zone id of nekolog.io."
+  type        = string
+}
+
+variable "zone_name" {
+  description = "Apex of that zone."
+  type        = string
+  default     = "nekolog.io"
+}
+
+variable "operator_emails" {
+  description = "Addresses allowed to open an SSH session on the machine through Access."
+  type        = list(string)
+}
+
 variable "tenancy_ocid" {
   description = "Oracle Cloud tenancy."
   type        = string

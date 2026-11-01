@@ -9,4 +9,6 @@ minimumReleaseAge: 4320
 allowBuilds:
   "@parcel/watcher": true
   "@swc/core": true
+  esbuild: true
   lefthook: true
+  workerd: true
