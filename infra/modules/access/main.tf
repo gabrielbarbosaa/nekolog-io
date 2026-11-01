@@ -51,12 +51,12 @@ resource "cloudflare_zero_trust_access_application" "clickhouse" {
   type             = "self_hosted"
   session_duration = var.operator_session_duration
 
-  app_launcher_visible        = false
-  http_only_cookie_attribute  = true
-  enable_binding_cookie       = true
-  same_site_cookie_attribute  = "strict"
-  service_auth_401_redirect   = true
-  auto_redirect_to_identity   = false
+  app_launcher_visible       = false
+  http_only_cookie_attribute = true
+  enable_binding_cookie      = true
+  same_site_cookie_attribute = "strict"
+  service_auth_401_redirect  = true
+  auto_redirect_to_identity  = false
 
   destinations = [
     {
