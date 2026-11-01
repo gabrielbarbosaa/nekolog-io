@@ -3,6 +3,15 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
+  issueCreateArgs,
+  issueListArgs,
+  labelCreateArgs,
+  labelListArgs,
+  milestoneCreateArgs,
+  milestoneListArgs,
+  repoViewArgs,
+} from './commands.ts'
+import {
   issueBody,
   issueTitle,
   type Milestone,
@@ -304,5 +313,77 @@ describe('labelFor', () => {
 
   it('still answers for a prefix nobody defined', () => {
     expect(labelFor('whatever').description).not.toBe('')
+  })
+})
+
+describe('the gh commands', () => {
+  const issue = {
+    title: '1.1 feat/schema-v1',
+    body: 'primeira linha\n\n- [ ] item com `crase` e "aspas"',
+    label: 'feat',
+    milestone: 'M1 — Ingestão',
+  }
+
+  it('passes the issue body as an argument, never through stdin', () => {
+    const args = issueCreateArgs(issue)
+
+    expect(args).not.toContain('--body-file')
+    expect(args).not.toContain('-')
+    expect(args[args.indexOf('--body') + 1]).toBe(issue.body)
+  })
+
+  it('files the issue under its label and milestone', () => {
+    const args = issueCreateArgs(issue)
+
+    expect(args[args.indexOf('--label') + 1]).toBe('feat')
+    expect(args[args.indexOf('--milestone') + 1]).toBe('M1 — Ingestão')
+    expect(args[args.indexOf('--title') + 1]).toBe(issue.title)
+  })
+
+  it('counts closed issues as existing, so a closed one is not recreated', () => {
+    expect(issueListArgs()).toContain('--state')
+    expect(issueListArgs()[issueListArgs().indexOf('--state') + 1]).toBe('all')
+  })
+
+  it('asks for more issues and labels than the roadmap will ever have', () => {
+    const issueLimit = Number(issueListArgs()[issueListArgs().indexOf('--limit') + 1])
+    const labelLimit = Number(labelListArgs()[labelListArgs().indexOf('--limit') + 1])
+
+    expect(issueLimit).toBeGreaterThan(parseEtapas(etapas).flatMap((m) => m.steps).length)
+    expect(labelLimit).toBeGreaterThan(Object.keys(LABELS).length)
+  })
+
+  it('counts closed milestones as existing too', () => {
+    expect(milestoneListArgs('owner/repo')).toContain('state=all')
+    expect(milestoneListArgs('owner/repo')).toContain('repos/owner/repo/milestones')
+  })
+
+  it('sends the colour and the description when it creates a label', () => {
+    const args = labelCreateArgs({ name: 'feat', colour: '0e8a16', description: 'Funcionalidade' })
+
+    expect(args[args.indexOf('--color') + 1]).toBe('0e8a16')
+    expect(args[args.indexOf('--description') + 1]).toBe('Funcionalidade')
+  })
+
+  it('describes the milestone it creates', () => {
+    const args = milestoneCreateArgs('owner/repo', {
+      title: 'M1 — Ingestão',
+      description: 'Pronto quando: x.',
+    })
+
+    expect(args).toContain('title=M1 — Ingestão')
+    expect(args).toContain('description=Pronto quando: x.')
+  })
+
+  it.each([
+    ['repo view', repoViewArgs()],
+    ['issue list', issueListArgs()],
+    ['label list', labelListArgs()],
+    ['milestone list', milestoneListArgs('owner/repo')],
+    ['issue create', issueCreateArgs(issue)],
+    ['label create', labelCreateArgs({ name: 'feat', colour: '0e8a16', description: 'x' })],
+    ['milestone create', milestoneCreateArgs('owner/repo', { title: 'M1', description: 'x' })],
+  ])('builds %s out of non-empty strings only', (_what, args) => {
+    expect(args.every((arg) => typeof arg === 'string' && arg.length > 0)).toBe(true)
   })
 })

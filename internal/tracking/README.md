@@ -76,3 +76,9 @@ quem cria conteúdo rápido demais (o limite secundário é da ordem de 80 por
 minuto). Uma que falhe não interrompe as outras: no fim o script lista as que
 não entraram e sai com código diferente de zero. Como ele é idempotente, a saída
 para isso é rodar de novo.
+
+Toda chamada ao `gh` tem prazo de 30 s. Um comando que fica esperando algo que
+nunca vem morre em meio minuto, em vez de pendurar a execução inteira em
+silêncio — foi exatamente assim que a primeira versão falhou, mandando o corpo
+da issue por stdin num `execFile` assíncrono, que não escreve stdin nenhum. Hoje
+o corpo vai como argumento, e tem teste exigindo que continue assim.

@@ -1,3 +1,12 @@
+export {
+  issueCreateArgs,
+  issueListArgs,
+  labelCreateArgs,
+  labelListArgs,
+  milestoneCreateArgs,
+  milestoneListArgs,
+  repoViewArgs,
+} from './commands.ts'
 export type { Milestone, MilestoneGoal, Step } from './etapas.ts'
 export {
   issueBody,

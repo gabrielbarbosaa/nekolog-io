@@ -4,6 +4,15 @@ import { dirname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import {
+  issueCreateArgs,
+  issueListArgs,
+  labelCreateArgs,
+  labelListArgs,
+  milestoneCreateArgs,
+  milestoneListArgs,
+  repoViewArgs,
+} from './commands.ts'
 import { parseEtapas, parseGoals } from './etapas.ts'
 import { buildPlan, type SyncPlan } from './plan.ts'
 
@@ -14,42 +23,20 @@ const ETAPAS = join(ROOT, 'docs', 'ETAPAS.md')
 const PLANO = join(ROOT, 'docs', 'PLANO.md')
 
 export const CREATE_DELAY_MS = 1_200
+export const CALL_TIMEOUT_MS = 30_000
 
-async function gh(args: string[], input?: string): Promise<string> {
+async function gh(args: string[]): Promise<string> {
   const { stdout } = await run('gh', args, {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 32,
-    ...(input === undefined ? {} : { input }),
+    timeout: CALL_TIMEOUT_MS,
   })
   return stdout
 }
 
-async function currentRepo(): Promise<string> {
-  const raw = await gh(['repo', 'view', '--json', 'nameWithOwner'])
-  return (JSON.parse(raw) as { nameWithOwner: string }).nameWithOwner
-}
-
-async function titlesOfMilestones(repo: string): Promise<Set<string>> {
-  const raw = await gh([
-    'api',
-    '--paginate',
-    '-X',
-    'GET',
-    '-f',
-    'state=all',
-    `repos/${repo}/milestones`,
-  ])
-  return new Set((JSON.parse(raw) as Array<{ title: string }>).map((entry) => entry.title))
-}
-
-async function namesOfLabels(): Promise<Set<string>> {
-  const raw = await gh(['label', 'list', '--limit', '200', '--json', 'name'])
-  return new Set((JSON.parse(raw) as Array<{ name: string }>).map((entry) => entry.name))
-}
-
-async function titlesOfIssues(): Promise<Set<string>> {
-  const raw = await gh(['issue', 'list', '--state', 'all', '--limit', '1000', '--json', 'title'])
-  return new Set((JSON.parse(raw) as Array<{ title: string }>).map((entry) => entry.title))
+function titlesFrom(raw: string, field: 'title' | 'name'): Set<string> {
+  const entries = JSON.parse(raw) as Array<Record<string, string>>
+  return new Set(entries.map((entry) => entry[field] ?? ''))
 }
 
 function write(line: string): void {
@@ -78,14 +65,14 @@ async function main(): Promise<void> {
     throw new Error(`Nenhum marco encontrado em ${ETAPAS}. O formato do arquivo mudou?`)
   }
 
-  const repo = await currentRepo()
+  const repo = (JSON.parse(await gh(repoViewArgs())) as { nameWithOwner: string }).nameWithOwner
   const plan = buildPlan({
     milestones,
     goals: parseGoals(readFileSync(PLANO, 'utf8')),
     existing: {
-      milestones: await titlesOfMilestones(repo),
-      labels: await namesOfLabels(),
-      issues: await titlesOfIssues(),
+      milestones: titlesFrom(await gh(milestoneListArgs(repo)), 'title'),
+      labels: titlesFrom(await gh(labelListArgs()), 'name'),
+      issues: titlesFrom(await gh(issueListArgs()), 'title'),
     },
     includeDone,
   })
@@ -95,29 +82,14 @@ async function main(): Promise<void> {
   for (const milestone of plan.milestones) {
     write(`${apply ? 'criando' : 'criaria'} milestone ${milestone.title}`)
     if (apply) {
-      await gh([
-        'api',
-        `repos/${repo}/milestones`,
-        '-f',
-        `title=${milestone.title}`,
-        '-f',
-        `description=${milestone.description}`,
-      ])
+      await gh(milestoneCreateArgs(repo, milestone))
     }
   }
 
   for (const label of plan.labels) {
     write(`${apply ? 'criando' : 'criaria'} label ${label.name}`)
     if (apply) {
-      await gh([
-        'label',
-        'create',
-        label.name,
-        '--color',
-        label.colour,
-        '--description',
-        label.description,
-      ])
+      await gh(labelCreateArgs(label))
     }
   }
 
@@ -130,21 +102,7 @@ async function main(): Promise<void> {
       continue
     }
     try {
-      await gh(
-        [
-          'issue',
-          'create',
-          '--title',
-          issue.title,
-          '--body-file',
-          '-',
-          '--label',
-          issue.label,
-          '--milestone',
-          issue.milestone,
-        ],
-        issue.body,
-      )
+      await gh(issueCreateArgs(issue))
       created += 1
     } catch (error) {
       failed.push({
