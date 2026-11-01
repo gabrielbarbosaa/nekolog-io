@@ -1,0 +1,23 @@
+{
+  "name": "@examples/express",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env src/server.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nekolog-io/node": "workspace:*",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@apps/ingest": "workspace:*",
+    "@internal/clickhouse": "workspace:*",
+    "@internal/seed": "workspace:*",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "vitest": "^5.0.5"
+  }
+}

@@ -41,6 +41,19 @@ export type { ErrorBody } from './errors.ts'
 export { errorBody, STATUS_FOR_CODE, statusFor } from './errors.ts'
 export type { FoundKey, KeyLocation, KeyLookup } from './keys.ts'
 export { KEY_QUERY_PARAM, keyFromRequest } from './keys.ts'
+export type {
+  LocalIngestConfig,
+  LocalIngestEnv,
+  LocalIngestOptions,
+  LocalIngestServer,
+} from './local.ts'
+export {
+  DEFAULT_LOCAL_PORT,
+  localIngestApp,
+  localIngestConfigFrom,
+  portFrom,
+  startLocalIngest,
+} from './local.ts'
 export type { RowContext } from './rows.ts'
 export {
   clickHouseTimestamp,
