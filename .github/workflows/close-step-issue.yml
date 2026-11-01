@@ -1,0 +1,46 @@
+name: Step Issues
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  close:
+    name: Close the step issue
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Close the issue named after this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          gh issue list --repo "$REPO" --state open --limit 500 --json number,title > issues.json
+
+          number=$(jq -r --arg ref " $HEAD_REF" \
+            '[.[] | select(.title | endswith($ref))] | .[0].number // empty' issues.json)
+
+          if [ -z "$number" ]; then
+            echo "Nenhuma issue aberta tem o nome de branch '$HEAD_REF' no título. Nada a fechar."
+            exit 0
+          fi
+
+          gh issue close "$number" --repo "$REPO" \
+            --comment "Entregue no PR #${PR_NUMBER}, mergeado na \`dev\`."
+          echo "Fechei a issue #${number}."
