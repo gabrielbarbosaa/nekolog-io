@@ -39,7 +39,7 @@ SDKs (browser / node) → HTTPS batch (gzip)
 
 Key invariants from `docs/PLANO.md` §3–4 that should guide any implementation:
 
-- **Ingestion stays dumb; processing happens elsewhere.** The ingest API only validates and writes. Fingerprinting, source-map resolution, and alerting run in `apps/jobs`, not `apps/ingest`.
+- **Ingestion does no I/O beyond the write; processing happens elsewhere.** The ingest API validates, derives what comes out of the event itself, and writes. Anything needing a network call or a database read — source-map resolution, alert evaluation, issue building — runs in `apps/jobs`. **Fingerprinting is computed at ingestion** (spec 5, step 4.5): it is pure CPU over the event in hand, and ClickHouse cannot backfill the `fingerprint` column after the insert without a mutation. `docs/PLANO.md` §3 principle 1 states the rule in this form; an older wording said error grouping ran outside ingestion, which contradicted spec 5 and `ETAPAS.md` 4.5 and was settled in favour of ingestion on 2026-10-31.
 - **Ingestion never depends on Postgres or Redis** — keys live in Workers KV so Neon's cold-start/hibernation never adds latency to the hot path.
 - **Vendor-specific behavior is always behind an interface** (`KeyStore`, `RateLimiter`, `BlobStore`, `Mailer`, `LogStore`, `RedisClient` in `internal/adapters/`) so the same code runs on free-tier cloud and in self-host (Redis/Valkey, Garage, SMTP, local ClickHouse/Postgres).
 - **The SDK must never throw into the host app** and ships with zero dependencies.
