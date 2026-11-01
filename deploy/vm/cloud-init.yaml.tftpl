@@ -1,0 +1,97 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - docker.io
+  - docker-compose-v2
+  - unattended-upgrades
+  - apt-listchanges
+  - fail2ban
+
+write_files:
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    permissions: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+  - path: /etc/apt/apt.conf.d/51nekolog-unattended
+    permissions: "0644"
+    content: |
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Automatic-Reboot-Time "04:17";
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+  - path: /etc/nekolog/docker-compose.yml
+    permissions: "0640"
+    content: |
+${indent(6, compose)}
+
+  - path: /etc/nekolog/clickhouse/users.xml
+    permissions: "0640"
+    content: |
+${indent(6, clickhouse_users)}
+
+%{ for name, body in init_sql ~}
+  - path: /etc/nekolog/clickhouse/init/${name}
+    permissions: "0640"
+    content: |
+${indent(6, body)}
+%{ endfor ~}
+
+%{ for environment, tunnel in tunnels ~}
+  - path: /etc/nekolog/cloudflared/${environment}/config.yml
+    permissions: "0640"
+    content: |
+      tunnel: ${tunnel.id}
+      credentials-file: /etc/cloudflared/credentials.json
+      metrics: 127.0.0.1:0
+      ingress:
+        - hostname: ${tunnel.hostname}
+          service: http://clickhouse:8123
+        - service: http_status:404
+
+  - path: /etc/nekolog/cloudflared/${environment}/credentials.json
+    permissions: "0600"
+    content: |
+      {"AccountTag":"${tunnel.account_tag}","TunnelID":"${tunnel.id}","TunnelSecret":"${tunnel.secret}"}
+
+%{ endfor ~}
+  - path: /etc/nekolog/.env
+    permissions: "0600"
+    content: |
+      CLICKHOUSE_MIGRATOR_PASSWORD=${migrator_password}
+
+  - path: /etc/systemd/system/nekolog.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=NekoLog ClickHouse and tunnels
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/etc/nekolog
+      ExecStart=/usr/bin/docker compose up -d --wait
+      ExecStop=/usr/bin/docker compose down
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - [chmod, "0750", /etc/nekolog]
+  - [systemctl, enable, --now, docker]
+  - [systemctl, enable, --now, unattended-upgrades]
+  - [systemctl, enable, --now, nekolog.service]
+
+power_state:
+  mode: reboot
+  condition: test -f /var/run/reboot-required
+  delay: "+5"

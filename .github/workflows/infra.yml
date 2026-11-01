@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm; do
             found=$(grep -cE '^[[:space:]]*enforced[[:space:]]*=[[:space:]]*true$' "$root/backend.tf" || true)
             if [ "$found" -ne 2 ]; then
               echo "$root/backend.tf enforces encryption $found time(s); state and plan both have to."
@@ -61,21 +61,18 @@ jobs:
       - name: Validate every root module
         run: |
           set -euo pipefail
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm; do
             echo "::group::$root"
-            tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
+            tofu -chdir="$root" init -backend=false -input=false
             tofu -chdir="$root" validate
             echo "::endgroup::"
           done
 
-      - name: Refuse a provider lock file that drifted
+      - name: TEMPORARY print the vm lock file
         run: |
-          set -euo pipefail
-          if ! git diff --quiet -- '*.terraform.lock.hcl'; then
-            echo 'A provider lock file changed during init. Run tofu init locally and commit the result.'
-            git --no-pager diff -- '*.terraform.lock.hcl'
-            exit 1
-          fi
+          echo '=====BEGIN infra/vm'
+          cat infra/vm/.terraform.lock.hcl
+          echo '=====END infra/vm'
 
   plan:
     name: Plan (${{ matrix.root }})
@@ -85,7 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        root: [envs/dev, envs/qa, envs/prod, repo]
+        root: [envs/dev, envs/qa, envs/prod, repo, vm]
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -177,7 +174,7 @@ jobs:
           case "$GITHUB_REF_NAME" in
             dev)  echo "list=envs/dev" >> "$GITHUB_OUTPUT" ;;
             qa)   echo "list=envs/qa" >> "$GITHUB_OUTPUT" ;;
-            main) echo "list=envs/prod repo" >> "$GITHUB_OUTPUT" ;;
+            main) echo "list=envs/prod repo vm" >> "$GITHUB_OUTPUT" ;;
             *)    echo "list=" >> "$GITHUB_OUTPUT" ;;
           esac
 

@@ -1,0 +1,115 @@
+name: nekolog
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8-alpine
+    restart: unless-stopped
+    networks:
+      inside:
+        aliases:
+          - clickhouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+      - ./clickhouse/users.xml:/etc/clickhouse-server/users.d/nekolog.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  clickhouse-init:
+    image: curlimages/curl:8.11.1
+    networks:
+      - inside
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./clickhouse/init:/init:ro
+    environment:
+      CLICKHOUSE_MIGRATOR_PASSWORD: ${CLICKHOUSE_MIGRATOR_PASSWORD:?o compose precisa da senha do migrator}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        for file in /init/*.sql; do
+          echo "aplicando $$file"
+          curl -sS --fail-with-body \
+            -u "nekolog_migrator:$$CLICKHOUSE_MIGRATOR_PASSWORD" \
+            --data-binary "@$$file" \
+            http://clickhouse:8123/
+        done
+
+  tunnel-dev:
+    image: cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    networks:
+      - inside
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./cloudflared/dev:/etc/cloudflared:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tunnel-qa:
+    image: cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    networks:
+      - inside
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./cloudflared/qa:/etc/cloudflared:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tunnel-prod:
+    image: cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    networks:
+      - inside
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./cloudflared/prod:/etc/cloudflared:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  inside:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
