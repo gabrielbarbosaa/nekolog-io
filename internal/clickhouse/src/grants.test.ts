@@ -8,6 +8,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const DEV = readFileSync(join(ROOT, 'deploy', 'clickhouse-users.dev.xml'), 'utf8')
 const VM = readFileSync(join(ROOT, 'deploy', 'vm', 'clickhouse', 'users.xml.tftpl'), 'utf8')
 
+// biome-ignore lint/suspicious/noTemplateCurlyInString: an OpenTofu placeholder, not a JS template
+const ENVIRONMENT = '${environment}'
+// biome-ignore lint/suspicious/noTemplateCurlyInString: an OpenTofu placeholder, not a JS template
+const CONTAINER_NETWORK = '${container_network}'
+
 const VIEW_COLUMNS = [
   'project_id',
   'environment_id',
@@ -18,6 +23,16 @@ const VIEW_COLUMNS = [
 ]
 
 const HIDDEN_COLUMNS = ['message', 'stacktrace', 'attributes', 'user_id', 'trace_id', 'span_id']
+
+const ROLES = ['reader', 'ingest', 'jobs'] as const
+
+function vmUser(role: string): string {
+  return `nekolog_${role}_${ENVIRONMENT}`
+}
+
+function vmDatabase(): string {
+  return `nekolog_${ENVIRONMENT}`
+}
 
 function escaped(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -44,7 +59,7 @@ function usersOf(xml: string): string[] {
 describe('the ingestion credential, in both files', () => {
   it.each([
     ['dev', DEV, 'nekolog_ingest', 'nekolog_dev'],
-    ['vm', VM, 'nekolog_ingest_${environment}', 'nekolog_${environment}'],
+    ['vm', VM, vmUser('ingest'), vmDatabase()],
   ])('writes logs and nothing else in %s', (_name, xml, user, database) => {
     const grants = grantsOf(xml, user)
 
@@ -56,7 +71,7 @@ describe('the ingestion credential, in both files', () => {
 
   it.each([
     ['dev', DEV, 'nekolog_ingest'],
-    ['vm', VM, 'nekolog_ingest_${environment}'],
+    ['vm', VM, vmUser('ingest')],
   ])('reads only the columns the materialized views need in %s', (_name, xml, user) => {
     const select = grantsOf(xml, user).find((grant) => grant.startsWith('GRANT SELECT('))
     expect(select).toBeDefined()
@@ -73,7 +88,7 @@ describe('the ingestion credential, in both files', () => {
 
   it.each([
     ['dev', DEV, 'nekolog_ingest'],
-    ['vm', VM, 'nekolog_ingest_${environment}'],
+    ['vm', VM, vmUser('ingest')],
   ])('never gets a table-wide SELECT in %s', (_name, xml, user) => {
     for (const grant of grantsOf(xml, user)) {
       expect(grant).not.toMatch(/GRANT[^(]*\bSELECT\b(?!\()/)
@@ -84,7 +99,7 @@ describe('the ingestion credential, in both files', () => {
 describe('the reading credential', () => {
   it.each([
     ['dev', DEV, 'nekolog_reader'],
-    ['vm', VM, 'nekolog_reader_${environment}'],
+    ['vm', VM, vmUser('reader')],
   ])('only reads in %s', (_name, xml, user) => {
     for (const grant of grantsOf(xml, user)) {
       expect(grant).not.toMatch(/\b(INSERT|CREATE|DROP|ALTER|TRUNCATE)\b/)
@@ -94,17 +109,12 @@ describe('the reading credential', () => {
 
 describe('the migrations credential', () => {
   it('is the only one in either file allowed to change a schema', () => {
-    for (const [xml, users] of [
+    const files: Array<[string, string[]]> = [
       [DEV, ['nekolog_reader', 'nekolog_ingest', 'nekolog_jobs']],
-      [
-        VM,
-        [
-          'nekolog_reader_${environment}',
-          'nekolog_ingest_${environment}',
-          'nekolog_jobs_${environment}',
-        ],
-      ],
-    ] as const) {
+      [VM, ROLES.map(vmUser)],
+    ]
+
+    for (const [xml, users] of files) {
       for (const user of users) {
         for (const grant of grantsOf(xml, user)) {
           expect(grant).not.toMatch(/\b(CREATE|DROP|ALTER|TRUNCATE)\b/)
@@ -114,9 +124,16 @@ describe('the migrations credential', () => {
   })
 
   it('cannot touch a database outside the three the platform owns, on the vm', () => {
-    for (const grant of grantsOf(VM, 'nekolog_migrator')) {
-      expect(grant).toMatch(/ON nekolog_\$\{environment\}\.\*$/)
+    const grants = grantsOf(VM, 'nekolog_migrator')
+
+    expect(grants.length).toBeGreaterThan(0)
+    for (const grant of grants) {
+      expect(grant.endsWith(`ON ${vmDatabase()}.*`)).toBe(true)
     }
+  })
+
+  it('may create the three databases, because nothing else is allowed to', () => {
+    expect(grantsOf(VM, 'nekolog_migrator')).toContain(`GRANT CREATE DATABASE ON ${vmDatabase()}.*`)
   })
 })
 
@@ -128,17 +145,16 @@ describe('the vm file, where the three environments share one server', () => {
 
     expect(named.length).toBeGreaterThan(0)
     for (const user of named) {
-      expect(user).toMatch(/\$\{environment\}$/)
+      expect(user.endsWith(ENVIRONMENT)).toBe(true)
     }
   })
 
-  it.each([
-    'nekolog_reader_${environment}',
-    'nekolog_ingest_${environment}',
-    'nekolog_jobs_${environment}',
-  ])('gives %s no grant on another environment', (user) => {
-    for (const grant of grantsOf(VM, user)) {
-      expect(grant).toMatch(/ON nekolog_\$\{environment\}\./)
+  it.each(ROLES)('gives the %s of one environment no grant on another', (role) => {
+    const grants = grantsOf(VM, vmUser(role))
+
+    expect(grants.length).toBeGreaterThan(0)
+    for (const grant of grants) {
+      expect(grant).toContain(`ON ${vmDatabase()}.`)
       expect(grant).not.toMatch(/nekolog_(dev|qa|prod)/)
     }
   })
@@ -166,7 +182,7 @@ describe('the vm file, where the three environments share one server', () => {
 
     expect(networks.length).toBeGreaterThan(1)
     for (const network of networks) {
-      expect(network === '127.0.0.1' || network === '${container_network}').toBe(true)
+      expect(network === '127.0.0.1' || network === CONTAINER_NETWORK).toBe(true)
     }
   })
 })
