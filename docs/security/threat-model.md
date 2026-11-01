@@ -102,6 +102,7 @@
 | D5 | Disco da VM enche e o ClickHouse para | 2 | TTL por linha (`retention_days`); alerta de disco acima de 80%; monitor externo | Planejada (M2) |
 | D6 | ClickHouse fora do ar faz perder logs recebidos | 2 | Contingência no R2 (`spool/`) e reenvio pelos jobs, com `<ambiente>:<batchId>` como token de deduplicação. O binding `SPOOL` é obrigatório: o Worker de ingestão não sobe sem ele. Lote que o ClickHouse nunca vai aceitar (`400`) vai para `quarantine/` em vez de travar a fila | **Implementada** (etapa 1.11); falta o alerta de acúmulo (2.24) |
 | D7 | Força bruta de senha | 3 | Por conta: 5 erros em 15 min ativam espera crescente (1→15 min); por IP: 20 tentativas em 15 min; código de login com 5 tentativas | Planejada (M2) |
+| D8 | Payload montado para o validador lançar exceção, virando `500` que o SDK retenta para sempre | 1 | Valor que vem do cliente nunca é convertido em texto por coerção (`String(x)` lança em `{"toString":""}`): o `describeValue` do `@internal/schema` reporta tipo, não valor. O risco não é o `500` em si — é que `decisionForStatus` manda retentar `5xx`, então um lote que nunca vai ser aceito voltaria em loop. *Fuzzing* com fast-check (etapa 1.14) exige que o validador nunca lance | **Implementada** (etapa 1.14) |
 
 ## E — Elevation of privilege
 

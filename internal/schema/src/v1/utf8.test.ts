@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { truncateToUtf8Bytes, utf8ByteLength } from './utf8'
+﻿import { describe, expect, it } from 'vitest'
+import { truncateToUtf8Bytes, utf8ByteLength } from './utf8.ts'
 
 describe('utf8ByteLength', () => {
   it('counts ASCII as one byte each', () => {

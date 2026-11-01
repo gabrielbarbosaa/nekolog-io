@@ -483,3 +483,27 @@ describe('everything else', () => {
     expect(onError).toHaveBeenCalledWith(boom)
   })
 })
+
+describe('a payload crafted to make the parser throw', () => {
+  const HOSTILE = '{"schemaVersion":{"toString":""}}'
+
+  it('answers 400 with a stable code, not 500', async () => {
+    const { app, onError } = setup()
+
+    const response = await app.request(post(HOSTILE))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      error: { code: 'unsupported_schema_version' },
+    })
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('never reaches the sink with it', async () => {
+    const { app, batches } = setup()
+
+    await app.request(post(HOSTILE))
+
+    expect(batches).toEqual([])
+  })
+})

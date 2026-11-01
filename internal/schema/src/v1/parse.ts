@@ -1,6 +1,6 @@
-import * as v from 'valibot'
-import { type BatchErrorCode, type EventRejectionCode, rejectionCodeForField } from './codes'
-import { DEFAULT_SERVICE, MAX_BATCH_BYTES, MAX_MESSAGE_BYTES } from './limits'
+﻿import * as v from 'valibot'
+import { type BatchErrorCode, type EventRejectionCode, rejectionCodeForField } from './codes.ts'
+import { DEFAULT_SERVICE, MAX_BATCH_BYTES, MAX_MESSAGE_BYTES } from './limits.ts'
 import {
   type Envelope,
   envelopeSchema,
@@ -9,8 +9,8 @@ import {
   type Resource,
   type Sdk,
   schemaVersionSchema,
-} from './schema'
-import { truncateToUtf8Bytes } from './utf8'
+} from './schema.ts'
+import { truncateToUtf8Bytes } from './utf8.ts'
 
 export function exceedsBatchSizeLimit(byteLength: number): boolean {
   return byteLength > MAX_BATCH_BYTES
@@ -40,12 +40,32 @@ export type ParseResult =
   | { ok: true; batch: ParsedBatch }
   | { ok: false; code: BatchErrorCode; message: string }
 
+export const MAX_REPORTED_VALUE_CHARS = 32
+
+export function describeValue(value: unknown): string {
+  switch (typeof value) {
+    case 'string':
+      return value.length > MAX_REPORTED_VALUE_CHARS
+        ? `${value.slice(0, MAX_REPORTED_VALUE_CHARS)}…`
+        : value
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+      return String(value)
+    case 'object':
+      return value === null ? 'null' : Array.isArray(value) ? 'array' : 'object'
+    default:
+      return typeof value
+  }
+}
+
 function firstIssueField(issues: ReadonlyArray<v.BaseIssue<unknown>>): string | undefined {
   const path = issues[0]?.path
   if (!path || path.length === 0) {
     return undefined
   }
-  return String(path[0]?.key)
+  const key = path[0]?.key
+  return typeof key === 'string' || typeof key === 'number' ? String(key) : undefined
 }
 
 function schemaVersionOf(input: unknown): unknown {
@@ -65,7 +85,7 @@ export function parseBatch(input: unknown): ParseResult {
     return {
       ok: false,
       code: 'unsupported_schema_version',
-      message: `Unsupported schemaVersion: ${String(declaredVersion)}`,
+      message: `Unsupported schemaVersion: ${describeValue(declaredVersion)}`,
     }
   }
 

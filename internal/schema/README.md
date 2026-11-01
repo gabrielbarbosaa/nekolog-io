@@ -91,3 +91,37 @@ o fato.
   `received_at`, `country`, `fingerprint`, `retention_days`): não fazem parte do
   contrato com o SDK.
 - **Validação de key, origem, cota e rate limit**: tudo isso é da ingestão.
+
+## Fuzzing
+
+`src/v1/fuzz.test.ts` joga payload gerado no `parseBatch` e exige propriedades,
+não exemplos:
+
+- **nunca lança**, nem para JSON arbitrário nem para valores que o JSON sequer
+  carrega. Este é o validador da borda pública: uma exceção aqui é um `500`.
+- **não perde nem conta duas vezes**: `accepted` e `rejected` juntos cobrem
+  exatamente os índices `0..n-1` do lote.
+- **nunca aceita evento fora dos limites** da especificação 1, por mais
+  corrompido que o payload chegue.
+- **dá o mesmo veredicto antes e depois de uma volta pelo JSON**.
+- **ignora campo que não conhece**, que é a regra de compatibilidade da spec.
+- **trunca mensagem com honestidade**: o que sai é prefixo do que entrou, e a
+  flag `messageTruncated` concorda com isso.
+
+### O teste que vigia o fuzzer
+
+Propriedade que nunca roda passa sempre. Por isso existe o bloco
+`the fuzzer itself`: ele conta quantos payloads chegam a ser aceitos, quantos
+são recusados e quantos produzem evento rejeitado, e falha se a distribuição
+degenerar.
+
+Ele já pagou o aluguel: na primeira execução, 285 de 300 lotes "limpos" eram
+recusados porque o gerador produzia UUID v4 e o `batchId` exige **v7**. Sem o
+vigia, as outras dez propriedades teriam passado sem nunca olhar um evento.
+
+### Quantas rodadas
+
+`FUZZ_RUNS` controla; o padrão local é baixo para o teste ser rápido, e o CI
+roda `1000`. Como a semente muda a cada execução, **uma falha só no CI é um
+achado de verdade, não flakiness** — a saída do fast-check traz a semente e o
+contra-exemplo já reduzido, e `fc.assert(..., { seed })` reproduz.

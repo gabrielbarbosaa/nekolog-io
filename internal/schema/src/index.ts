@@ -1,10 +1,10 @@
-export {
+﻿export {
   BATCH_ERROR_CODES,
   type BatchErrorCode,
   EVENT_REJECTION_CODES,
   type EventRejectionCode,
   rejectionCodeForField,
-} from './v1/codes'
+} from './v1/codes.ts'
 export {
   ATTRIBUTE_KEY_PATTERN,
   DEFAULT_SERVICE,
@@ -33,7 +33,7 @@ export {
   SPAN_ID_CHARS,
   SUPPORTED_SCHEMA_VERSIONS,
   TRACE_ID_CHARS,
-} from './v1/limits'
+} from './v1/limits.ts'
 export {
   type AcceptedEvent,
   exceedsBatchSizeLimit,
@@ -41,7 +41,7 @@ export {
   type ParseResult,
   parseBatch,
   type RejectedEvent,
-} from './v1/parse'
+} from './v1/parse.ts'
 export {
   type AttributeValue,
   attributesSchema,
@@ -60,5 +60,5 @@ export {
   sessionSchema,
   timestampSchema,
   traceSchema,
-} from './v1/schema'
-export { truncateToUtf8Bytes, utf8ByteLength } from './v1/utf8'
+} from './v1/schema.ts'
+export { truncateToUtf8Bytes, utf8ByteLength } from './v1/utf8.ts'
