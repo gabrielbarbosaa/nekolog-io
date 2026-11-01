@@ -1,0 +1,202 @@
+name: Infra
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  push:
+    branches: [main, qa, dev]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TOFU_VERSION: 1.13.2
+
+jobs:
+  check:
+    name: Format and validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive -diff infra
+
+      - name: Every root must enforce state encryption
+        run: |
+          set -euo pipefail
+          failed=0
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+            found=$(grep -cE '^[[:space:]]*enforced[[:space:]]*=[[:space:]]*true$' "$root/backend.tf" || true)
+            if [ "$found" -ne 2 ]; then
+              echo "$root/backend.tf enforces encryption $found time(s); state and plan both have to."
+              failed=1
+            fi
+          done
+          test "$failed" -eq 0
+
+      - name: Validate every root module
+        run: |
+          set -euo pipefail
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+            echo "::group::$root"
+            tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
+            tofu -chdir="$root" validate
+            echo "::endgroup::"
+          done
+
+      - name: Refuse a provider lock file that drifted
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- '*.terraform.lock.hcl'; then
+            echo 'A provider lock file changed during init. Run tofu init locally and commit the result.'
+            git --no-pager diff -- '*.terraform.lock.hcl'
+            exit 1
+          fi
+
+  plan:
+    name: Plan (${{ matrix.root }})
+    needs: check
+    if: github.event_name == 'pull_request' && vars.INFRA_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        root: [envs/dev, envs/qa, envs/prod, repo]
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: Refuse to run without state encryption
+        run: test -n "${TF_ENCRYPTION:-}"
+        env:
+          TF_ENCRYPTION: ${{ secrets.TF_ENCRYPTION }}
+
+      - name: Write the backend configuration
+        run: |
+          set -euo pipefail
+          printf 'bucket = "%s"\n' "$STATE_BUCKET" > backend.hcl
+          printf 'endpoints = { s3 = "%s" }\n' "$STATE_ENDPOINT" >> backend.hcl
+        env:
+          STATE_BUCKET: ${{ vars.TOFU_STATE_BUCKET }}
+          STATE_ENDPOINT: ${{ vars.TOFU_STATE_ENDPOINT }}
+
+      - name: Plan
+        run: |
+          set -euo pipefail
+          tofu -chdir="infra/${{ matrix.root }}" init -input=false \
+            -backend-config="$GITHUB_WORKSPACE/backend.hcl"
+          tofu -chdir="infra/${{ matrix.root }}" plan -input=false -lock=false -no-color
+        env:
+          TF_ENCRYPTION: ${{ secrets.TF_ENCRYPTION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TOFU_STATE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TOFU_STATE_SECRET_ACCESS_KEY }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
+          TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+
+  apply:
+    name: Apply (${{ github.ref_name }})
+    needs: check
+    if: github.event_name == 'push' && vars.INFRA_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+          tofu_wrapper: false
+
+      - name: Refuse to run without state encryption
+        run: test -n "${TF_ENCRYPTION:-}"
+        env:
+          TF_ENCRYPTION: ${{ secrets.TF_ENCRYPTION }}
+
+      - name: Write the backend configuration
+        run: |
+          set -euo pipefail
+          printf 'bucket = "%s"\n' "$STATE_BUCKET" > backend.hcl
+          printf 'endpoints = { s3 = "%s" }\n' "$STATE_ENDPOINT" >> backend.hcl
+        env:
+          STATE_BUCKET: ${{ vars.TOFU_STATE_BUCKET }}
+          STATE_ENDPOINT: ${{ vars.TOFU_STATE_ENDPOINT }}
+
+      - name: Decide which roots this branch owns
+        id: roots
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF_NAME" in
+            dev)  echo "list=envs/dev" >> "$GITHUB_OUTPUT" ;;
+            qa)   echo "list=envs/qa" >> "$GITHUB_OUTPUT" ;;
+            main) echo "list=envs/prod repo" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "list=" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Apply
+        run: |
+          set -euo pipefail
+          for root in ${{ steps.roots.outputs.list }}; do
+            echo "::group::$root"
+            tofu -chdir="infra/$root" init -input=false \
+              -backend-config="$GITHUB_WORKSPACE/backend.hcl"
+            tofu -chdir="infra/$root" apply -input=false -auto-approve -no-color
+            echo "::endgroup::"
+          done
+        env:
+          TF_ENCRYPTION: ${{ secrets.TF_ENCRYPTION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TOFU_STATE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TOFU_STATE_SECRET_ACCESS_KEY }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
+          TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}

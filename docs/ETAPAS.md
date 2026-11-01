@@ -74,7 +74,7 @@
 - [x] **1.13** `feat/seed-script` — script que cria org, projeto, ambientes e keys antes de existir o dashboard.
 - [x] **1.14** `test/ingest-integration` — testes de contrato SDK ↔ ingest, integração com ClickHouse, Postgres e Redis no CI e fuzzing do validador. *(Postgres e Redis ficam para quando existir quem os leia: `internal/db` é a 2.2 e o adaptador de Redis é a 2.3.)*
 - [x] **1.15** `feat/example-express` — `examples/express` mandando logs de verdade. *(Junto veio o `pnpm --filter @apps/ingest serve`: sem uma ingestão para onde apontar, o exemplo não manda log nenhum.)*
-- [ ] **1.16** `infra/opentofu-base` — OpenTofu em `infra/` com estado criptografado no R2, um diretório por ambiente, `tofu plan` nos PRs e `apply` no merge; DNS, Tunnel, Access, KV, R2 e rulesets do GitHub.
+- [x] **1.16** `infra/opentofu-base` — OpenTofu em `infra/` com estado criptografado no R2, um diretório por ambiente, `tofu plan` nos PRs e `apply` no merge; DNS, Tunnel, Access, KV, R2 e rulesets do GitHub. *(Entrega o código e o pipeline; o `apply` fica desligado até a variável `INFRA_ENABLED` existir — ver `infra/README.md`.)*
 - [ ] **1.17** `infra/oracle-vm` — VM criada pelo OpenTofu, com cloud-init + compose: ClickHouse com databases `nekolog_dev`, `nekolog_qa` e `nekolog_prod`, Tunnel, nenhuma porta aberta, SSH pelo Cloudflare Access e `unattended-upgrades`.
 - [ ] **1.18** `ci/deploy-workers` — `wrangler deploy --env` de ingest e jobs para `dev`, `qa` e `prod`, com environments protegidos no GitHub.
 

@@ -97,8 +97,14 @@ Se fizer na ordem inversa, a ingestão para entre o `DROP` e o deploy.
 
 ## 5. Tokens de deploy e de provedor
 
-`CLOUDFLARE_API_TOKEN`, `VERCEL_API_TOKEN`, `GITHUB_ADMIN_TOKEN`, `OCI_*`,
-`CF_KV_API_TOKEN`, credenciais do R2.
+`CLOUDFLARE_API_TOKEN`, `INFRA_GITHUB_TOKEN`, `VERCEL_API_TOKEN`, `OCI_*`,
+`CF_KV_API_TOKEN`, e as credenciais S3 do bucket de estado
+(`TOFU_STATE_ACCESS_KEY_ID` e `TOFU_STATE_SECRET_ACCESS_KEY`).
+
+O `CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET` dos Workers **não** entram
+aqui: eles são saída do OpenTofu. Rotacionar é subir o
+`client_secret_version` do `cloudflare_zero_trust_access_service_token`, aplicar
+e levar a saída nova para os segredos do Worker.
 
 1. Crie o token novo no provedor, **com o menor escopo que funcione** — a
    rotação é uma boa hora para perceber que o token antigo tinha permissão
@@ -107,17 +113,48 @@ Se fizer na ordem inversa, a ingestão para entre o `DROP` e o deploy.
 3. Rode o workflow que o usa, para confirmar.
 4. Revogue o antigo **no provedor**. Remover do GitHub não revoga nada.
 
-## 6. `TOFU_STATE_PASSPHRASE`
+## 6. `TF_ENCRYPTION`
 
-Decifra o estado do OpenTofu, que contém os outros segredos de infraestrutura.
-Tratar como a chave mestra.
+Decifra o estado do OpenTofu, que contém o segredo do túnel e o client secret
+do service token do Access. Tratar como a chave mestra.
 
-1. Backup do estado atual antes de qualquer coisa.
-2. Siga o procedimento de troca de chave de criptografia de estado do OpenTofu
-   («conferir na documentação da versão em uso» — o estado precisa ser
-   recriptografado, não só reconfigurado).
-3. Guarde a nova fora do GitHub também. Perdê-la significa perder o controle do
-   estado.
+O segredo guarda o HCL inteiro da criptografia, não só a frase — ver
+[infra/README.md](../../infra/README.md). Ele nunca aparece no código: as raízes
+declaram só `enforced = true`.
+
+**Não troque a frase editando o segredo.** O estado no R2 continua cifrado com a
+antiga, e o próximo `init` não consegue abrir. A troca é em dois passos, porque
+o estado precisa ser **recriptografado**:
+
+1. Faça backup do estado atual: `wrangler r2 object get` de cada
+   `<ambiente>/terraform.tfstate`, guardado fora do GitHub.
+2. Monte um `TF_ENCRYPTION` com os **dois** provedores de chave, o novo como
+   método principal e o antigo como `fallback`:
+
+   ```hcl
+   key_provider "pbkdf2" "new" { passphrase = "«nova»" }
+   key_provider "pbkdf2" "old" { passphrase = "«antiga»" }
+
+   method "aes_gcm" "new" { keys = key_provider.pbkdf2.new }
+   method "aes_gcm" "old" { keys = key_provider.pbkdf2.old }
+
+   state {
+     method = method.aes_gcm.new
+     fallback { method = method.aes_gcm.old }
+   }
+
+   plan {
+     method = method.aes_gcm.new
+     fallback { method = method.aes_gcm.old }
+   }
+   ```
+
+3. Rode `tofu apply` em **cada** raiz — `envs/dev`, `envs/qa`, `envs/prod` e
+   `repo`. É a escrita do estado que o recriptografa; um `plan` não basta.
+4. Só então tire o `fallback` e o `key_provider` antigo, e rode de novo para
+   confirmar que abre sem ele.
+5. Guarde a nova fora do GitHub também. Perdê-la significa perder o controle do
+   estado — e, com `enforced = true`, não há estado em claro para recuperar.
 
 ## 7. Depois de qualquer rotação
 
