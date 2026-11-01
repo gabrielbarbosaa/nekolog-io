@@ -8,6 +8,11 @@ output "public_ip" {
   value       = module.vm.public_ip
 }
 
+output "ssh_hostname" {
+  description = "Hostname an operator points cloudflared access ssh at. There is no inbound rule on 22."
+  value       = module.ssh_access.hostname
+}
+
 output "clickhouse_passwords" {
   description = "One password per role and environment, for the Worker secrets and the CI migrator."
   value       = { for name, password in random_password.clickhouse : name => password.result }

@@ -13,13 +13,13 @@ variable "zone_name" {
   type        = string
 }
 
-variable "environment" {
-  description = "dev, qa or prod."
+variable "purpose" {
+  description = "What this tunnel carries: an environment name, or ssh for the machine itself."
   type        = string
 
   validation {
-    condition     = contains(["dev", "qa", "prod"], var.environment)
-    error_message = "The environment has to be dev, qa or prod."
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", var.purpose))
+    error_message = "The purpose has to be lowercase letters, digits and dashes."
   }
 }
 

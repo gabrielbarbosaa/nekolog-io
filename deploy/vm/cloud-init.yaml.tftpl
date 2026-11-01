@@ -53,7 +53,7 @@ ${indent(6, body)}
       metrics: 127.0.0.1:0
       ingress:
         - hostname: ${tunnel.hostname}
-          service: http://clickhouse:8123
+          service: ${tunnel.service}
         - service: http_status:404
 
   - path: /etc/nekolog/cloudflared/${environment}/credentials.json

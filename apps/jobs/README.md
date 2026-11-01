@@ -203,3 +203,19 @@ cota sobe.
 
 Sem um ClickHouse acessível esses testes são pulados, com aviso no stderr; no
 CI, `CLICKHOUSE_TEST_REQUIRED=1` transforma o skip em erro.
+
+## Deploy
+
+Um Worker por ambiente — `nekolog-jobs-dev`, `-qa` e `-prod` — publicados pelo
+workflow `Workers` no merge da branch correspondente. Os bindings vêm do
+`wrangler.json`, com os valores da conta preenchidos na hora pelo
+[`@internal/deploy`](../../internal/deploy/README.md); as senhas sobem separadas,
+com `wrangler secret bulk`.
+
+**Este Worker não tem endereço.** Nenhuma rota, nenhum `workers.dev`, nenhuma
+URL de preview. Ele só é acordado pelo cron `* * * * *`, que é a cadência que o
+despachante assume. O `/health` existe para o self-host, onde o app roda como um
+processo comum; na Cloudflare ele é inalcançável de propósito, e
+`src/wrangler.test.ts` falha se alguém der um hostname a ele — é a mesma
+preocupação da ameaça E12, um degrau antes: lá o app não expõe rota que rode
+tarefa, aqui ele não expõe rota nenhuma.
