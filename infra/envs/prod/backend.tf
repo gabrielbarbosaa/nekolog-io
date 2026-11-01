@@ -12,7 +12,7 @@ terraform {
 
   encryption {
     state {
-      enforced = true
+      enforced = false
     }
 
     plan {
