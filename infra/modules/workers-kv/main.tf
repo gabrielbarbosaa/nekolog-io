@@ -11,7 +11,7 @@ terraform {
 
 resource "cloudflare_workers_kv_namespace" "keys" {
   account_id = var.account_id
-  titel      = "nekolog-keys-${var.environment}"
+  title      = "nekolog-keys-${var.environment}"
 
   lifecycle {
     prevent_destroy = true
