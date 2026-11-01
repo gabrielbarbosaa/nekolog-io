@@ -8,17 +8,19 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "serve": "node src/serve.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.5",
     "@internal/adapters": "workspace:*",
     "@internal/clickhouse": "workspace:*",
     "@internal/schema": "workspace:*",
+    "@internal/seed": "workspace:*",
     "@internal/spool": "workspace:*",
     "hono": "^4.10.6"
   },
   "devDependencies": {
-    "@internal/seed": "workspace:*",
     "@nekolog-io/node": "workspace:*",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",

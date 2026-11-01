@@ -33,6 +33,27 @@ permite. `denyAll` existe para quem ainda não tem `KeyStore`: recusa tudo com
 `assertEnv` recusa um Worker sem binding e **diz todos os que faltam de uma
 vez**, em vez de o primeiro request morrer com `undefined is not a function`.
 
+## Rodando localmente, sem Cloudflare
+
+```bash
+pnpm seed init                     # cria as keys, uma vez
+pnpm --filter @apps/ingest serve   # ingestão em :8787
+```
+
+O `serve` é a mesma aplicação do Worker, com as peças que não existem fora da
+Cloudflare trocadas por equivalentes locais: as keys saem do `.nekolog-seed.json`
+em vez do KV, e **não há contingência** — se o ClickHouse recusar, o erro aparece
+no stderr em vez de ir para um bucket. É de propósito: em desenvolvimento, falha
+guardada em silêncio é falha que você descobre tarde.
+
+Ele recusa subir sem o arquivo de seed e sem ClickHouse respondendo, dizendo qual
+dos dois falta. `startLocalIngest` é o mesmo caminho, exportado, e é o que o
+`examples/express` usa no teste de ponta a ponta.
+
+Escuta em `127.0.0.1`, não em `0.0.0.0`. Ele carrega as keys do seed em memória e
+fala com um ClickHouse de desenvolvimento sem TLS — nada disso deveria ficar
+alcançável pela rede da sua casa ou do café.
+
 ## Keys
 
 Duas formas de mandar a key, e elas não são intercambiáveis:
