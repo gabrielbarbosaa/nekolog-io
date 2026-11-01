@@ -40,7 +40,11 @@ test-results/
 .DS_Store
 Thumbs.db
 
-# OpenTofu
+# OpenTofu (the provider lock files are committed on purpose)
 **/.terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
+backend.hcl
+*.tfvars
+*.auto.tfvars
