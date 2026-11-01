@@ -39,7 +39,7 @@
 ## M0 — Fundação
 
 - [x] **0.1** `chore/repo-init` — repositório `nekolog-io/nekolog` com as branches `main`, `qa` e `dev`; `.gitignore`, `.editorconfig`, `.nvmrc` (Node 24), licenças e README em inglês, com versões em pt-BR e es.
-- [ ] **0.2** `chore/github-tracking` — script com o `gh` que cria os milestones M0–M6 e uma issue por etapa a partir deste arquivo, com labels por tipo (`feat`, `security`, `infra`…).
+- [x] **0.2** `chore/github-tracking` — script com o `gh` que cria os milestones M0–M6 e uma issue por etapa a partir deste arquivo, com labels por tipo (`feat`, `security`, `infra`…).
 - [x] **0.3** `chore/workspace` — pnpm workspaces, Turborepo, `tsconfig` base e Biome; pnpm com `onlyBuiltDependencies` e `minimumReleaseAge`.
 - [x] **0.4** `chore/commit-conventions` — commitlint (Conventional Commits), git hooks com lefthook, templates de PR e de issue.
 - [x] **0.5** `ci/pipeline` — workflow de PR com lint, typecheck, testes e build; actions fixadas por SHA, `permissions` mínimas, harden-runner e cache do pnpm.
