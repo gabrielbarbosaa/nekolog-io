@@ -27,6 +27,16 @@ resource "cloudflare_zero_trust_access_policy" "workers" {
       }
     }
   ]
+
+  lifecycle {
+    postcondition {
+      condition = [
+        for rule in self.include : try(rule.service_token.token_id, null)
+      ] == [cloudflare_zero_trust_access_service_token.workers.id]
+
+      error_message = "This policy has to include exactly the Workers service token and nothing else."
+    }
+  }
 }
 
 resource "cloudflare_zero_trust_access_policy" "operators" {
@@ -43,6 +53,16 @@ resource "cloudflare_zero_trust_access_policy" "operators" {
       }
     }
   ]
+
+  lifecycle {
+    postcondition {
+      condition = toset([
+        for rule in self.include : try(rule.email.email, null)
+      ]) == toset(var.operator_emails)
+
+      error_message = "This policy has to include exactly the operator addresses and nothing else."
+    }
+  }
 }
 
 resource "cloudflare_zero_trust_access_application" "clickhouse" {

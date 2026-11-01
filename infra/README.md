@@ -102,6 +102,35 @@ Crie os *environments* `dev`, `qa` e `prod` no GitHub, com aprovação manual no
 `prod`. O `apply` usa o environment da branch; é o que dá o passo manual que o
 plano pede para produção.
 
+## O que o `validate` pega, e o que não
+
+Sem conta nenhuma configurada, o CI consegue rodar `fmt -check` e `validate`.
+Isso é mais do que parece: o `validate` confere o HCL contra o **schema real do
+provider**, então nome de recurso, nome de atributo e tipo errados falham ali.
+
+Mas tem um limite, e ele foi medido quebrando o código de propósito:
+
+| O que quebrei | O `validate` pegou? |
+|---|---|
+| atributo que não existe no recurso | sim |
+| argumento obrigatório faltando | sim |
+| tipo errado num atributo aninhado | sim |
+| versão de provider que o lock não satisfaz | sim |
+| `enforced = true` removido | sim, pela guarda do workflow |
+| **atributo opcional escrito errado dentro de objeto aninhado** | **não** |
+
+O último é o que importa saber. Escrever `serivce_token` em vez de
+`service_token` dentro de um `include` passa batido: a conversão de objeto do
+HCL **descarta** atributo que o tipo de destino não tem, e como todos ali são
+opcionais, sobra uma regra vazia. O resultado seria uma política que não deixa
+ninguém entrar — não é um buraco de segurança, mas é um apply quebrado que o CI
+não anuncia.
+
+Por isso as duas políticas do módulo `access` têm `postcondition`: elas afirmam
+que o `include` resultante é exatamente o service token, e exatamente os
+e-mails de operador. **Essas verificações só rodam no `plan`**, que depende da
+conta existir. O `validate` não as executa.
+
 ## O fluxo
 
 | Quando | O que roda |
