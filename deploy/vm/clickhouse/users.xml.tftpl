@@ -1,0 +1,57 @@
+<clickhouse>
+  <users>
+    <default replace="replace">
+      <password_sha256_hex>${default_password_sha256}</password_sha256_hex>
+      <networks><ip>127.0.0.1</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <access_management>1</access_management>
+    </default>
+
+%{ for environment in environments ~}
+    <nekolog_reader_${environment}>
+      <password_sha256_hex>${passwords["reader_${environment}"]}</password_sha256_hex>
+      <networks><ip>${container_network}</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT ON nekolog_${environment}.*</query>
+      </grants>
+    </nekolog_reader_${environment}>
+
+    <nekolog_ingest_${environment}>
+      <password_sha256_hex>${passwords["ingest_${environment}"]}</password_sha256_hex>
+      <networks><ip>${container_network}</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT INSERT ON nekolog_${environment}.logs</query>
+        <query>GRANT SELECT(project_id, environment_id, timestamp, received_at, level, service) ON nekolog_${environment}.logs</query>
+      </grants>
+    </nekolog_ingest_${environment}>
+
+    <nekolog_jobs_${environment}>
+      <password_sha256_hex>${passwords["jobs_${environment}"]}</password_sha256_hex>
+      <networks><ip>${container_network}</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT SELECT, INSERT ON nekolog_${environment}.*</query>
+      </grants>
+    </nekolog_jobs_${environment}>
+
+%{ endfor ~}
+    <nekolog_migrator>
+      <password_sha256_hex>${passwords["migrator"]}</password_sha256_hex>
+      <networks><ip>${container_network}</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+%{ for environment in environments ~}
+        <query>GRANT CREATE DATABASE ON nekolog_${environment}.*</query>
+        <query>GRANT SELECT, INSERT, CREATE, DROP, ALTER, TRUNCATE, SHOW ON nekolog_${environment}.*</query>
+%{ endfor ~}
+      </grants>
+    </nekolog_migrator>
+  </users>
+</clickhouse>

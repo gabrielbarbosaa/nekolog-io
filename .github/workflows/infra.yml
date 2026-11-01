@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm; do
             found=$(grep -cE '^[[:space:]]*enforced[[:space:]]*=[[:space:]]*true$' "$root/backend.tf" || true)
             if [ "$found" -ne 2 ]; then
               echo "$root/backend.tf enforces encryption $found time(s); state and plan both have to."
@@ -61,7 +61,7 @@ jobs:
       - name: Validate every root module
         run: |
           set -euo pipefail
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm; do
             echo "::group::$root"
             tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
             tofu -chdir="$root" validate
@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        root: [envs/dev, envs/qa, envs/prod, repo]
+        root: [envs/dev, envs/qa, envs/prod, repo, vm]
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -132,6 +132,15 @@ jobs:
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
           TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
           TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+          TF_VAR_tenancy_ocid: ${{ vars.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ vars.OCI_USER_OCID }}
+          TF_VAR_api_key_fingerprint: ${{ vars.OCI_FINGERPRINT }}
+          TF_VAR_api_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ vars.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ vars.OCI_COMPARTMENT_OCID }}
+          TF_VAR_ssh_public_key: ${{ vars.VM_SSH_PUBLIC_KEY }}
+          TF_VAR_state_bucket: ${{ vars.TOFU_STATE_BUCKET }}
+          TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}
 
   apply:
     name: Apply (${{ github.ref_name }})
@@ -177,7 +186,7 @@ jobs:
           case "$GITHUB_REF_NAME" in
             dev)  echo "list=envs/dev" >> "$GITHUB_OUTPUT" ;;
             qa)   echo "list=envs/qa" >> "$GITHUB_OUTPUT" ;;
-            main) echo "list=envs/prod repo" >> "$GITHUB_OUTPUT" ;;
+            main) echo "list=envs/prod repo vm" >> "$GITHUB_OUTPUT" ;;
             *)    echo "list=" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -200,3 +209,12 @@ jobs:
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
           TF_VAR_operator_emails: ${{ vars.OPERATOR_EMAILS }}
           TF_VAR_github_token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+          TF_VAR_tenancy_ocid: ${{ vars.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ vars.OCI_USER_OCID }}
+          TF_VAR_api_key_fingerprint: ${{ vars.OCI_FINGERPRINT }}
+          TF_VAR_api_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ vars.OCI_REGION }}
+          TF_VAR_compartment_ocid: ${{ vars.OCI_COMPARTMENT_OCID }}
+          TF_VAR_ssh_public_key: ${{ vars.VM_SSH_PUBLIC_KEY }}
+          TF_VAR_state_bucket: ${{ vars.TOFU_STATE_BUCKET }}
+          TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}

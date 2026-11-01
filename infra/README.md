@@ -10,9 +10,16 @@ modules/
   tunnel/        Cloudflare Tunnel e o CNAME que aponta para ele
   access/        service token dos Workers, políticas e a aplicação Access
   environment/   junta os quatro; é o que cada ambiente chama
+  oracle-vm/     a VM, a rede sem entrada e o cloud-init
 envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
 repo/                 rulesets do GitHub; não é um ambiente, é o repositório
+vm/                   a VM; também não é um ambiente — é uma máquina para os três
 ```
+
+A `vm` lê os três estados de ambiente com `terraform_remote_state`, para montar
+o arquivo de credenciais de cada `cloudflared`. Ela aplica depois deles, e só
+pela `main`. O que roda dentro da máquina está em
+[`deploy/vm/`](../deploy/vm/README.md).
 
 ## Nada disso foi aplicado ainda
 
@@ -139,7 +146,7 @@ conta existir. O `validate` não as executa.
 | mesmo PR, com `INFRA_ENABLED` | `plan` nas quatro raízes |
 | merge na `dev` | `apply` em `envs/dev` |
 | merge na `qa` | `apply` em `envs/qa` |
-| merge na `main` | `apply` em `envs/prod` **e** em `repo` |
+| merge na `main` | `apply` em `envs/prod`, em `repo` e na `vm` |
 
 Os rulesets do repositório só mudam pela `main`, de propósito: são a proteção
 que impede qualquer uma das outras branches de fazer o que quiser.
@@ -179,13 +186,24 @@ tofu -chdir=infra/envs/dev plan
 `.terraform.lock.hcl` **não** estão: eles fixam o hash de cada provider, e o CI
 falha se um deles mudar sozinho.
 
+### 6. A Oracle, para a `vm`
+
+Uma chave de API do OCI, com o par OCID da tenancy, OCID do usuário,
+*fingerprint* e a chave privada. Variáveis: `OCI_TENANCY_OCID`, `OCI_USER_OCID`,
+`OCI_FINGERPRINT`, `OCI_REGION`, `OCI_COMPARTMENT_OCID` e `VM_SSH_PUBLIC_KEY`;
+segredo: `OCI_PRIVATE_KEY`.
+
+A `vm` também precisa de `TOFU_STATE_BUCKET` e `TOFU_STATE_ENDPOINT` como
+variáveis **de entrada** (`TF_VAR_state_bucket` e `TF_VAR_state_endpoint`), além
+de backend: ela lê os três estados de ambiente para montar as credenciais do
+`cloudflared`.
+
 ## O que ainda não está aqui
 
-- **VM da Oracle e a configuração do `cloudflared`** — etapa 1.17. O túnel é
-  `config_src = "local"`: o mapeamento de hostname para serviço é um arquivo na
-  VM, e sai junto com o cloud-init.
-- **Aplicação Access para SSH** — também 1.17; não faz sentido criar DNS e
-  política para uma máquina que não existe.
+- **Aplicação Access para SSH.** A VM tem a chave pública do `ubuntu` no
+  cloud-init, mas não há regra de entrada na porta 22 — o caminho é o Cloudflare
+  Access, e a aplicação de SSH entra junto com o deploy dos Workers (1.18), que é
+  quando passa a existir alguém para operar.
 - **Rotas e deploy dos Workers** — etapa 1.18.
 - **Vercel, Turnstile, Email Routing, Neon e Upstash** — o plano os prevê
   (seção 15.5); entram quando houver o que configurar.
