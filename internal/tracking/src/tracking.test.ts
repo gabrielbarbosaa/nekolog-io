@@ -149,7 +149,32 @@ describe('issueTitle and issueBody', () => {
     expect(body.startsWith('> formato do payload v1.')).toBe(true)
     expect(body).toContain('`feat/schema-v1`')
     expect(body).toContain('M1 — Ingestão')
-    expect(body).toContain('Closes #N')
+  })
+
+  it('does not promise the automatic closing that this repository cannot do', () => {
+    const [, m1] = sampleMilestones()
+    const step = m1?.steps[0]
+    const body = step && m1 ? issueBody(step, m1) : ''
+
+    expect(body).toContain('close-step-issue')
+    expect(body).not.toMatch(/^\s*Closes #N/m)
+  })
+
+  it('ends every title with the branch name, which is how the workflow finds it', () => {
+    for (const milestone of parseEtapas(etapas)) {
+      for (const step of milestone.steps) {
+        expect(issueTitle(step).endsWith(` ${step.branch}`)).toBe(true)
+      }
+    }
+  })
+
+  it('never ends one title with the branch of another step', () => {
+    const steps = parseEtapas(etapas).flatMap((milestone) => milestone.steps)
+
+    for (const step of steps) {
+      const matching = steps.filter((other) => issueTitle(other).endsWith(` ${step.branch}`))
+      expect(matching).toHaveLength(1)
+    }
   })
 
   it('carries the definition of done as a checklist', () => {

@@ -4,7 +4,8 @@
 
 ## Como usar
 
-- **Uma etapa = uma issue = uma branch a partir da `dev` = um PR.** Cada etapa é uma issue no milestone do seu marco (M0 a M6); o nome da branch está ao lado de cada etapa, e o PR fecha a issue com `Closes #N`.
+- **Uma etapa = uma issue = uma branch a partir da `dev` = um PR.** Cada etapa é uma issue no milestone do seu marco (M0 a M6), criada pelo `pnpm tracking`; o nome da branch está ao lado de cada etapa.
+- **A issue fecha sozinha** quando o PR daquela branch entra na `dev`, pelo workflow `close-step-issue`, que acha a issue pelo nome da branch no título. **`Closes #N` não funciona neste repositório:** o GitHub só fecha issue vinculada quando o PR entra na branch padrão (`main`), e toda etapa entra na `dev`.
 - **Commits em inglês, no padrão Conventional Commits**, com o pacote ou app como escopo:
 
   ```
