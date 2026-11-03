@@ -1,9 +1,11 @@
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function HomePage() {
   const t = useTranslations('HomePage')
+  const legal = useTranslations('Legal')
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-8 text-center">
@@ -16,6 +18,14 @@ export default function HomePage() {
         <p className="text-muted-foreground">{t('tagline')}</p>
         <p className="text-muted-foreground text-sm">{t('comingSoon')}</p>
       </div>
+      <footer className="flex gap-6 text-muted-foreground text-sm">
+        <Link href="/legal/terms" className="hover:text-foreground">
+          {legal('terms')}
+        </Link>
+        <Link href="/legal/privacy" className="hover:text-foreground">
+          {legal('privacy')}
+        </Link>
+      </footer>
     </main>
   )
 }
