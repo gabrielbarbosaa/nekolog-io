@@ -525,6 +525,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      fake-indexeddb:
+        specifier: ^6.2.7
+        version: 6.2.7
       happy-dom:
         specifier: ^21.0.4
         version: 21.0.4
@@ -3217,6 +3220,10 @@ packages:
 
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
+
+  fake-indexeddb@6.2.7:
+    resolution: {integrity: sha512-g0ghQ+BmU3CSZaHup5FigEAAtCmtNyxkrmID7OAeK2qONHghw1aQ2l2T1RxmfhP1H1tEXVRWArUTGVCk5832ww==}
+    engines: {node: '>=18'}
 
   fast-check@4.10.2:
     resolution: {integrity: sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw==}
@@ -7016,6 +7023,8 @@ snapshots:
       '@expressive-code/plugin-text-markers': 0.44.3
 
   extend@3.0.2: {}
+
+  fake-indexeddb@6.2.7: {}
 
   fast-check@4.10.2:
     dependencies:

@@ -189,6 +189,49 @@ remendado depois de nós; se outra biblioteca entrou por cima, a dela fica.
 XHR **não** é remendado: `fetch` é o que a etapa 3.2 pede, e um remendo a mais
 é uma chance a mais de quebrar o app de alguém.
 
+## Fila offline
+
+Se o lote não conseguiu sair — metrô, avião, wifi de hotel — ele é guardado no
+IndexedDB e reenviado quando a rede volta, **e também na visita seguinte**, sem
+esperar evento nenhum: o erro que aconteceu offline e fechou a aba chega quando
+a pessoa abre o site de novo.
+
+```ts
+init({ offline: { maxBatches: 50, maxBytes: 2 * 1024 * 1024, maxAgeMs: 7 * 24 * 60 * 60 * 1000 } })
+init({ offline: false })  // desliga
+```
+
+### O que é motivo para guardar, e o que não é
+
+Só **falha de transporte** — a promise do `fetch` rejeitada, que é como "sem
+rede" se parece. Resposta `400` não é queda: o servidor recusou e vai recusar
+de novo, então o lote é descartado na hora em vez de ficar voltando para
+sempre. Na volta, `429` e `5xx` mantêm o lote na fila; `4xx` o apaga.
+
+### Nunca escrevemos a key no disco
+
+O registro guardado tem só `at`, `url` e `body`. O `Authorization` é montado de
+novo na hora de reenviar, com a key que está valendo. Key num banco de dados do
+navegador é credencial em repouso por nada — e tem teste conferindo que o
+registro não tem outro campo.
+
+### Limites, porque não é nosso disco
+
+No máximo 50 lotes, 2 MB e 7 dias. Estourou, o **mais antigo** sai. Log de uma
+semana atrás já não resolve nada, e encher o armazenamento do navegador de
+alguém é um jeito de quebrar o site inteiro.
+
+### Quando guardar falha
+
+Se o IndexedDB recusar — cota estourada, navegação privativa, transação
+abortada — o erro original **é relançado**. Nada de dizer "guardei" quando não
+guardou: o core volta a tratar como falha de envio, que é o que de fato
+aconteceu. A transação é esperada até o fim por isso: um `add` que deu certo e
+uma transação que abortou depois não é um lote salvo.
+
+No `pagehide` sem rede, guardar provavelmente não termina a tempo — a página
+está morrendo e a escrita é assíncrona. Isso não tem conserto deste lado.
+
 ## Renderizado no servidor
 
 O pacote não toca em `window`, `document` ou `sessionStorage` na importação, e
@@ -198,9 +241,10 @@ nada e a sessão fica em memória.
 
 ## O que ainda não está aqui
 
-Fila offline no IndexedDB e propagação de `traceparent` são as etapas 3.3 e
-3.4. O orçamento de 5 KB gzip é verificado a partir da 3.12.
+Propagação de `traceparent` é a etapa 3.4. O orçamento de 5 KB gzip é
+verificado a partir da 3.12.
 
-Os testes rodam contra um DOM de verdade (happy-dom), com `ErrorEvent`,
-`pagehide`, `visibilitychange` e clique despachados de verdade. Browser de
-verdade — Chromium, Firefox e WebKit — é a matriz da etapa 3.12.
+Os testes rodam contra um DOM de verdade (happy-dom) e um IndexedDB de verdade
+(fake-indexeddb), com `ErrorEvent`, `pagehide`, `visibilitychange`, `online` e
+clique despachados de verdade. Browser de verdade — Chromium, Firefox e WebKit
+— é a matriz da etapa 3.12.

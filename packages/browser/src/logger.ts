@@ -9,7 +9,9 @@ import {
 import { BEACON_MAX_BYTES, createSender, type SendBeaconLike } from './beacon.ts'
 import { browserContext } from './context.ts'
 import { publicKeyOnly } from './keys.ts'
+import { type OfflineTuning, parkingSender } from './offline.ts'
 import type { PageDetail } from './page.ts'
+import type { BatchStore } from './store.ts'
 import { type BreadcrumbTuning, DEFAULT_ATTACH_FROM, withBreadcrumbs } from './trail.ts'
 import { SDK_NAME, SDK_VERSION } from './version.ts'
 
@@ -18,6 +20,8 @@ export type BrowserLoggerOptions = Omit<LoggerOptions, 'runtime' | 'sdk'> & {
   fetch?: FetchLike
   sendBeacon?: SendBeaconLike | false
   breadcrumbs?: BreadcrumbTuning
+  offline?: OfflineTuning | false
+  offlineStore?: BatchStore
 }
 
 function warn(onError: ((error: unknown) => void) | undefined, message: string): void {
@@ -51,8 +55,34 @@ function beforeSendWith(options: BrowserLoggerOptions): BeforeSend | undefined {
   }
 }
 
+function senderFor(options: BrowserLoggerOptions, apiKey: string): FetchLike {
+  const beacon = createSender({
+    apiKey,
+    fetch: options.fetch,
+    sendBeacon: options.sendBeacon,
+  })
+
+  if (options.offline === false) {
+    return beacon
+  }
+
+  return parkingSender(beacon, {
+    ...options.offline,
+    store: options.offlineStore,
+    onError: options.onError,
+  })
+}
+
 export function createLogger(options: BrowserLoggerOptions = {}): Logger {
-  const { page, fetch: fetchLike, sendBeacon, breadcrumbs, ...rest } = options
+  const {
+    page,
+    fetch: _fetch,
+    sendBeacon: _sendBeacon,
+    breadcrumbs,
+    offline,
+    offlineStore: _offlineStore,
+    ...rest
+  } = options
   const { apiKey, refusal } = publicKeyOnly(options.apiKey)
 
   if (refusal !== undefined) {
@@ -67,7 +97,7 @@ export function createLogger(options: BrowserLoggerOptions = {}): Logger {
         options.transport?.maxBatchBytes ?? BEACON_MAX_BYTES,
         BEACON_MAX_BYTES,
       ),
-      fetch: createSender({ apiKey, fetch: fetchLike, sendBeacon }),
+      fetch: senderFor(options, apiKey),
     }
   }
 

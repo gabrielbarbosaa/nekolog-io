@@ -7,6 +7,7 @@ import { sessionId } from './context.ts'
 import { installFlushOnHide } from './flush.ts'
 import { installGlobalHandlers } from './handlers.ts'
 import { createLogger } from './logger.ts'
+import { offlineStore, parkingSender } from './offline.ts'
 
 describe('the same bundle rendered on a server', () => {
   it('has no window to hook into, and says nothing about it', () => {
@@ -22,6 +23,16 @@ describe('the same bundle rendered on a server', () => {
     createLogger({ sink }).info('rendered on the server')
 
     expect(sink.events).toHaveLength(1)
+  })
+
+  it('has nowhere to park a batch, and says so instead of pretending', async () => {
+    expect(offlineStore()).toBeUndefined()
+
+    const send = parkingSender(() => Promise.reject(new TypeError('Failed to fetch')))
+
+    await expect(
+      send('https://ingest.nekolog.io/v1/logs', { method: 'POST', headers: {}, body: '{}' }),
+    ).rejects.toThrow('Failed to fetch')
   })
 
   it('still has a session, kept in memory because there is no storage', () => {

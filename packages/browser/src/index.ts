@@ -74,6 +74,21 @@ export {
   STATUS_DATA_KEY,
   urlOf,
 } from './network.ts'
+export type {
+  OfflineTuning,
+  OnlineReplayOptions,
+  ParkingOptions,
+  ReplayOptions,
+} from './offline.ts'
+export {
+  configureOffline,
+  DEFAULT_REPLAY_LIMIT,
+  installOnlineReplay,
+  keepsWaiting,
+  offlineStore,
+  parkingSender,
+  replayOnce,
+} from './offline.ts'
 export type { PageDetail } from './page.ts'
 export { DEFAULT_PAGE_DETAIL, PAGE_PROTOCOLS, pageUrl } from './page.ts'
 export type { SessionOptions, SessionStore, StorageLike } from './session.ts'
@@ -83,6 +98,25 @@ export {
   SESSION_STORAGE_KEY,
   SESSION_WRITE_INTERVAL_MS,
 } from './session.ts'
+export type {
+  BatchStore,
+  IndexedDbOptions,
+  PendingBatch,
+  PruneOptions,
+  StoredBatch,
+} from './store.ts'
+export {
+  AGE_INDEX,
+  DATABASE_NAME,
+  DATABASE_VERSION,
+  DEFAULT_MAX_AGE_MS,
+  DEFAULT_MAX_STORED_BATCHES,
+  DEFAULT_MAX_STORED_BYTES,
+  doomed,
+  indexedDbStore,
+  memoryBatchStore,
+  STORE_NAME,
+} from './store.ts'
 export type { BreadcrumbTuning, InstallBreadcrumbOptions } from './trail.ts'
 export {
   addBreadcrumb,

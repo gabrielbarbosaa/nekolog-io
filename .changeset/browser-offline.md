@@ -1,0 +1,5 @@
+---
+'@nekolog-io/browser': minor
+---
+
+Park a batch in IndexedDB when it cannot leave the page, and send it when the network comes back — and on the next visit, without waiting for an event, so the error that happened offline and closed the tab arrives when the person opens the site again. Only a transport failure counts as an outage: a `400` is a refusal the server will repeat, so that batch is dropped rather than retried forever, and on replay `429` and `5xx` keep a batch while `4xx` deletes it. The stored record holds only `at`, `url` and `body` — the `Authorization` header is built again at replay time, because an API key in a browser database is a credential at rest for nothing. At most 50 batches, 2 MB and 7 days, oldest out first, since it is not our disk. If IndexedDB refuses the write — quota, private browsing, an aborted transaction — the original error is rethrown rather than reported as parked, which is why the transaction is awaited to completion: an `add` that succeeded and a transaction that aborted afterwards is not a saved batch.
