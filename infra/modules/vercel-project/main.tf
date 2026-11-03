@@ -81,7 +81,7 @@ resource "vercel_project" "this" {
     }
 
     precondition {
-      condition     = setequal(local.named, local.valued)
+      condition     = length(setsubtract(local.named, local.valued)) == 0 && length(setsubtract(local.valued, local.named)) == 0
       error_message = "Every declared variable needs a value and every value needs a declaration. Declared without a value: ${join(", ", setsubtract(local.named, local.valued))}. Value without a declaration: ${join(", ", setsubtract(local.valued, local.named))}"
     }
   }
