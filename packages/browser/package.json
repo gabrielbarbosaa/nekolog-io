@@ -52,7 +52,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
-    "happy-dom": "^20.0.0",
+    "happy-dom": "^21.0.4",
     "publint": "^0.3.25",
     "tsdown": "^0.23.2",
     "vitest": "^5.0.5"

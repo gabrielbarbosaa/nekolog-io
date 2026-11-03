@@ -652,6 +652,18 @@ describe('the helpers it exposes', () => {
     expect(requestUrlFor('https://x.dev///')).toBe('https://x.dev/v1/logs')
   })
 
+  it('keeps the slashes that are not at the end', () => {
+    expect(requestUrlFor('https://x.dev//a//b//')).toBe('https://x.dev//a//b/v1/logs')
+  })
+
+  it('trims a long run of slashes without taking polynomial time', () => {
+    const started = performance.now()
+
+    expect(requestUrlFor(`https://x.dev/${'/'.repeat(100_000)}x`)).toContain('x/v1/logs')
+
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
   it('builds json headers with a bearer token', () => {
     expect(headersFor('k')).toEqual({
       'Content-Type': 'application/json',

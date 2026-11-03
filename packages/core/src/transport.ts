@@ -101,8 +101,14 @@ export function isSecretKey(apiKey: string): boolean {
   return apiKey.startsWith(SECRET_KEY_PREFIX)
 }
 
+const SLASH = 47
+
 export function requestUrlFor(endpoint: string): string {
-  return `${endpoint.replace(/\/+$/, '')}/v1/logs`
+  let end = endpoint.length
+  while (end > 0 && endpoint.charCodeAt(end - 1) === SLASH) {
+    end -= 1
+  }
+  return `${endpoint.slice(0, end)}/v1/logs`
 }
 
 export function headersFor(apiKey: string): Record<string, string> {
