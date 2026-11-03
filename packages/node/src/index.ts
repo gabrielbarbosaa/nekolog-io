@@ -39,6 +39,25 @@ export {
   traceparentOf,
 } from '@nekolog-io/core'
 export { addContext, bindContext, currentContext, runWithContext } from './context.ts'
+export type { AccessLine, IncomingRequest, IncomingRequestOptions } from './http.ts'
+export {
+  accessAttributes,
+  accessMessage,
+  DURATION_ATTRIBUTE,
+  levelForStatus,
+  MAX_REQUEST_ID_CHARS,
+  METHOD_ATTRIBUTE,
+  newRequestId,
+  PARENT_SPAN_ATTRIBUTE,
+  REQUEST_ID_ATTRIBUTE,
+  REQUEST_ID_BYTES,
+  REQUEST_ID_HEADER,
+  ROUTE_ATTRIBUTE,
+  requestIdFrom,
+  STATUS_ATTRIBUTE,
+  startRequest,
+  UNMATCHED_ROUTE,
+} from './http.ts'
 export type { NodeLoggerOptions } from './logger.ts'
 export {
   API_KEY_ENV,
