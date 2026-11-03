@@ -12,5 +12,11 @@
   },
   "LocaleSwitcher": {
     "label": "Idioma"
+  },
+  "Legal": {
+    "terms": "Termos de uso",
+    "privacy": "Política de privacidade",
+    "updated": "Atualizado em {date}",
+    "backHome": "Voltar para a página inicial"
   }
 }
