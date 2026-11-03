@@ -123,6 +123,63 @@ Dois cuidados:
 Erro de carregamento de recurso (uma imagem 404) **não** vira log aqui: ele não
 sobe até a `window` sem captura, e é assunto da etapa de breadcrumbs.
 
+## Breadcrumbs
+
+O que a pessoa fez antes do erro: clique, navegação e request. Fica numa fila de
+20 na memória, e **só viaja junto com log de `error` ou `fatal`**.
+
+```ts
+nekolog.addBreadcrumb('cupom aplicado', { code: 'WELCOME' })
+```
+
+| Coletor | O que vira |
+|---|---|
+| clique | `button#pay.primary` ou `button[data-testid=checkout-pay]` |
+| navegação | o endereço novo, com o anterior em `data.from` |
+| fetch | `POST https://api.test/orders`, com `status` e `ms` |
+
+### Por que só no erro
+
+A especificação 1 não tem campo para breadcrumb, então a trilha vai como **um
+atributo**, `breadcrumbs`, em JSON. Atributo tem teto de 4 KB e o lote tem teto
+de 512 KB: grudar 4 KB em cada uma das 500 linhas de um lote daria 2 MB e o
+lote seria recusado inteiro. Num `error` o custo se paga; num `info` não.
+
+`breadcrumbs: { attachFrom: 'info' }` muda o nível, `attachFrom: false`
+desliga, e `max` muda o tamanho da fila.
+
+A trilha é cortada **pelo começo** até caber nos 4 KB — nunca no meio de um
+registro, então o que chega é sempre JSON válido. Se nem um registro couber,
+não vai atributo nenhum.
+
+### O que a trilha nunca leva
+
+- **O texto do elemento clicado.** "Pagar como Ada Lovelace" é o nome de uma
+  pessoa; `button#pay` não é. Também não lemos `value`, então o que foi digitado
+  não sai daqui.
+- **Query string.** Endereço de navegação e de request passam pela mesma regra
+  do `page.url`: sem query, sem fragmento. Um `?token=…` num breadcrumb é o
+  mesmo vazamento, só que mais escondido.
+- **Corpo e header do request.** O `Authorization` e o que foi postado não são
+  lidos — só método, endereço, status e duração.
+- **O lote que estamos mandando.** O request do próprio SDK é ignorado; senão
+  cada flush viraria breadcrumb do flush seguinte.
+
+A trilha passa pelo filtro de dados sensíveis do core como qualquer outro
+atributo (cartão, CPF, `Bearer …`, key do NekoLog). **E-mail não está nesse
+filtro** — é uma decisão do core, não um esquecimento deste pacote.
+
+### Os remendos
+
+Dois: `window.fetch` e `history.pushState`/`replaceState`. Os dois chamam o
+original e devolvem exatamente o que ele devolveu — inclusive a rejeição, que é
+relançada, não engolida. O `close()` desfaz os dois, e **só** se ninguém tiver
+remendado depois de nós; se outra biblioteca entrou por cima, a dela fica.
+
+`clicks: false`, `navigation: false` ou `fetch: false` desligam cada coletor.
+XHR **não** é remendado: `fetch` é o que a etapa 3.2 pede, e um remendo a mais
+é uma chance a mais de quebrar o app de alguém.
+
 ## Renderizado no servidor
 
 O pacote não toca em `window`, `document` ou `sessionStorage` na importação, e
@@ -132,10 +189,9 @@ nada e a sessão fica em memória.
 
 ## O que ainda não está aqui
 
-Breadcrumbs (cliques, navegação, fetch), fila offline no IndexedDB e
-propagação de `traceparent` são as etapas 3.2, 3.3 e 3.4. O orçamento de 5 KB
-gzip é verificado a partir da 3.12.
+Fila offline no IndexedDB e propagação de `traceparent` são as etapas 3.3 e
+3.4. O orçamento de 5 KB gzip é verificado a partir da 3.12.
 
-Os testes rodam contra um DOM de verdade (happy-dom) com `ErrorEvent`,
-`pagehide` e `visibilitychange` despachados de verdade. Browser de verdade —
-Chromium, Firefox e WebKit — é a matriz da etapa 3.12.
+Os testes rodam contra um DOM de verdade (happy-dom), com `ErrorEvent`,
+`pagehide`, `visibilitychange` e clique despachados de verdade. Browser de
+verdade — Chromium, Firefox e WebKit — é a matriz da etapa 3.12.
