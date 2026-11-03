@@ -95,6 +95,34 @@ seria pior que o recorte menor.
 O que cada execução fez aparece no `detail` do resumo:
 `{ environments, blocked, unblocked, stillBlocked, written, stopped }`.
 
+## `capacity-watch`
+
+Olha as duas coisas que estouram em silêncio: a contingência no R2 e o disco do
+ClickHouse. A cada 5 minutos ele conta os arquivos ainda parados no spool e lê a
+`system.disks`; acima de 100 arquivos pendentes ou abaixo de 15% de espaço
+livre, emite alerta.
+
+Ele **alerta quando não consegue medir**, em vez de ficar quieto. Spool
+ilegível e `system.disks` que não responde são exatamente o estado em que a
+plataforma está pior, e silêncio ali seria lido como "está tudo bem" — a mesma
+regra do `quota-block`. Disco com `total_space` zero conta como cheio, não como
+vazio.
+
+O alerta hoje vai para o log do Worker. O canal de verdade (e-mail, Discord,
+webhook) é a etapa 5.2; a 2.24 entrega o sinal e o limiar.
+
+## Heartbeat
+
+Se `HEARTBEAT_URL` existir, o Worker avisa o monitor externo no fim de cada
+execução: a URL quando tudo passou, `…/fail` quando alguma tarefa falhou. Assim
+o monitor distingue "os jobs pararam" de "os jobs rodaram e uma tarefa quebrou"
+— sem isso, um cron morto e uma tarefa com defeito dariam o mesmo alerta.
+
+**Monitor fora do ar não derruba a execução.** A falha do heartbeat é anotada no
+log e a execução segue; o contrário faria o monitor de disponibilidade virar
+causa de indisponibilidade. A URL carrega um token, então é **secret**, não
+`vars`.
+
 ## Por que um cron só
 
 O Cloudflare dá **5 Cron Triggers por conta** e o NekoLog tem três ambientes

@@ -4,12 +4,15 @@ import {
   type R2BucketLike,
   r2BlobStore,
 } from '@nekolog-io/adapters'
+import { queryRows } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
 import type { Hono } from 'hono'
 import { createJobsApp } from './app.ts'
+import { sendHeartbeat } from './heartbeat.ts'
 import { type RunSummary, runDueTasks } from './run.ts'
 import type { Task } from './task.ts'
+import type { CapacityAlert, DiskReading } from './tasks/capacity-watch.ts'
 import type { QuotaBlockEvent } from './tasks/quota-block.ts'
 import type { SpoolResendEvent } from './tasks/spool-resend.ts'
 import { buildTasks } from './tasks.ts'
@@ -25,6 +28,7 @@ export type JobsEnv = {
   CF_ACCESS_CLIENT_ID?: string
   CF_ACCESS_CLIENT_SECRET?: string
   JOBS_VERSION?: string
+  HEARTBEAT_URL?: string
 }
 
 export type ScheduledEventLike = {
@@ -107,6 +111,25 @@ export function writeQuotaEvent(event: QuotaBlockEvent): void {
   )
 }
 
+export function writeCapacityAlert(alert: CapacityAlert): void {
+  write('warn', '[nekolog/jobs] capacity', JSON.stringify(alert))
+}
+
+export function diskReaderFor(config: Parameters<typeof queryRows>[0]) {
+  return async (signal: AbortSignal): Promise<DiskReading[]> => {
+    const rows = await queryRows<{ name: string; free_space: string; total_space: string }>(
+      config,
+      'select name, free_space, total_space from system.disks',
+      { fetch: (input, init) => fetch(input, { ...init, signal }) },
+    )
+    return rows.map((row) => ({
+      name: row.name,
+      freeBytes: Number(row.free_space),
+      totalBytes: Number(row.total_space),
+    }))
+  }
+}
+
 export function buildJobTasks(env: JobsEnv): readonly Task[] {
   const clickHouse = {
     url: env.CLICKHOUSE_URL,
@@ -130,6 +153,8 @@ export function buildJobTasks(env: JobsEnv): readonly Task[] {
     ...(dailyQuota === undefined ? {} : { dailyQuota }),
     onSpoolEvent: writeSpoolEvent,
     onQuotaEvent: writeQuotaEvent,
+    readDisks: diskReaderFor(clickHouse),
+    onCapacityAlert: writeCapacityAlert,
   })
 }
 
@@ -147,6 +172,7 @@ export function assertNoFailures(summary: RunSummary): RunSummary {
 export type RunScheduledOptions = {
   tasks: readonly Task[]
   onSummary?: (summary: RunSummary) => void
+  heartbeatUrl?: string
 }
 
 export async function runScheduled(
@@ -158,6 +184,14 @@ export async function runScheduled(
     cron: event.cron,
     onSummary: options.onSummary ?? writeSummary,
   })
+
+  if (options.heartbeatUrl !== undefined && options.heartbeatUrl !== '') {
+    await sendHeartbeat(summary, {
+      url: options.heartbeatUrl,
+      onProblem: (reason) => write('warn', '[nekolog/jobs] heartbeat', reason),
+    })
+  }
+
   return assertNoFailures(summary)
 }
 
@@ -187,7 +221,10 @@ export default {
     env: Partial<JobsEnv>,
     ctx: ExecutionContextLike,
   ): Promise<RunSummary> {
-    const work = runScheduled(event, { tasks: tasksFor(env) })
+    const work = runScheduled(event, {
+      tasks: tasksFor(env),
+      ...(env?.HEARTBEAT_URL ? { heartbeatUrl: env.HEARTBEAT_URL } : {}),
+    })
     ctx.waitUntil(work)
     return work
   },
