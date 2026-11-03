@@ -6,7 +6,9 @@ import { isJsonObject, type JsonObject, readJsonObject } from './config.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
-const SHARED = ['adapters', 'clickhouse', 'config']
+const SHARED = ['adapters', 'clickhouse', 'config', 'db']
+
+const TYPES_FROM_SOURCE = ['db']
 
 function manifestOf(folder: string): JsonObject {
   return readJsonObject(join(ROOT, 'packages', folder, 'package.json'))
@@ -51,13 +53,16 @@ describe('every package this repository publishes', () => {
   })
 
   it.each(published())('%s ships every file its exports point at', (folder, manifest) => {
-    const shipped = manifest.files as string[]
+    const shipped = (manifest.files as string[]).map((entry) => entry.replace(/^\.\//, ''))
     const targets = exportTargets(manifest.publishConfig ?? manifest.exports)
 
     expect(targets.length).toBeGreaterThan(0)
     for (const target of targets) {
-      const top = target.replace(/^\.\//, '').split('/')[0] ?? ''
-      expect(shipped, `${folder} publishes ${target} but does not ship ${top}`).toContain(top)
+      const path = target.replace(/^\.\//, '')
+      const covered = shipped.some((entry) => path === entry || path.startsWith(`${entry}/`))
+      expect(covered, `${folder} publishes ${target} but ships only ${shipped.join(', ')}`).toBe(
+        true,
+      )
     }
   })
 })
@@ -70,15 +75,46 @@ describe('the packages the dashboard consumes', () => {
     }
   })
 
-  it.each(SHARED)('%s resolves to its build once published', (folder) => {
+  it.each(SHARED)('%s runs from its build once published', (folder) => {
     const config = manifestOf(folder).publishConfig
 
     expect(isJsonObject(config)).toBe(true)
-    const targets = exportTargets((config as JsonObject).exports)
-    expect(targets.length).toBeGreaterThan(0)
-    for (const target of targets) {
+    const entries = (config as JsonObject).exports as JsonObject
+    const runtime = Object.values(entries).map((entry) =>
+      typeof entry === 'string' ? entry : ((entry as JsonObject).default as string),
+    )
+
+    expect(runtime.length).toBeGreaterThan(0)
+    for (const target of runtime) {
       expect(target.startsWith('./dist/')).toBe(true)
     }
+  })
+
+  it.each(SHARED.filter((folder) => !TYPES_FROM_SOURCE.includes(folder)))(
+    '%s publishes generated declarations',
+    (folder) => {
+      const entries = (manifestOf(folder).publishConfig as JsonObject).exports as JsonObject
+
+      for (const entry of Object.values(entries)) {
+        expect((entry as JsonObject).types).toMatch(/^\.\/dist\/.+\.d\.mts$/)
+      }
+    },
+  )
+
+  it.each(TYPES_FROM_SOURCE)('%s publishes its source as the types, and says why', (folder) => {
+    const entries = (manifestOf(folder).publishConfig as JsonObject).exports as JsonObject
+    const source = join(ROOT, 'packages', folder, 'src', 'index.ts')
+
+    for (const entry of Object.values(entries)) {
+      expect((entry as JsonObject).types).toBe('./src/index.ts')
+    }
+    expect(readFileSync(join(ROOT, 'packages', folder, 'README.md'), 'utf8')).toContain(
+      'isolatedDeclarations',
+    )
+    expect(
+      readFileSync(source, 'utf8'),
+      'the published source cannot import a sibling: the consumer compiles it with its own settings',
+    ).not.toMatch(/from '\.\.?\//)
   })
 
   it.each(SHARED)('%s is checked against the tarball, not the directory', (folder) => {

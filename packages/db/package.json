@@ -1,0 +1,62 @@
+{
+  "name": "@nekolog-io/db",
+  "version": "0.0.0",
+  "description": "Postgres schema NekoLog's jobs and dashboard share: organizations, projects, environments, keys and the audit log.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",
+    "directory": "packages/db"
+  },
+  "homepage": "https://nekolog.io",
+  "bugs": "https://github.com/gabrielbarbosaa/nekolog-io/issues",
+  "keywords": [
+    "logging",
+    "observability",
+    "nekolog"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src/index.ts",
+    "migrations"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./src/index.ts",
+        "default": "./dist/index.mjs"
+      }
+    },
+    "main": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "types": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "lint": "pnpm run build && pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^24.0.0",
+    "publint": "^0.3.25",
+    "tsdown": "^0.23.2",
+    "vitest": "^5.0.5",
+    "drizzle-kit": "^0.31.11",
+    "postgres": "^4.0.0"
+  }
+}
