@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import {
   issueCreateArgs,
+  issueEditArgs,
   issueListArgs,
   labelCreateArgs,
   labelListArgs,
@@ -14,7 +15,7 @@ import {
   repoViewArgs,
 } from './commands.ts'
 import { parseEtapas, parseGoals } from './etapas.ts'
-import { buildPlan, type SyncPlan } from './plan.ts'
+import { buildPlan, type ExistingIssue, type SyncPlan } from './plan.ts'
 
 const run = promisify(execFile)
 
@@ -39,6 +40,21 @@ function titlesFrom(raw: string, field: 'title' | 'name'): Set<string> {
   return new Set(entries.map((entry) => entry[field] ?? ''))
 }
 
+function issuesFrom(raw: string): Map<string, ExistingIssue> {
+  const entries = JSON.parse(raw) as Array<{
+    number: number
+    title: string
+    body: string
+    state: string
+  }>
+  return new Map(
+    entries.map((entry) => [
+      entry.title,
+      { number: entry.number, body: entry.body ?? '', open: entry.state === 'OPEN' },
+    ]),
+  )
+}
+
 function write(line: string): void {
   process.stdout.write(`${line}\n`)
 }
@@ -53,6 +69,7 @@ function describePlan(plan: SyncPlan, repo: string, apply: boolean, includeDone:
   write(
     `a criar: ${plan.milestones.length} milestones, ${plan.labels.length} labels, ${plan.issues.length} issues`,
   )
+  write(`a atualizar: ${plan.updates.length} corpos de issue aberta`)
   write('')
 }
 
@@ -72,7 +89,7 @@ async function main(): Promise<void> {
     existing: {
       milestones: titlesFrom(await gh(milestoneListArgs(repo)), 'title'),
       labels: titlesFrom(await gh(labelListArgs()), 'name'),
-      issues: titlesFrom(await gh(issueListArgs()), 'title'),
+      issues: issuesFrom(await gh(issueListArgs())),
     },
     includeDone,
   })
@@ -113,8 +130,27 @@ async function main(): Promise<void> {
     await sleep(CREATE_DELAY_MS)
   }
 
+  let updated = 0
+
+  for (const update of plan.updates) {
+    write(`${apply ? 'atualizando' : 'atualizaria'} o corpo de ${update.title}`)
+    if (!apply) {
+      continue
+    }
+    try {
+      await gh(issueEditArgs(update))
+      updated += 1
+    } catch (error) {
+      failed.push({
+        title: update.title,
+        why: (error instanceof Error ? error.message : String(error)).split('\n')[0] ?? '',
+      })
+    }
+    await sleep(CREATE_DELAY_MS)
+  }
+
   if (apply) {
-    write(`\n${created} issues criadas`)
+    write(`\n${created} issues criadas, ${updated} corpos atualizados`)
   }
   if (failed.length > 0) {
     write(`\n${failed.length} falharam:`)

@@ -30,6 +30,30 @@ Por isso o comando também serve para **acrescentar**: etapa nova no
 O que ele **não** faz é apagar, renomear ou fechar nada. Issue que saiu do
 ETAPAS continua lá; quem decide o que fazer com ela é uma pessoa.
 
+## Corpo que ficou para trás
+
+Criar e esquecer não bastava. O corpo da issue carrega a descrição da etapa e a
+regra de como ela fecha, e as duas mudam depois que a issue já existe: as 53
+issues abertas em 03/11/2026 ainda diziam "o PR fecha esta issue com
+`Closes #N`", que **não funciona neste repositório** — o GitHub só fecha issue
+vinculada quando o PR entra na branch padrão, e toda etapa entra na `dev`. O
+texto certo já estava no código, com teste; o que faltava era alguém reescrever
+o que já tinha sido criado.
+
+Agora, para cada etapa que ainda está no arquivo e cuja issue está **aberta**, o
+script compara o corpo guardado com o que o `docs/ETAPAS.md` gera hoje e
+reescreve quando diferem. Continua sem renomear: o título é a chave pela qual
+ele se reencontra, e o `issueEditArgs` nunca recebe `--title`.
+
+Três coisas ele não mexe:
+
+- **Issue fechada.** É registro do que aconteceu, não planejamento.
+- **Item marcado à mão.** O "pronto quando" é uma checklist para quem está
+  trabalhando ir marcando; um `[x]` sobrevive à reescrita, e marcar um item
+  sozinho não conta como diferença — senão a próxima execução desmarcaria tudo.
+- **Quebra de linha.** O GitHub devolve o corpo com `\r\n`; sem normalizar,
+  toda issue pareceria mudada e as 51 seriam reescritas a cada execução.
+
 ## As etapas já concluídas ficam de fora
 
 Por padrão só viram issue as etapas ainda não marcadas. As concluídas já têm um
@@ -71,10 +95,10 @@ que criar é o `buildPlan`, que é função pura e tem teste.
 
 ## Limite de criação
 
-As issues são criadas uma a uma, com 1,2 s entre elas, porque o GitHub corta
-quem cria conteúdo rápido demais (o limite secundário é da ordem de 80 por
-minuto). Uma que falhe não interrompe as outras: no fim o script lista as que
-não entraram e sai com código diferente de zero. Como ele é idempotente, a saída
+As issues são criadas e editadas uma a uma, com 1,2 s entre elas, porque o
+GitHub corta quem cria conteúdo rápido demais (o limite secundário é da ordem de
+80 por minuto). Uma que falhe não interrompe as outras: no fim o script lista as
+que não entraram e sai com código diferente de zero. Como ele é idempotente, a saída
 para isso é rodar de novo.
 
 Toda chamada ao `gh` tem prazo de 30 s. Um comando que fica esperando algo que
