@@ -29,6 +29,8 @@
         "MAILPIT_TEST_REQUIRED",
         "MAILPIT_TEST_URL",
         "SMTP_TEST_URL",
+        "WEB_HEADERS_TEST_REQUIRED",
+        "DOCS_HEADERS_TEST_REQUIRED",
         "FUZZ_RUNS"
       ]
     }

@@ -68,6 +68,8 @@
 | T6 | Push direto reescrevendo história em branch protegida | 6 | Rulesets sem bypass para ninguém; sem force push; commits assinados em `main` e `qa` | **Implementada** (0.7) |
 | T7 | Cliente foge da cota datando os eventos fora do dia corrente | 1 | O uso é contado pela `usage_per_minute`, agrupada por `received_at` (carimbado pelo servidor), e não pela `logs_per_minute`, agrupada pelo `timestamp` que o cliente escolhe. Teste de integração manda um evento datado de 2020 e confere que ele entra na contagem de hoje | **Implementada** (etapa 1.12) |
 | **T7** | **Cliente grava log no projeto de outra organização** mandando `projectId`/`environmentId` no corpo | 1 | Esses campos vêm **só da key**, pelo `principal`, e nunca do payload; campos desconhecidos no corpo são ignorados pelo esquema. É o espelho de escrita da I1 | **Implementada** (etapa 1.7) |
+| T8 | Script de terceiro executando na página do site ou da documentação | 3 | CSP sem `'unsafe-inline'` e sem `'unsafe-eval'` em `script-src`: nonce por resposta no `apps/web` e hash por script no `apps/docs`, que é estático. `base-uri 'none'`, `object-src 'none'` e `form-action 'self'` fecham as saídas que sobram quando o `script-src` segura. Teste sobe o servidor de produção e falha se **qualquer** `<script>` da página não carregar o nonce — um script que o CSP bloquearia é tela branca, não aviso | **Implementada** (etapa 2.12) |
+| T9 | Clickjacking: a página embutida num iframe de terceiro | 3 | `frame-ancestors 'none'` no CSP e `X-Frame-Options: DENY` para quem não lê CSP, nos dois sites, com teste | **Implementada** (etapa 2.12) |
 
 ## R — Repudiation (repúdio)
 
@@ -152,6 +154,14 @@ Registrar o que **não** está coberto é tão importante quanto o que está.
   antes da demo pública.
 - **Uma pessoa só revisa os PRs.** O GitHub não permite aprovar o próprio PR,
   então não há revisão obrigatória até entrar um segundo mantenedor.
+- **`style-src 'unsafe-inline'` na documentação.** O Starlight escreve centenas
+  de atributos `style="…"` nas páginas, e atributo de estilo não é coberto por
+  hash nem por nonce — só por `'unsafe-inline'`. O `script-src` continua preso a
+  `'self'` mais a lista de hashes, que é onde mora o XSS; o que se aceita aqui é
+  CSS injetado, num site cujo conteúdo todo vem deste repositório. O gerador
+  **recusa** escrever a política se um elemento `<style>` aparecer no build,
+  porque um hash ali faria o navegador ignorar o `'unsafe-inline'` e quebrar as
+  centenas de atributos em silêncio (etapa 2.12).
 
 ### Achados do Scorecard aceitos
 

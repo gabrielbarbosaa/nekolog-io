@@ -94,9 +94,14 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Build
+        run: pnpm run build
+
       - name: Test
         run: pnpm run test
         env:
+          WEB_HEADERS_TEST_REQUIRED: "1"
+          DOCS_HEADERS_TEST_REQUIRED: "1"
           CLICKHOUSE_TEST_REQUIRED: "1"
           CLICKHOUSE_TEST_URL: http://localhost:8123
           CLICKHOUSE_TEST_USER: default
@@ -109,6 +114,3 @@ jobs:
           MAILPIT_TEST_URL: http://localhost:8025
           SMTP_TEST_URL: smtp://localhost:1025
           FUZZ_RUNS: "1000"
-
-      - name: Build
-        run: pnpm run build

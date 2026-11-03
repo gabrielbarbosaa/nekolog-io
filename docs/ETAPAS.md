@@ -107,7 +107,7 @@
 
 **Site e operação**
 
-- [ ] **2.12** `security/headers` — CSP com nonce, HSTS e demais cabeçalhos no `apps/web` e no `apps/docs`, com teste automático. O dashboard repete para si, no repositório dele.
+- [x] **2.12** `security/headers` — CSP com nonce, HSTS e demais cabeçalhos no `apps/web` e no `apps/docs`, com teste automático. O dashboard repete para si, no repositório dele. *(A política vive no `internal/security-headers`, que os dois leem. No site estático não dá para ter nonce por requisição: lá o `script-src` é feito de hashes gerados do `dist/`, e o build falha se o `vercel.json` parar de cobrir o que ele produziu. O teste do `apps/web` sobe o servidor de produção e recusa qualquer `<script>` sem o nonce.)*
 - [ ] **2.21** `feat/legal-privacy` — termos de uso e política de privacidade nos três idiomas, no site. A exclusão de conta e a exportação dos dados são telas do dashboard.
 - [ ] **2.22** `infra/deploy-envs` — Vercel com `dev.nekolog.io`, `qa.nekolog.io` e `app.nekolog.io`, configurada pelo OpenTofu; segredos separados por ambiente. Os projetos dos **dois** repositórios são declarados aqui, porque toda a infraestrutura vive neste.
 - [ ] **2.23** `infra/email-dns` — subdomínio de envio, SPF, DKIM e DMARC pelo OpenTofu, e webhooks de bounce.
