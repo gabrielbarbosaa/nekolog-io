@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm infra/vercel; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm infra/vercel infra/email; do
             found=$(grep -cE '^[[:space:]]*enforced[[:space:]]*=[[:space:]]*true$' "$root/backend.tf" || true)
             if [ "$found" -ne 2 ]; then
               echo "$root/backend.tf enforces encryption $found time(s); state and plan both have to."
@@ -61,7 +61,7 @@ jobs:
       - name: Validate every root module
         run: |
           set -euo pipefail
-          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm infra/vercel; do
+          for root in infra/envs/dev infra/envs/qa infra/envs/prod infra/repo infra/vm infra/vercel infra/email; do
             echo "::group::$root"
             tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly
             tofu -chdir="$root" validate
@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        root: [envs/dev, envs/qa, envs/prod, repo, vm, vercel]
+        root: [envs/dev, envs/qa, envs/prod, repo, vm, vercel, email]
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -149,6 +149,10 @@ jobs:
           TF_VAR_docs_values: ${{ secrets.VERCEL_DOCS_VALUES }}
           TF_VAR_dashboard_variables: ${{ vars.VERCEL_DASHBOARD_VARIABLES }}
           TF_VAR_dashboard_values: ${{ secrets.VERCEL_DASHBOARD_VALUES }}
+          TF_VAR_mail_from_host: ${{ vars.MAIL_FROM_HOST }}
+          TF_VAR_dkim_records: ${{ secrets.MAIL_DKIM_RECORDS }}
+          TF_VAR_dmarc_policy: ${{ vars.MAIL_DMARC_POLICY }}
+          TF_VAR_forward_to: ${{ secrets.MAIL_FORWARD_TO }}
   apply:
     name: Apply (${{ github.ref_name }})
     needs: check
@@ -193,7 +197,7 @@ jobs:
           case "$GITHUB_REF_NAME" in
             dev)  echo "list=envs/dev" >> "$GITHUB_OUTPUT" ;;
             qa)   echo "list=envs/qa" >> "$GITHUB_OUTPUT" ;;
-            main) echo "list=envs/prod repo vm vercel" >> "$GITHUB_OUTPUT" ;;
+            main) echo "list=envs/prod repo vm vercel email" >> "$GITHUB_OUTPUT" ;;
             *)    echo "list=" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -233,3 +237,7 @@ jobs:
           TF_VAR_docs_values: ${{ secrets.VERCEL_DOCS_VALUES }}
           TF_VAR_dashboard_variables: ${{ vars.VERCEL_DASHBOARD_VARIABLES }}
           TF_VAR_dashboard_values: ${{ secrets.VERCEL_DASHBOARD_VALUES }}
+          TF_VAR_mail_from_host: ${{ vars.MAIL_FROM_HOST }}
+          TF_VAR_dkim_records: ${{ secrets.MAIL_DKIM_RECORDS }}
+          TF_VAR_dmarc_policy: ${{ vars.MAIL_DMARC_POLICY }}
+          TF_VAR_forward_to: ${{ secrets.MAIL_FORWARD_TO }}

@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "7",
   "dialect": "postgresql",
   "entries": [
@@ -7,6 +7,13 @@
       "version": "7",
       "when": 1793715714147,
       "tag": "0000_initial_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793731479065,
+      "tag": "0001_email_suppressions",
       "breakpoints": true
     }
   ]

@@ -137,6 +137,7 @@ describe.skipIf(!reachable)('the migration this package ships', () => {
     expect(rows.map((row) => row.table_name)).toEqual([
       'api_keys',
       'audit_log',
+      'email_suppressions',
       'environments',
       'invites',
       'memberships',
@@ -235,6 +236,17 @@ const TABLES: Array<[string, string, Insert]> = [
         role: 'member',
         token_hash: 'b'.repeat(64),
         expires_at: new Date(Date.now() + 86_400_000),
+      })}`
+    },
+  ],
+  [
+    'email_suppressions',
+    ID_PREFIXES.emailSuppression,
+    async (tx, badId) => {
+      await tx`insert into email_suppressions ${tx({
+        id: badId,
+        address: 'ada@example.test',
+        reason: 'bounce',
       })}`
     },
   ],
@@ -533,5 +545,57 @@ describe.skipIf(!reachable)('the audit log', () => {
         })}`
       }),
     ).rejects.toThrow(/audit_log_country_is_a_code/)
+  })
+})
+
+describe.skipIf(!reachable)('a suppressed address', () => {
+  it('is stored lowercased, so the same mailbox is not suppressed twice', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into email_suppressions ${tx({
+          id: id(ID_PREFIXES.emailSuppression),
+          address: 'Ada@Example.test',
+          reason: 'bounce',
+        })}`
+      }),
+    ).rejects.toThrow(/email_suppressions_address_is_lowercase/)
+  })
+
+  it('cannot be recorded twice, however many times it bounces', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        for (const reason of ['bounce', 'complaint']) {
+          await tx`insert into email_suppressions ${tx({
+            id: id(ID_PREFIXES.emailSuppression),
+            address: 'ada@example.test',
+            reason,
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/email_suppressions_address/)
+  })
+
+  it('has to be an address, not a name', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into email_suppressions ${tx({
+          id: id(ID_PREFIXES.emailSuppression),
+          address: 'ada',
+          reason: 'bounce',
+        })}`
+      }),
+    ).rejects.toThrow(/email_suppressions_address_has_one_at/)
+  })
+
+  it('cannot carry a reason nobody defined', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into email_suppressions ${tx({
+          id: id(ID_PREFIXES.emailSuppression),
+          address: 'ada@example.test',
+          reason: 'because',
+        })}`
+      }),
+    ).rejects.toThrow()
   })
 })

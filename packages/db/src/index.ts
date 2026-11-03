@@ -21,6 +21,7 @@ export const ID_PREFIXES = {
   environment: 'env_',
   apiKey: 'key_',
   auditEntry: 'aud_',
+  emailSuppression: 'sup_',
 } as const
 
 export const ULID_CHARS = 26
@@ -30,7 +31,9 @@ export const ULID_PATTERN = '[0-9A-HJKMNP-TV-Z]{26}'
 export const MEMBERSHIP_ROLES = ['owner', 'admin', 'member', 'viewer'] as const
 export const API_KEY_KINDS = ['public', 'secret'] as const
 export const API_KEY_SCOPES = ['logs:write', 'logs:read'] as const
+export const SUPPRESSION_REASONS = ['bounce', 'complaint', 'manual'] as const
 
+export const suppressionReason = pgEnum('suppression_reason', SUPPRESSION_REASONS)
 export const membershipRole = pgEnum('membership_role', MEMBERSHIP_ROLES)
 export const apiKeyKind = pgEnum('api_key_kind', API_KEY_KINDS)
 
@@ -213,5 +216,25 @@ export const auditLog = pgTable(
     index('audit_log_by_organization_and_time').on(table.organizationId, table.createdAt),
     check('audit_log_id_shape', sql`id ~ '^aud_[0-9A-HJKMNP-TV-Z]{26}$'`),
     check('audit_log_country_is_a_code', sql`country is null or country ~ '^[A-Z]{2}$'`),
+  ],
+)
+
+export const emailSuppressions = pgTable(
+  'email_suppressions',
+  {
+    id: text('id').primaryKey(),
+    address: text('address').notNull(),
+    reason: suppressionReason('reason').notNull(),
+    detail: text('detail'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('email_suppressions_address').on(table.address),
+    check('email_suppressions_id_shape', sql`id ~ '^sup_[0-9A-HJKMNP-TV-Z]{26}$'`),
+    check('email_suppressions_address_is_lowercase', sql`address = lower(address)`),
+    check(
+      'email_suppressions_address_has_one_at',
+      sql`address ~ '^[^@[:space:]]+@[^@[:space:]]+$'`,
+    ),
   ],
 )
