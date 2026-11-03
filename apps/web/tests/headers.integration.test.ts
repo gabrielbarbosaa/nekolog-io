@@ -104,6 +104,18 @@ describe.skipIf(!isBuilt)('the headers a real response carries', () => {
     }
   })
 
+  it('leaves the documentation its own policy instead of imposing this one', async () => {
+    const response = await fetch(`${ORIGIN}/docs/getting-started/introduction/`, {
+      redirect: 'manual',
+    })
+
+    expect(
+      response.headers.get('content-security-policy'),
+      'the site would overwrite the hash-based policy the docs are served with, ' +
+        'and every Starlight script would be blocked',
+    ).toBeNull()
+  })
+
   it('loads no script from anywhere but this origin', async () => {
     const html = await (await fetch(ORIGIN)).text()
     const sources = scriptTags(html)

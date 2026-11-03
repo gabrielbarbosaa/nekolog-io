@@ -13,10 +13,50 @@ modules/
   environment/   junta os cinco; é o que cada ambiente chama
   oracle-vm/     a VM, a rede sem entrada e o cloud-init
   ssh-access/    a aplicação Access na frente do SSH da máquina
+  vercel-project/ um projeto na Vercel, seus domínios e suas variáveis
 envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
 repo/                 rulesets do GitHub; não é um ambiente, é o repositório
 vm/                   a VM; também não é um ambiente — é uma máquina para os três
+vercel/               os três projetos da Vercel; também não é por ambiente
 ```
+
+## Por que a Vercel não tem uma raiz por ambiente
+
+Nas outras raízes, ambiente é diretório. Na Vercel não dá: a unidade lá é o
+**projeto**, e um projeto já contém os três — produção é a `main`, e `qa` e
+`dev` são preview de branch. Três projetos por aplicação dariam três histórias
+de deploy desconectadas para a mesma aplicação, e domínio de preview por branch
+é o recurso que a Vercel oferece exatamente para isso.
+
+Então `infra/vercel` declara **três projetos**: o site (`apps/web`), a
+documentação (`apps/docs`) e o dashboard, que vem do repositório privado —
+porque toda a infraestrutura mora aqui, mesmo a de lá.
+
+O que separa os ambientes é o segredo, não o projeto, e o módulo recusa
+configuração que não separe:
+
+- variável sem nenhum `target` não chega a deployment nenhum;
+- variável de produção com `git_branch` faria produção ler o valor de uma
+  branch;
+- **variável sensível com `target = ["preview"]` e sem `git_branch`** é a mesma
+  senha em `dev` e em `qa`, que é o que a etapa 2.22 pede para não acontecer;
+- domínio fora da zona que o módulo administra.
+
+Os valores vêm de `TF_VAR_site_variables`, `TF_VAR_docs_variables` e
+`TF_VAR_dashboard_variables`, que o workflow lê de secrets do repositório como
+JSON. Nenhum valor mora aqui.
+
+## A documentação sai do site, mas não pelo mesmo CSP
+
+`nekolog.io/docs` é reescrito para o projeto da documentação
+(`next.config.ts`, `rewrites`), porque o Astro é construído com `base: '/docs'`
+e o plano diz que site e docs moram no mesmo endereço.
+
+Por isso o `proxy.ts` do `apps/web` **exclui `/docs` do matcher**. Se não
+excluísse, o CSP com nonce do site sobrescreveria o CSP com hashes com que a
+documentação é servida, e todo script do Starlight seria bloqueado — página em
+branco, sem erro de build. Há teste que pede `/docs/...` ao servidor de produção
+e falha se vier um `content-security-policy`.
 
 A `vm` lê os três estados de ambiente com `terraform_remote_state`, para montar
 o arquivo de credenciais de cada `cloudflared`. Ela aplica depois deles, e só
