@@ -189,6 +189,48 @@ remendado depois de nós; se outra biblioteca entrou por cima, a dela fica.
 XHR **não** é remendado: `fetch` é o que a etapa 3.2 pede, e um remendo a mais
 é uma chance a mais de quebrar o app de alguém.
 
+## `traceparent`
+
+Todo log da página leva o mesmo `trace`, e cada request sai com um
+`traceparent` do W3C — um span filho por request. É o que faz o clique no front
+e a request no back aparecerem na mesma linha do tempo.
+
+```ts
+init({ trace: { targets: ['api.shop.test', '.servicos.interno'] } })
+init({ trace: { sameOrigin: false, targets: [/^https:\/\/api\./] } })
+init({ trace: false })
+```
+
+### Só nos domínios configurados
+
+Por padrão, **só a própria origem**. O `traceId` é identificador interno: mandar
+para um terceiro é vazamento pequeno mas de graça, e um header a mais numa
+request entre domínios vira preflight e pode simplesmente quebrar a chamada.
+
+As regras de casamento são estritas de propósito:
+
+| Entrada | Casa com |
+|---|---|
+| `api.shop.test` | só esse host |
+| `.shop.test` | o domínio e os subdomínios |
+| `shop.test/api` ou `https://shop.test/api` | esse host, nesse caminho ou abaixo dele |
+| `/^https:\/\/api\./` | o que a expressão disser |
+
+Host que só *começa* igual (`api.shop.test.evil.test`) não casa — a comparação
+é de origem e de host inteiro, nunca prefixo de texto. Porta diferente é origem
+diferente. `http:` não é `https:`. Esquema que não seja `http`/`https` nunca
+recebe o header. E a própria ingestão também não recebe: ela não tem o que
+fazer com ele.
+
+### Não quebramos a request
+
+O header é somado ao que o app já tinha — `Headers`, lista de pares, objeto ou
+um `Request` pronto, cada um do seu jeito. Se qualquer coisa der errado na hora
+de montar, a request sai **sem** o header em vez de não sair.
+
+É o mesmo remendo do `fetch` dos breadcrumbs, não um segundo: um remendo só,
+um `close()` só.
+
 ## Fila offline
 
 Se o lote não conseguiu sair — metrô, avião, wifi de hotel — ele é guardado no
@@ -241,8 +283,7 @@ nada e a sessão fica em memória.
 
 ## O que ainda não está aqui
 
-Propagação de `traceparent` é a etapa 3.4. O orçamento de 5 KB gzip é
-verificado a partir da 3.12.
+O orçamento de 5 KB gzip é verificado a partir da 3.12.
 
 Os testes rodam contra um DOM de verdade (happy-dom) e um IndexedDB de verdade
 (fake-indexeddb), com `ErrorEvent`, `pagehide`, `visibilitychange`, `online` e

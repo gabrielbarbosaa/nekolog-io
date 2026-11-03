@@ -96,6 +96,41 @@ conferem o código de saída, o stderr e se o flush terminou antes de o processo
 morrer — inclusive um controle que roda sem os hooks, para provar que o Node
 já se comportava assim.
 
+## `traceparent`
+
+A leitura e a escrita do header W3C vêm do core e são reexportadas aqui, para
+o middleware de cada framework usar a mesma implementação:
+
+```ts
+const { trace, parentSpanId, sampled } = traceForRequest(request.get('traceparent'))
+response.setHeader('traceparent', traceparentOf(trace, sampled))
+runWithContext({ trace }, next)
+```
+
+`traceForRequest` continua o trace de quem chamou com um **span novo**, ou
+começa um trace quando ninguém mandou nada. Um `traceparent` inválido não
+derruba a request: vira trace novo.
+
+Para as chamadas que **saem** do serviço:
+
+```ts
+installTracePropagation({ targets: ['orders.internal', '.servicos.interno'] })
+```
+
+`targets` é obrigatório, e não existe padrão. No browser "a própria origem" é um
+padrão seguro e óbvio; num servidor não existe origem própria, e mandar o
+`traceId` interno para o gateway de pagamento não é o que ninguém queria. Se
+você não listar, não propaga — e isso é preferível a propagar para todo mundo
+em silêncio.
+
+O trace sai do contexto da request (`runWithContext`), e cada chamada leva um
+span filho — nunca o span da própria request. Fora de uma request não há trace,
+e então não vai header nenhum.
+
+O remendo no `fetch` global chama o original, devolve o que ele devolveu,
+relança o que ele rejeitou, e o `install` devolve a função que desfaz — que só
+desfaz se ninguém tiver remendado depois.
+
 ## Ambiente
 
 Sem opção explícita, estas variáveis valem:

@@ -6,19 +6,20 @@ import {
   type Logger,
   type LogLevel,
   runWithContext,
+  TRACEPARENT_HEADER,
+  traceForRequest,
+  traceparentOf,
 } from '@nekolog-io/node'
 import type { ErrorRequestHandler, Request, RequestHandler } from 'express'
 import { publicMessageOf, statusOf } from './errors.ts'
-import { type RandomBytes, traceForRequest, traceparentOf } from './trace.ts'
 
 export const REQUEST_ID_HEADER = 'x-request-id'
-export const TRACEPARENT_HEADER = 'traceparent'
 export const MAX_REQUEST_ID_CHARS = 64
 
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]+$/
 
 export type MiddlewareOptions = {
-  random?: RandomBytes
+  random?: () => number
   newRequestId?: () => string
   now?: () => number
 }

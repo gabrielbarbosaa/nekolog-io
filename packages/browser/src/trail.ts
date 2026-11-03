@@ -10,7 +10,7 @@ import {
 } from './breadcrumbs.ts'
 import { type ClickBreadcrumbOptions, installClickBreadcrumbs } from './clicks.ts'
 import { installNavigationBreadcrumbs, type NavigationBreadcrumbOptions } from './navigation.ts'
-import { type FetchBreadcrumbOptions, installFetchBreadcrumbs } from './network.ts'
+import { type FetchBreadcrumbOptions, installFetchPatch, type TracePatch } from './network.ts'
 import type { PageDetail } from './page.ts'
 
 export const DEFAULT_ATTACH_FROM: LogLevel = 'error'
@@ -69,6 +69,7 @@ export function withBreadcrumbs(event: LogEvent, attachFrom: LogLevel): LogEvent
 export type InstallBreadcrumbOptions = BreadcrumbTuning & {
   page?: PageDetail
   endpoint?: string
+  trace?: TracePatch
   clickOptions?: ClickBreadcrumbOptions
   navigationOptions?: NavigationBreadcrumbOptions
   fetchOptions?: FetchBreadcrumbOptions
@@ -86,11 +87,13 @@ export function installBreadcrumbs(options: InstallBreadcrumbOptions = {}): () =
       installNavigationBreadcrumbs(trail, { page: options.page, ...options.navigationOptions }),
     )
   }
-  if (options.fetch !== false) {
+  if (options.fetch !== false || options.trace !== undefined) {
     installed.push(
-      installFetchBreadcrumbs(trail, {
+      installFetchPatch({
         page: options.page,
         endpoint: options.endpoint,
+        trail: options.fetch === false ? undefined : trail,
+        trace: options.trace,
         ...options.fetchOptions,
       }),
     )

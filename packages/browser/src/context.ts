@@ -2,6 +2,7 @@ import type { LogContext } from '@nekolog-io/core'
 import { globalHref } from './globals.ts'
 import { DEFAULT_PAGE_DETAIL, type PageDetail, pageUrl } from './page.ts'
 import { createSessionStore, type SessionOptions, type SessionStore } from './session.ts'
+import { currentTrace } from './tracing.ts'
 
 export const PAGE_URL_ATTRIBUTE = 'page.url'
 
@@ -52,7 +53,7 @@ export function browserContext(options: ContextOptions = {}): () => LogContext {
 
   return () => {
     const store = options.session ?? sessionStore()
-    const context: LogContext = { session: { id: store.current() } }
+    const context: LogContext = { session: { id: store.current() }, trace: currentTrace() }
 
     const id = currentUser()
     if (id !== undefined) {

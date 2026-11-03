@@ -12,6 +12,7 @@ import { publicKeyOnly } from './keys.ts'
 import { type OfflineTuning, parkingSender } from './offline.ts'
 import type { PageDetail } from './page.ts'
 import type { BatchStore } from './store.ts'
+import type { TraceTuning } from './tracing.ts'
 import { type BreadcrumbTuning, DEFAULT_ATTACH_FROM, withBreadcrumbs } from './trail.ts'
 import { SDK_NAME, SDK_VERSION } from './version.ts'
 
@@ -20,6 +21,7 @@ export type BrowserLoggerOptions = Omit<LoggerOptions, 'runtime' | 'sdk'> & {
   fetch?: FetchLike
   sendBeacon?: SendBeaconLike | false
   breadcrumbs?: BreadcrumbTuning
+  trace?: TraceTuning | false
   offline?: OfflineTuning | false
   offlineStore?: BatchStore
 }
@@ -79,6 +81,7 @@ export function createLogger(options: BrowserLoggerOptions = {}): Logger {
     fetch: _fetch,
     sendBeacon: _sendBeacon,
     breadcrumbs,
+    trace: _trace,
     offline,
     offlineStore: _offlineStore,
     ...rest
