@@ -2,6 +2,8 @@ export type { BrowserClient, InitOptions } from '@nekolog-io/browser'
 export {
   addBreadcrumb,
   clearBreadcrumbs,
+  clearUser,
+  currentUser,
   resetSession,
   sessionId,
   setUser,

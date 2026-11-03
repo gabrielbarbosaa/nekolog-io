@@ -1,9 +1,14 @@
 export type { LogContext, LogEvent, Logger, LogLevel } from '@nekolog-io/core'
 export {
+  accessAttributes,
+  accessMessage,
   addContext,
   bindContext,
   currentContext,
+  levelForStatus,
+  REQUEST_ID_HEADER,
   runWithContext,
+  startRequest,
   TRACEPARENT_HEADER,
   traceForRequest,
   traceparentOf,

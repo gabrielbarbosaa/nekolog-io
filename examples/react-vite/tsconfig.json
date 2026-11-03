@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.tsx"]
+}
