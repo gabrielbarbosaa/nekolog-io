@@ -339,6 +339,31 @@ describe('resource and sdk', () => {
   })
 })
 
+describe('the transport it builds from an api key', () => {
+  it('sends through the fetch the caller handed it, so another runtime can beacon instead', async () => {
+    const calls: string[] = []
+    const logger = createLogger({
+      apiKey: 'nekolog_pk_0123456789abcdef0123456789abcdef',
+      transport: {
+        fetch: async (url) => {
+          calls.push(url)
+          return {
+            ok: true,
+            status: 202,
+            headers: { get: () => null },
+            text: () => Promise.resolve('{"accepted":1}'),
+          }
+        },
+      },
+    })
+
+    logger.error('boom')
+    await logger.flush()
+
+    expect(calls).toEqual(['https://ingest.nekolog.io/v1/logs'])
+  })
+})
+
 describe('flush', () => {
   it('delegates to the sink', async () => {
     const flush = vi.fn().mockResolvedValue(undefined)

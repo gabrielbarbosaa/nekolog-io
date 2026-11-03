@@ -1,4 +1,5 @@
 import type { LOG_LEVELS, RUNTIMES } from './limits.ts'
+import type { FetchLike } from './transport.ts'
 
 export type LogLevel = (typeof LOG_LEVELS)[number]
 export type Runtime = (typeof RUNTIMES)[number]
@@ -68,6 +69,7 @@ export type TransportTuning = {
   maxRetries?: number
   baseRetryDelayMs?: number
   maxRetryDelayMs?: number
+  fetch?: FetchLike
 }
 
 export type SamplingTuning = {

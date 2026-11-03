@@ -1,0 +1,141 @@
+# @nekolog-io/browser
+
+SDK do NekoLog para o browser: tudo do
+[`@nekolog-io/core`](../core/README.md) mais erro global, promise rejeitada,
+sessão por aba, `setUser` e o envio no `pagehide` via `sendBeacon`.
+
+```ts
+import { init } from '@nekolog-io/browser'
+
+const nekolog = init({
+  apiKey: 'nekolog_pk_…',
+  service: 'checkout-web',
+  release: '1.4.2',
+})
+
+nekolog.setUser('u_42')
+nekolog.logger.info('Checkout aberto', { step: 'payment' })
+```
+
+`init` cria o logger, instala os dois handlers globais e o flush no `pagehide`.
+Se você preferir montar as peças na mão, `createLogger`,
+`installGlobalHandlers` e `installFlushOnHide` são exportados separadamente, e
+cada `install*` devolve a função que desfaz.
+
+## A key secreta não entra aqui
+
+Uma `nekolog_sk_…` numa página é uma credencial publicada: qualquer pessoa com o
+"ver código-fonte" tem ela. Então o SDK **recusa**, avisa pelo `onError` e cai
+no console — não manda nada. Ele não joga exceção, porque derrubar o app de
+quem configurou errado é pior do que não mandar log; o aviso é alto o
+suficiente.
+
+Use a key pública do ambiente. É ela que diz projeto e ambiente, e ela só
+escreve.
+
+## Por que o `pagehide` manda de outro jeito
+
+`pagehide` é o último evento que uma página recebe de forma confiável — e é
+justamente aí que um `fetch` normal pode ser morto junto com a aba. Então, com a
+página saindo, o lote vai por `navigator.sendBeacon`, que o browser entrega
+depois da página já ter morrido.
+
+`sendBeacon` não manda header nenhum. É por isso, e só por isso, que **a key vai
+na URL** (`/v1/logs?key=nekolog_pk_…`) nesse caminho; no envio normal ela
+continua no `Authorization`. O corpo vai como `text/plain`, que é o que faz a
+request ser simples de CORS — um `application/json` pediria preflight, e
+preflight durante o descarregamento da página não acontece.
+
+Duas consequências práticas:
+
+- O lote do browser é limitado a **60 KB**, porque esse é o teto do
+  `sendBeacon`. Um `maxBatchBytes` maior que isso é reduzido, não aceito.
+- Se o browser recusar o beacon (cota estourada), o SDK **cai para o `fetch`
+  com `keepalive`** em vez de perder o lote.
+
+Também damos flush quando a aba fica escondida (`visibilitychange`), porque em
+alguns celulares esse é o único evento que chega antes do app ser suspenso. E no
+`pageshow` voltamos ao envio normal, para a página restaurada do cache de
+voltar/avançar não continuar mandando por beacon.
+
+## Sessão
+
+Cada aba tem uma sessão, um UUID guardado no `sessionStorage`. Ela recomeça
+depois de **30 minutos** sem nenhum log, e sobrevive a um reload.
+
+Três cuidados que valem mais do que a descrição:
+
+- **O que está guardado não é confiável.** Qualquer script da mesma origem
+  escreve no `sessionStorage`. O SDK só aceita de volta um UUID com a forma
+  exata; qualquer outra coisa vira sessão nova, em vez de ir parar num evento.
+- **Relógio para trás também é motivo de recomeçar.** Um carimbo de tempo no
+  futuro é tão suspeito quanto um velho demais.
+- **Storage pode simplesmente não existir.** No modo privativo do Safari o
+  acesso levanta exceção. A sessão continua funcionando, só em memória.
+
+`sessionId()` devolve a atual e `resetSession()` começa outra — é o que você
+chama num logout.
+
+## `setUser`
+
+```ts
+nekolog.setUser('u_42')  // depois do login
+nekolog.setUser(null)    // depois do logout
+```
+
+Só o identificador. **Não existe onde colocar nome ou e-mail**, e isso é de
+propósito: o dashboard não precisa deles para agrupar, e um campo livre de
+usuário é exatamente por onde PII vaza para dentro de um log. Se você precisa de
+mais, `logger.child({ attributes: … })` passa pelo filtro de dados sensíveis do
+core.
+
+O usuário vale a partir da chamada — eventos anteriores não são reescritos.
+
+## O endereço da página
+
+Todo evento leva `page.url`. Por padrão vai **sem query string e sem
+fragmento**, porque é neles que viajam token de reset, código de convite e
+cupom. Um `?token=…` num log é um vazamento silencioso que ninguém procura.
+
+```ts
+init({ page: 'full' })  // com query, se você souber o que tem lá
+init({ page: false })   // sem endereço nenhum
+```
+
+Endereço que não seja `http:`, `https:` ou `file:` não vira atributo.
+
+## Erro que ninguém pegou
+
+| Evento | O que vira |
+|---|---|
+| `error` | log `error` com `error.kind=uncaught`, mais `error.source`, `error.line` e `error.column` |
+| `unhandledrejection` | log `error` com `error.kind=unhandledrejection` |
+
+Dois cuidados:
+
+- **O browser continua reportando.** Instalamos listener, não trocamos o
+  `window.onerror`, e nunca chamamos `preventDefault()` — o erro continua
+  aparecendo no console de quem está depurando.
+- **Não dá para entrar em laço.** Se o próprio envio levantar um erro, o
+  handler se recusa a reentrar; senão uma falha de rede viraria uma página
+  travada.
+
+Erro de carregamento de recurso (uma imagem 404) **não** vira log aqui: ele não
+sobe até a `window` sem captura, e é assunto da etapa de breadcrumbs.
+
+## Renderizado no servidor
+
+O pacote não toca em `window`, `document` ou `sessionStorage` na importação, e
+cada acesso é protegido. Um componente compartilhado entre servidor e cliente
+pode importar e logar dos dois lados; no servidor os `install*` não instalam
+nada e a sessão fica em memória.
+
+## O que ainda não está aqui
+
+Breadcrumbs (cliques, navegação, fetch), fila offline no IndexedDB e
+propagação de `traceparent` são as etapas 3.2, 3.3 e 3.4. O orçamento de 5 KB
+gzip é verificado a partir da 3.12.
+
+Os testes rodam contra um DOM de verdade (happy-dom) com `ErrorEvent`,
+`pagehide` e `visibilitychange` despachados de verdade. Browser de verdade —
+Chromium, Firefox e WebKit — é a matriz da etapa 3.12.
