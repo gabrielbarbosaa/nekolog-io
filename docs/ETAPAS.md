@@ -171,7 +171,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 - [x] **3.8** `feat/nestjs` — módulo e interceptor.
 - [x] **3.9** `feat/log-transports` — transports para pino e winston.
 - [x] **3.11** `feat/examples` — um exemplo para cada integração, usados no e2e.
-- [ ] **3.12** `ci/compat-matrix` — testes em Node 22, 24 e 26, Bun e Deno, Chromium, Firefox e WebKit; `size-limit` no SDK de browser.
+- [x] **3.12** `ci/compat-matrix` — testes em Node 22, 24 e 26, Bun e Deno, Chromium, Firefox e WebKit; `size-limit` no SDK de browser.
 - [ ] **3.13** `feat/cli-init` — `npx @nekolog-io/cli init`: detecta o framework, instala o SDK e cria o `.env`.
 - [ ] **3.15** `docs/sdk-guides` — guia de cada framework nos três idiomas, incluindo o CORS do `traceparent`.
 

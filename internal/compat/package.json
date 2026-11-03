@@ -1,0 +1,18 @@
+{
+  "name": "@internal/compat",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node dist/smoke.mjs"
+  },
+  "devDependencies": {
+    "@nekolog-io/browser": "workspace:*",
+    "@nekolog-io/core": "workspace:*",
+    "@nekolog-io/node": "workspace:*",
+    "@types/node": "^24.0.0",
+    "tsdown": "^0.23.2"
+  }
+}

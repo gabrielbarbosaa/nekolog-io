@@ -60,7 +60,7 @@ function beforeSendWith(options: BrowserLoggerOptions): BeforeSend | undefined {
 function senderFor(options: BrowserLoggerOptions, apiKey: string): FetchLike {
   const beacon = createSender({
     apiKey,
-    fetch: options.fetch,
+    fetch: options.fetch ?? options.transport?.fetch,
     sendBeacon: options.sendBeacon,
   })
 

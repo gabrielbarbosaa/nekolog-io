@@ -235,7 +235,18 @@ await log.flush() // essencial em serverless
 
 - Remoção de dados sensíveis por padrão: `password`, `token`, `authorization`, `cpf`, números de cartão. A busca é por **chave** (qualquer segmento do caminho achatado) e por **valor** no texto: par `chave=valor` com chave sensível (`?token=abc`, `{"password":"x"}`), cartão validado por Luhn, CPF pelos dígitos verificadores, JWT, `Bearer`/`Basic`, credencial dentro de URL e a própria key do NekoLog. A validação existe para não apagar um id de pedido só porque tem 16 dígitos.
 - **A remoção é a última etapa do pipeline**, depois do `beforeSend`: o gancho vê o evento cru e pode rotear por ele, mas não consegue desfazer a remoção. O que o `beforeSend` devolve é revalidado contra o contrato da ingestão. A amostragem é **consistente por trace** (hash do `traceId`), para uma request não ficar pela metade, e `error`/`fatal` não são amostrados por padrão, porque alerta e issue contam erro. Detalhes e alternativas descartadas no ADR [0014](adr/0014-ordem-do-pipeline-de-privacidade-do-sdk.md).
-- SDK de browser com meta de menos de 5 KB gzip, verificada no CI com `size-limit`.
+- SDK de browser com tamanho verificado no CI pelo `size-limit`. **A meta de
+  5 KB gzip escrita aqui não foi cumprida, e isso está medido, não estimado**
+  (etapa 3.12, 03/11/2026): `init` — o SDK inteiro, com breadcrumbs, fila
+  offline e `traceparent` — custa **12,05 KB gzip**, e `createLogger` sozinho,
+  que é logger, envio em lote e o filtro de dados sensíveis, custa **9,4 KB**.
+  O `@nekolog-io/core` é 74% desse peso, e já sai *tree-shaken*: 40 KB de
+  fonte viram 17,5 KB no bundle. O que sobra é o que o próprio plano pede —
+  remoção de dados sensíveis com Luhn e CPF, achatamento de atributos, retry
+  com backoff, amostragem. Chegar aos 5 KB significaria cortar o filtro de
+  privacidade, que é um requisito da seção 14, não enfeite. O `size-limit`
+  trava os números onde eles estão hoje, para não subirem em silêncio;
+  rediscutir a meta é decisão de produto, não de implementação.
 - Para o `traceparent` ir do front ao back, o back-end precisa liberar esse header no CORS; isso entra no guia de cada framework.
 - **Primeiro uso:** `npx @nekolog-io/cli init` detecta o framework, instala o SDK certo e cria o `.env` com a key.
 - Versões suportadas e política de compatibilidade: seção 16.

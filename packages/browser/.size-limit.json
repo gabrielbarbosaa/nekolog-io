@@ -1,0 +1,23 @@
+[
+  {
+    "name": "init — the whole browser sdk",
+    "path": "dist/index.mjs",
+    "import": "{ init }",
+    "gzip": true,
+    "limit": "12.5 kB"
+  },
+  {
+    "name": "createLogger — logger, transport and the privacy pipeline",
+    "path": "dist/index.mjs",
+    "import": "{ createLogger }",
+    "gzip": true,
+    "limit": "9.8 kB"
+  },
+  {
+    "name": "createSender — what the beacon path costs on its own",
+    "path": "dist/index.mjs",
+    "import": "{ createSender }",
+    "gzip": true,
+    "limit": "1 kB"
+  }
+]
