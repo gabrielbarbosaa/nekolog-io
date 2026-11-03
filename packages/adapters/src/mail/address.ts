@@ -1,9 +1,34 @@
 import type { EmailMessage } from '../mailer.ts'
 
 export const MAX_SUBJECT_CHARS = 200
+export const MAX_ADDRESS_CHARS = 254
 
-const ADDRESS = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/
+const FORBIDDEN_IN_ADDRESS = /[\s<>,;"]/
 const CONTROL = /[\r\n\0]/
+
+export function looksLikeAddress(value: string): boolean {
+  if (value.length === 0 || value.length > MAX_ADDRESS_CHARS) {
+    return false
+  }
+
+  const at = value.indexOf('@')
+  if (at <= 0 || at !== value.lastIndexOf('@')) {
+    return false
+  }
+
+  const local = value.slice(0, at)
+  const domain = value.slice(at + 1)
+  if (
+    domain.length === 0 ||
+    FORBIDDEN_IN_ADDRESS.test(local) ||
+    FORBIDDEN_IN_ADDRESS.test(domain)
+  ) {
+    return false
+  }
+
+  const dot = domain.lastIndexOf('.')
+  return dot > 0 && dot < domain.length - 1
+}
 
 export class EmailRefused extends Error {
   constructor(reason: string) {
@@ -21,7 +46,7 @@ export function assertAddress(value: string, what: string): string {
     throw new EmailRefused(`the ${what} carries a line break, which would forge a header`)
   }
   const address = normaliseAddress(value)
-  if (!ADDRESS.test(address)) {
+  if (!looksLikeAddress(address)) {
     throw new EmailRefused(`"${value}" is not an address the ${what} can be`)
   }
   return address

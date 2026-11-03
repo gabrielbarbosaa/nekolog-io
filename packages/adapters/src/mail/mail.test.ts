@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EmailMessage, Mailer } from '../mailer.ts'
 import type { FetchLike, HttpResponseLike } from '../redis/upstash-redis.ts'
-import { assertMessage, EmailRefused, MAX_SUBJECT_CHARS } from './address.ts'
+import { assertMessage, EmailRefused, MAX_ADDRESS_CHARS, MAX_SUBJECT_CHARS } from './address.ts'
 import { allowedBy, allowlistedMailer, parseAllowlist } from './allowlist.ts'
 import { memoryMailer } from './memory-mailer.ts'
 import { ResendError, resendMailer } from './resend-mailer.ts'
@@ -38,6 +38,23 @@ describe('what a message has to be before it leaves', () => {
     ['nothing', ''],
   ])('refuses %s as a recipient', (_name, to) => {
     expect(() => assertMessage(message({ to }))).toThrow(EmailRefused)
+  })
+
+  it('refuses an address longer than any real one', () => {
+    const long = `${'a'.repeat(MAX_ADDRESS_CHARS)}@example.com`
+
+    expect(() => assertMessage(message({ to: long }))).toThrow(EmailRefused)
+  })
+
+  it('decides in a straight line, so a crafted address cannot stall the sender', () => {
+    const crafted = `!@${'!.'.repeat(20_000)}`
+    const started = Date.now()
+
+    expect(() => assertMessage(message({ to: crafted }))).toThrow(EmailRefused)
+    expect(
+      Date.now() - started,
+      'the check backtracked, which is what a polynomial regular expression does',
+    ).toBeLessThan(1000)
   })
 
   it('refuses an empty subject and an empty body', () => {

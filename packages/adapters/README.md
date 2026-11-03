@@ -89,6 +89,14 @@ A verificação acontece **antes** da chamada de rede, não depois: há teste
 afirmando que, com um cabeçalho forjado, nada chegou ao `fetch` nem ao
 transporte.
 
+**O endereço é conferido em linha reta, sem regex ambígua.** A primeira versão
+usava `/^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/`, e o CodeQL a reprovou como
+ReDoS polinomial: as classes aceitam `.`, então `a@!.!.!.…` faz o motor voltar
+atrás muitas vezes. Como o destinatário vem de convite e de cadastro, isso é
+entrada de terceiro. A versão atual procura o `@` por índice e checa as duas
+metades, com um limite de 254 caracteres. Há teste que recusa a entrada
+adversarial e mede o tempo.
+
 ### A allowlist falha fechada
 
 Em `dev` e `qa`, o `EMAIL_ALLOWLIST` limita para quem dá para escrever, e

@@ -1,4 +1,4 @@
-﻿export type { BlobStore } from './blob-store.ts'
+export type { BlobStore } from './blob-store.ts'
 export type { MemoryBlobStore } from './blobs/memory-blob-store.ts'
 export { memoryBlobStore } from './blobs/memory-blob-store.ts'
 export type { R2BucketLike, R2ListedLike, R2ObjectBodyLike } from './blobs/r2-blob-store.ts'
@@ -34,6 +34,8 @@ export {
   assertAddress,
   assertMessage,
   EmailRefused,
+  looksLikeAddress,
+  MAX_ADDRESS_CHARS,
   MAX_SUBJECT_CHARS,
   normaliseAddress,
 } from './mail/address.ts'
