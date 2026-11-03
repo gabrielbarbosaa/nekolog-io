@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   issueCreateArgs,
+  issueEditArgs,
   issueListArgs,
   labelCreateArgs,
   labelListArgs,
@@ -12,6 +13,7 @@ import {
   repoViewArgs,
 } from './commands.ts'
 import {
+  bodyUpdate,
   issueBody,
   issueTitle,
   type Milestone,
@@ -19,9 +21,10 @@ import {
   milestoneTitle,
   parseEtapas,
   parseGoals,
+  type Step,
 } from './etapas.ts'
 import { LABELS, labelFor } from './labels.ts'
-import { buildPlan, type ExistingState } from './plan.ts'
+import { buildPlan, type ExistingIssue, type ExistingState } from './plan.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const etapas = readFileSync(join(ROOT, 'docs', 'ETAPAS.md'), 'utf8')
@@ -49,11 +52,27 @@ const SAMPLE = [
 const nothing: ExistingState = {
   milestones: new Set<string>(),
   labels: new Set<string>(),
-  issues: new Set<string>(),
+  issues: new Map<string, ExistingIssue>(),
 }
 
 function sampleMilestones(): Milestone[] {
   return parseEtapas(SAMPLE)
+}
+
+function sampleStep(
+  milestoneIndex: number,
+  stepIndex: number,
+): { step: Step; milestone: Milestone } {
+  const milestone = sampleMilestones()[milestoneIndex]
+  const step = milestone?.steps[stepIndex]
+  if (milestone === undefined || step === undefined) {
+    throw new Error('the sample lost a step')
+  }
+  return { step, milestone }
+}
+
+function existingIssues(entries: Array<[string, ExistingIssue]>): ExistingState {
+  return { ...nothing, issues: new Map(entries) }
 }
 
 describe('parseEtapas', () => {
@@ -186,6 +205,47 @@ describe('issueTitle and issueBody', () => {
   })
 })
 
+describe('bodyUpdate', () => {
+  const { step, milestone } = sampleStep(1, 0)
+  const fresh = issueBody(step, milestone)
+
+  it('says nothing to do when the issue already carries the current text', () => {
+    expect(bodyUpdate(fresh, fresh)).toBeNull()
+  })
+
+  it('does not call a line ending difference a change', () => {
+    expect(bodyUpdate(fresh, fresh.replace(/\n/g, '\r\n'))).toBeNull()
+  })
+
+  it('keeps what somebody ticked by hand while the text around it changes', () => {
+    const working = fresh
+      .replace('- [ ] CI verde', '- [x] CI verde')
+      .replace('> formato do payload v1.', '> outra descrição.')
+    const merged = bodyUpdate(fresh, working)
+
+    expect(merged).toContain('- [x] CI verde')
+    expect(merged).toContain('> formato do payload v1.')
+    expect(merged?.split('\n').filter((line) => line.startsWith('- [x] '))).toHaveLength(1)
+  })
+
+  it('does not tick an item the ticked one merely starts with', () => {
+    const merged = bodyUpdate(
+      ['- [ ] CI verde', '- [ ] CI verde, com os testes'].join('\n'),
+      '- [x] CI verde',
+    )
+
+    expect(merged).toBe(['- [x] CI verde', '- [ ] CI verde, com os testes'].join('\n'))
+  })
+
+  it('leaves a ticked item behind when the checklist no longer has it', () => {
+    expect(bodyUpdate('- [ ] b', '- [x] a')).toBe('- [ ] b')
+  })
+
+  it('does not rewrite an issue just because somebody ticked an item', () => {
+    expect(bodyUpdate(fresh, fresh.replace('- [ ] CI verde', '- [x] CI verde'))).toBeNull()
+  })
+})
+
 describe('buildPlan', () => {
   const goals = parseGoals(plano)
 
@@ -227,13 +287,19 @@ describe('buildPlan', () => {
       existing: {
         milestones: new Set(first.milestones.map((entry) => entry.title)),
         labels: new Set(first.labels.map((entry) => entry.name)),
-        issues: new Set(first.issues.map((entry) => entry.title)),
+        issues: new Map(
+          first.issues.map((entry, index) => [
+            entry.title,
+            { number: index + 1, body: entry.body, open: true },
+          ]),
+        ),
       },
     })
 
     expect(second.milestones).toEqual([])
     expect(second.labels).toEqual([])
     expect(second.issues).toEqual([])
+    expect(second.updates).toEqual([])
     expect(second.consideredSteps).toBe(first.consideredSteps)
   })
 
@@ -244,6 +310,57 @@ describe('buildPlan', () => {
       label: 'a11y',
       milestone: 'M1 — Ingestão',
     })
+  })
+
+  it('plans an update for an issue whose body drifted from the file', () => {
+    const plan = buildPlan({
+      milestones: sampleMilestones(),
+      goals,
+      existing: existingIssues([
+        ['1.1 feat/schema-v1', { number: 7, body: 'o texto velho', open: true }],
+      ]),
+    })
+
+    expect(plan.issues.map((issue) => issue.title)).not.toContain('1.1 feat/schema-v1')
+    expect(plan.updates).toHaveLength(1)
+    expect(plan.updates[0]?.number).toBe(7)
+    expect(plan.updates[0]?.body).toContain('close-step-issue')
+  })
+
+  it('never touches a closed issue, which is a record of what happened', () => {
+    const plan = buildPlan({
+      milestones: sampleMilestones(),
+      goals,
+      existing: existingIssues([
+        ['1.1 feat/schema-v1', { number: 7, body: 'o texto velho', open: false }],
+      ]),
+    })
+
+    expect(plan.updates).toEqual([])
+  })
+
+  it('leaves alone the issue of a step that is no longer in the file', () => {
+    const plan = buildPlan({
+      milestones: sampleMilestones(),
+      goals,
+      existing: existingIssues([
+        ['9.9 feat/orphan', { number: 9, body: 'o texto velho', open: true }],
+      ]),
+    })
+
+    expect(plan.updates).toEqual([])
+  })
+
+  it('does not update the issue of a step that is already done', () => {
+    const plan = buildPlan({
+      milestones: sampleMilestones(),
+      goals,
+      existing: existingIssues([
+        ['0.1 chore/repo-init', { number: 1, body: 'o texto velho', open: true }],
+      ]),
+    })
+
+    expect(plan.updates).toEqual([])
   })
 
   it('plans a milestone even when every step in it is already done', () => {
@@ -368,6 +485,25 @@ describe('the gh commands', () => {
   it('counts closed issues as existing, so a closed one is not recreated', () => {
     expect(issueListArgs()).toContain('--state')
     expect(issueListArgs()[issueListArgs().indexOf('--state') + 1]).toBe('all')
+  })
+
+  it('reads enough of each issue to tell whether its body drifted', () => {
+    const fields = (issueListArgs()[issueListArgs().indexOf('--json') + 1] ?? '').split(',')
+
+    expect(fields).toEqual(expect.arrayContaining(['number', 'title', 'body', 'state']))
+  })
+
+  it('edits a body by issue number, with the text as an argument', () => {
+    const args = issueEditArgs({ number: 42, title: '1.1 feat/schema-v1', body: 'novo corpo' })
+
+    expect(args).toEqual(['issue', 'edit', '42', '--body', 'novo corpo'])
+  })
+
+  it('never passes the title to the editor, so an issue is never renamed', () => {
+    const args = issueEditArgs({ number: 42, title: '1.1 feat/schema-v1', body: 'novo corpo' })
+
+    expect(args).not.toContain('--title')
+    expect(args).not.toContain('1.1 feat/schema-v1')
   })
 
   it('asks for more issues and labels than the roadmap will ever have', () => {

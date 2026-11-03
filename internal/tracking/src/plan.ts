@@ -1,4 +1,5 @@
 import {
+  bodyUpdate,
   issueBody,
   issueTitle,
   type Milestone,
@@ -8,10 +9,16 @@ import {
 } from './etapas.ts'
 import { type LabelDefinition, labelFor } from './labels.ts'
 
+export type ExistingIssue = {
+  number: number
+  body: string
+  open: boolean
+}
+
 export type ExistingState = {
   milestones: ReadonlySet<string>
   labels: ReadonlySet<string>
-  issues: ReadonlySet<string>
+  issues: ReadonlyMap<string, ExistingIssue>
 }
 
 export type PlannedMilestone = {
@@ -30,10 +37,17 @@ export type PlannedIssue = {
   milestone: string
 }
 
+export type PlannedUpdate = {
+  number: number
+  title: string
+  body: string
+}
+
 export type SyncPlan = {
   milestones: PlannedMilestone[]
   labels: PlannedLabel[]
   issues: PlannedIssue[]
+  updates: PlannedUpdate[]
   totalSteps: number
   consideredSteps: number
 }
@@ -76,10 +90,21 @@ export function buildPlan(options: BuildPlanOptions): SyncPlan {
     }))
     .filter((planned) => !existing.issues.has(planned.title))
 
+  const updates = considered.flatMap(({ step, milestone }) => {
+    const title = issueTitle(step)
+    const current = existing.issues.get(title)
+    if (current === undefined || !current.open) {
+      return []
+    }
+    const body = bodyUpdate(issueBody(step, milestone), current.body)
+    return body === null ? [] : [{ number: current.number, title, body }]
+  })
+
   return {
     milestones,
     labels,
     issues,
+    updates,
     totalSteps: options.milestones.reduce((total, milestone) => total + milestone.steps.length, 0),
     consideredSteps: considered.length,
   }

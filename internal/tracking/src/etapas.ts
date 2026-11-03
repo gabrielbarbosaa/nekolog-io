@@ -81,6 +81,29 @@ export function milestoneDescription(
     : `Pronto quando: ${goal.doneWhen}.`
 }
 
+const TICKED = '- [x] '
+const UNTICKED = '- [ ] '
+
+export function bodyUpdate(fresh: string, current: string): string | null {
+  const existing = current.replace(/\r\n/g, '\n')
+  const ticked = new Set(
+    existing
+      .split('\n')
+      .filter((line) => line.startsWith(TICKED))
+      .map((line) => line.slice(TICKED.length)),
+  )
+
+  const merged = fresh
+    .split('\n')
+    .map((line) => {
+      const item = line.startsWith(UNTICKED) ? line.slice(UNTICKED.length) : null
+      return item !== null && ticked.has(item) ? `${TICKED}${item}` : line
+    })
+    .join('\n')
+
+  return merged === existing ? null : merged
+}
+
 export function issueBody(step: Step, milestone: Milestone): string {
   return [
     `> ${step.description}`,

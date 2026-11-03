@@ -1,4 +1,4 @@
-﻿import type { PlannedIssue, PlannedLabel, PlannedMilestone } from './plan.ts'
+﻿import type { PlannedIssue, PlannedLabel, PlannedMilestone, PlannedUpdate } from './plan.ts'
 
 export function repoViewArgs(): string[] {
   return ['repo', 'view', '--json', 'nameWithOwner']
@@ -13,7 +13,7 @@ export function labelListArgs(): string[] {
 }
 
 export function issueListArgs(): string[] {
-  return ['issue', 'list', '--state', 'all', '--limit', '1000', '--json', 'title']
+  return ['issue', 'list', '--state', 'all', '--limit', '1000', '--json', 'number,title,body,state']
 }
 
 export function milestoneCreateArgs(repo: string, milestone: PlannedMilestone): string[] {
@@ -37,6 +37,10 @@ export function labelCreateArgs(label: PlannedLabel): string[] {
     '--description',
     label.description,
   ]
+}
+
+export function issueEditArgs(update: PlannedUpdate): string[] {
+  return ['issue', 'edit', String(update.number), '--body', update.body]
 }
 
 export function issueCreateArgs(issue: PlannedIssue): string[] {
