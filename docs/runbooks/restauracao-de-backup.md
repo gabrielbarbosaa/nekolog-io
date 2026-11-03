@@ -90,3 +90,19 @@ que não foi testado.
 - Trate como incidente de segurança e siga
   [incidente §5](incidente.md#5-se-for-incidente-de-segurança): indisponibilidade
   prolongada de dado pessoal também tem implicação sob a LGPD.
+
+## Como o backup roda hoje
+
+O workflow [`backup.yml`](../../.github/workflows/backup.yml) faz o dump diário às
+05:17 UTC: `pg_dump | gzip | age` num cano só, sem arquivo legível no meio, e
+confere a assinatura `age-encryption.org` antes de subir para o R2. A limpeza
+usa o `internal/backup`, que **recusa** apagar a lista inteira — se tudo parece
+vencido, o errado é o relógio.
+
+**O teste de restauração é o mesmo workflow**, disparado à mão com
+`restore_test`: ele baixa o backup mais recente, restaura num Postgres
+descartável e consulta cada tabela, uma a uma. Backup que ninguém restaurou é
+esperança, não backup.
+
+Nada disso roda ainda: falta a variável `BACKUPS_ENABLED`, o banco no Neon, o
+bucket no R2 e o par de chaves do `age`.
