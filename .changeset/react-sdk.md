@@ -1,0 +1,6 @@
+---
+'@nekolog-io/react': minor
+'@nekolog-io/browser': patch
+---
+
+Add `@nekolog-io/react`: `NekologProvider`, `useLogger` and an `ErrorBoundary` that logs what broke with the React component stack. The provider does not start a client per mount — it takes the page's one client, so two nested providers, StrictMode rendering everything twice, and a route that unmounts and remounts all share it with the global handlers installed once; unmounting the provider therefore closes nothing, because the page is still the page, and `closeClient()` is there for the cases that really end. `useLogger` outside a provider returns a console-backed logger and warns once rather than throwing: React's convention would be to throw, but this SDK's contract is never to throw into the host app, and a forgotten provider must not be why a production page goes blank. The boundary's `onError` runs even when the logging itself fails, the component stack is cut at 2 000 characters so one stack cannot eat the attribute budget, and `withErrorBoundary` wraps a component without writing the boundary by hand. `@nekolog-io/browser` now accepts an `sdk` override instead of always claiming to be the browser SDK, which is how the React package names itself.
