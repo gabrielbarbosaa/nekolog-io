@@ -42,9 +42,17 @@ configuração que não separe:
   senha em `dev` e em `qa`, que é o que a etapa 2.22 pede para não acontecer;
 - domínio fora da zona que o módulo administra.
 
-Os valores vêm de `TF_VAR_site_variables`, `TF_VAR_docs_variables` e
-`TF_VAR_dashboard_variables`, que o workflow lê de secrets do repositório como
-JSON. Nenhum valor mora aqui.
+**Nome e valor são duas variáveis diferentes, e isso não é estilo.** O
+`for_each` do OpenTofu não aceita valor sensível — a chave do recurso apareceria
+em claro —, então `*_variables` diz só quais variáveis existem e onde cada uma
+chega, e `*_values` carrega os valores. A primeira vem de uma *variable* do
+repositório e aparece no plano; a segunda vem de um *secret* e não aparece. O
+módulo recusa declaração sem valor e valor sem declaração, que é o jeito de as
+duas não se separarem na prática.
+
+O provedor da Vercel é instalado sem assinatura GPG: o registro do OpenTofu não
+tem chave publicada para ele. O que prende a versão é o `.terraform.lock.hcl`
+com os hashes do artefato, gerado pelo CI e commitado, como nas outras raízes.
 
 ## A documentação sai do site, mas não pelo mesmo CSP
 
@@ -52,11 +60,19 @@ JSON. Nenhum valor mora aqui.
 (`next.config.ts`, `rewrites`), porque o Astro é construído com `base: '/docs'`
 e o plano diz que site e docs moram no mesmo endereço.
 
-Por isso o `proxy.ts` do `apps/web` **exclui `/docs` do matcher**. Se não
-excluísse, o CSP com nonce do site sobrescreveria o CSP com hashes com que a
-documentação é servida, e todo script do Starlight seria bloqueado — página em
-branco, sem erro de build. Há teste que pede `/docs/...` ao servidor de produção
-e falha se vier um `content-security-policy`.
+Por isso o `proxy.ts` do `apps/web` **exclui `/docs` do matcher**: o CSP com
+nonce do site e o CSP com hashes da documentação não podem valer para a mesma
+resposta, e se o do site ganhasse, todo script do Starlight seria bloqueado —
+página em branco, sem erro de build.
+
+O teste que guarda isso lê o `functions-config-manifest.json` do build e confere
+em quais caminhos o proxy **foi compilado** para rodar. Foi a segunda tentativa:
+a primeira pedia `/docs/...` ao servidor de produção e conferia que não vinha
+`content-security-policy` — e passava dos dois jeitos, porque sem a documentação
+no ar a reescrita falha antes e a resposta sai sem cabeçalho nenhum. Um teste que
+não distingue as duas configurações não guarda nada. **O comportamento em
+produção, com o destino da reescrita existindo, continua sem verificação até
+haver conta na Vercel.**
 
 A `vm` lê os três estados de ambiente com `terraform_remote_state`, para montar
 o arquivo de credenciais de cada `cloudflared`. Ela aplica depois deles, e só
