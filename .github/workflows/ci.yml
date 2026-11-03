@@ -30,6 +30,19 @@ jobs:
           --health-timeout 5s
           --health-retries 20
           --health-start-period 60s
+      postgres:
+        image: postgres:18-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: nekolog
+          POSTGRES_PASSWORD: nekolog
+          POSTGRES_DB: nekolog_dev
+        options: >-
+          --health-cmd "pg_isready -U nekolog"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -69,6 +82,8 @@ jobs:
           CLICKHOUSE_TEST_URL: http://localhost:8123
           CLICKHOUSE_TEST_USER: default
           CLICKHOUSE_TEST_PASSWORD: nekolog
+          POSTGRES_TEST_REQUIRED: "1"
+          POSTGRES_TEST_URL: postgres://nekolog:nekolog@localhost:5432/nekolog_dev
           FUZZ_RUNS: "1000"
 
       - name: Build
