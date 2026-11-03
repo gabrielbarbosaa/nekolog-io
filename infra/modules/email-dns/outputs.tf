@@ -1,4 +1,4 @@
-﻿output "send_domain" {
+output "send_domain" {
   description = "Subdomain every message is sent from."
   value       = local.send_domain
 }

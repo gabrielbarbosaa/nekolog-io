@@ -1,4 +1,4 @@
-﻿terraform {
+terraform {
   backend "s3" {
     key                         = "email/terraform.tfstate"
     region                      = "auto"
