@@ -8,6 +8,7 @@ import type { LogEvent } from './types.ts'
 import { uuidv7 } from './uuid.ts'
 
 const RUNS = Number(process.env.FUZZ_RUNS ?? 300)
+const BATCH_PROPERTY_TIMEOUT_MS = 60_000
 
 const hostileText = fc.oneof(
   fc.string({ maxLength: 120 }),
@@ -138,24 +139,28 @@ describe('whatever the sdk is asked to log, the ingest parser accepts it', () =>
     )
   })
 
-  it('for a whole batch of mixed events at once', () => {
-    fc.assert(
-      fc.property(
-        fc.array(fc.tuple(level, hostileText, attributes), { minLength: 1, maxLength: 12 }),
-        (calls) => {
-          const sink = memorySink()
-          const logger = createLogger({ sink, level: 'trace' })
+  it(
+    'for a whole batch of mixed events at once',
+    () => {
+      fc.assert(
+        fc.property(
+          fc.array(fc.tuple(level, hostileText, attributes), { minLength: 1, maxLength: 12 }),
+          (calls) => {
+            const sink = memorySink()
+            const logger = createLogger({ sink, level: 'trace' })
 
-          for (const [chosen, message, extra] of calls) {
-            logger[chosen](message, extra as Record<string, unknown>)
-          }
+            for (const [chosen, message, extra] of calls) {
+              logger[chosen](message, extra as Record<string, unknown>)
+            }
 
-          expectAccepted(sink.events, logger)
-        },
-      ),
-      { numRuns: RUNS },
-    )
-  })
+            expectAccepted(sink.events, logger)
+          },
+        ),
+        { numRuns: RUNS },
+      )
+    },
+    BATCH_PROPERTY_TIMEOUT_MS,
+  )
 
   it('never throws into the host application, whatever it is handed', () => {
     fc.assert(

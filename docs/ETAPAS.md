@@ -161,7 +161,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 > gerada aqui e baixada lá. Decidir agora onde cada metade começa seria desenhar
 > no escuro; cada marco é separado quando começa, como este e como o M2.
 
-- [ ] **3.1** `feat/browser-sdk` — `@nekolog-io/browser`: erros globais, sessão, `setUser` e envio no `pagehide`.
+- [x] **3.1** `feat/browser-sdk` — `@nekolog-io/browser`: erros globais, sessão, `setUser` e envio no `pagehide`.
 - [ ] **3.2** `feat/browser-breadcrumbs` — cliques, navegação e fetch.
 - [ ] **3.3** `feat/browser-offline` — fila offline no IndexedDB.
 - [ ] **3.4** `feat/trace-propagation` — `traceparent` só nos domínios configurados, no browser e no Node.
