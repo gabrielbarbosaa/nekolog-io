@@ -82,46 +82,69 @@
 
 ## M2 — Plataforma
 
-> **Nota (30/10/2026):** o dashboard virou um produto de código fechado, no repositório privado [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) (ver PLANO.md seção 1 e 2). As etapas abaixo ainda descrevem o escopo certo, mas a numeração, os nomes de branch e os PRs de boa parte delas (tudo que é dashboard/auth/UI) vão acontecer naquele repositório, não aqui. `internal/db` e os adaptadores continuam neste repositório público, já que `apps/jobs` também depende deles. Antes de começar o M2, revisitar este marco e separar o que fica aqui do que migra para o repo novo.
+> **Nota (03/11/2026):** este marco foi separado entre os dois repositórios, que
+> é o que a nota anterior pedia antes de começar. As etapas **com caixa** abaixo
+> são as que têm branch e PR **aqui**; as de dashboard, autenticação e interface
+> estão em "O que acontece no nekolog-dashboard", no fim do marco. Elas ficam
+> listadas porque o roteiro público mostra o produto inteiro, mas sem caixa, para
+> o `pnpm tracking` não abrir issue delas neste repositório.
+>
+> Os números e os nomes de branch **não foram trocados**. As issues 2.1 a 2.25 já
+> existem aqui, e o `internal/tracking` nunca renomeia nem fecha nada: renumerar
+> abriria um segundo conjunto e deixaria o primeiro órfão.
+>
+> Como os dois repositórios compartilham código está no ADR
+> [0016](adr/0016-pacotes-compartilhados-no-npm.md): `schema`, `adapters`,
+> `clickhouse` e `db` saem de `internal/` e viram pacotes `@nekolog-io/*`
+> publicados no npm. É a etapa 2.0, e ela vem antes de todas.
 
-**Base**
+**Base compartilhada**
 
-- [ ] **2.1** `docs/ui-mockups` — mockups HTML no tema Grafite das telas principais (login e código, Explorer, issues, keys, primeiro log) para aprovação, seguindo o mapa de telas da seção 10.1 do plano.
-- [ ] **2.2** `feat/db-schema` — Drizzle: `users`, `organizations`, `memberships`, `invites`, `projects`, `environments`, `api_keys` e `audit_log`; uma branch do Neon por ambiente.
-- [ ] **2.3** `feat/redis-adapter` — cliente Redis (Upstash e ioredis), carga dos scripts Lua por hash e prefixo por ambiente.
-- [ ] **2.4** `feat/mailer` — adaptador `Mailer` (Resend, SMTP e Mailpit), templates React Email nos três idiomas e lista de destinatários autorizados em `dev` e `qa`.
+- [ ] **2.0** `chore/shared-packages` — mover `internal/schema`, `internal/adapters` e `internal/clickhouse` para `packages/`, publicados como `@nekolog-io/*` com tsdown, `isolatedDeclarations`, `publint` e `@arethetypeswrong/cli`. *(Primeira etapa do marco, apesar do número: a 2.2 já nasce neste formato. Os números existentes não podem ser remexidos — ver a nota acima e o ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md).)*
+- [ ] **2.2** `feat/db-schema` — Drizzle: `users`, `organizations`, `memberships`, `invites`, `projects`, `environments`, `api_keys` e `audit_log`; uma branch do Neon por ambiente. Nasce como `@nekolog-io/db` publicado, porque o dashboard escreve no mesmo banco.
+- [ ] **2.3** `feat/redis-adapter` — cliente Redis (Upstash e ioredis), carga dos scripts Lua por hash e prefixo por ambiente. O adaptador é daqui; os scripts de autenticação em si são do dashboard (2.6).
+- [ ] **2.4** `feat/mailer` — adaptador `Mailer` (Resend, SMTP e Mailpit) e lista de destinatários autorizados em `dev` e `qa`. Os templates React Email ficam com quem envia: os de alerta aqui (M5), os de autenticação no dashboard.
 
-**Autenticação**
+**Site e operação**
 
-- [ ] **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords.
-- [ ] **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
-- [ ] **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
-- [ ] **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
-- [ ] **2.9** `feat/auth-tokens` — JWT Ed25519 com `kid`, rotação do refresh token e sessões no Redis.
-- [ ] **2.10** `feat/auth-proxy` — `proxy.ts` com renovação automática, checagem de `Origin` e helper de sessão.
-- [ ] **2.11** `feat/auth-account` — recuperar e trocar senha, trocar e-mail, sessões ativas, sair de todos os dispositivos e re-autenticação.
-- [ ] **2.12** `security/headers` — CSP com nonce, HSTS e demais cabeçalhos, com teste automático.
-- [ ] **2.13** `test/auth-e2e` — todos os testes da seção 11.11 do plano, com Playwright e Mailpit.
-
-**Produto**
-
-- [ ] **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR.
-- [ ] **2.15** `feat/projects-envs` — projetos e ambientes, com as configurações de cada um.
-- [ ] **2.16** `feat/api-keys-ui` — criar, mostrar uma vez, revogar e rotacionar keys; último uso; sincronização com o KV.
-- [ ] **2.17** `feat/explorer` — tabela virtualizada, filtros, período, detalhe em JSON com renderização segura, filtros na URL e fuso do usuário.
-- [ ] **2.18** `feat/volume-chart` — ECharts com tema gerado dos tokens do CSS e gráfico de volume por nível, com legenda, texturas e tabela acessíveis.
-- [ ] **2.19** `feat/operator-area` — área do operador: convites da instância, uso por org, ajuste de cotas e suspensão.
-- [ ] **2.20** `feat/demo` — organização demo, sessão somente leitura e gerador de logs falsos.
-- [ ] **2.21** `feat/legal-privacy` — termos de uso e política de privacidade nos três idiomas, exclusão de conta e exportação dos dados.
-
-**Operação**
-
-- [ ] **2.22** `infra/deploy-envs` — Vercel com `dev.nekolog.io`, `qa.nekolog.io` e `app.nekolog.io`, configurada pelo OpenTofu; segredos separados por ambiente.
+- [ ] **2.12** `security/headers` — CSP com nonce, HSTS e demais cabeçalhos no `apps/web` e no `apps/docs`, com teste automático. O dashboard repete para si, no repositório dele.
+- [ ] **2.21** `feat/legal-privacy` — termos de uso e política de privacidade nos três idiomas, no site. A exclusão de conta e a exportação dos dados são telas do dashboard.
+- [ ] **2.22** `infra/deploy-envs` — Vercel com `dev.nekolog.io`, `qa.nekolog.io` e `app.nekolog.io`, configurada pelo OpenTofu; segredos separados por ambiente. Os projetos dos **dois** repositórios são declarados aqui, porque toda a infraestrutura vive neste.
 - [ ] **2.23** `infra/email-dns` — subdomínio de envio, SPF, DKIM e DMARC pelo OpenTofu, e webhooks de bounce.
 - [ ] **2.24** `feat/monitoring` — `/health` em tudo, monitor externo, heartbeat dos jobs e alertas de disco e de contingência.
 - [ ] **2.25** `infra/backups` — `pg_dump` diário criptografado no R2 e primeiro teste de restauração.
 
-**Pronto quando:** alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção.
+### O que acontece no nekolog-dashboard
+
+O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
+`internal/auth` (senhas, OTP, JWT, sessões) nasce lá e nunca existe aqui.
+
+**Base**
+
+- **2.1** `docs/ui-mockups` — mockups HTML no tema Grafite das telas principais (login e código, Explorer, issues, keys, primeiro log) para aprovação, seguindo o mapa de telas da seção 10.1 do plano.
+
+**Autenticação**
+
+- **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords.
+- **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
+- **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
+- **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
+- **2.9** `feat/auth-tokens` — JWT Ed25519 com `kid`, rotação do refresh token e sessões no Redis.
+- **2.10** `feat/auth-proxy` — `proxy.ts` com renovação automática, checagem de `Origin` e helper de sessão.
+- **2.11** `feat/auth-account` — recuperar e trocar senha, trocar e-mail, sessões ativas, sair de todos os dispositivos e re-autenticação.
+- **2.13** `test/auth-e2e` — todos os testes da seção 11.11 do plano, com Playwright e Mailpit.
+
+**Produto**
+
+- **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR.
+- **2.15** `feat/projects-envs` — projetos e ambientes, com as configurações de cada um.
+- **2.16** `feat/api-keys-ui` — criar, mostrar uma vez, revogar e rotacionar keys; último uso; sincronização com o KV.
+- **2.17** `feat/explorer` — tabela virtualizada, filtros, período, detalhe em JSON com renderização segura, filtros na URL e fuso do usuário.
+- **2.18** `feat/volume-chart` — ECharts com tema gerado dos tokens do CSS e gráfico de volume por nível, com legenda, texturas e tabela acessíveis.
+- **2.19** `feat/operator-area` — área do operador: convites da instância, uso por org, ajuste de cotas e suspensão.
+- **2.20** `feat/demo` — organização demo, sessão somente leitura e gerador de logs falsos.
+
+**Pronto quando:** alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção. *(É o critério do produto, e ele atravessa os dois repositórios: a key e os logs são daqui, a conta e a tela são de lá.)*
 
 ## M3 — Front e integrações
 
