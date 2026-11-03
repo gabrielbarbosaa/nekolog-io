@@ -24,6 +24,8 @@
         "CLICKHOUSE_TEST_PASSWORD",
         "POSTGRES_TEST_REQUIRED",
         "POSTGRES_TEST_URL",
+        "REDIS_TEST_REQUIRED",
+        "REDIS_TEST_URL",
         "FUZZ_RUNS"
       ]
     }

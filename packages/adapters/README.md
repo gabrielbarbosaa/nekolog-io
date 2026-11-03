@@ -47,6 +47,32 @@ O dashboard também cria e revoga key, e os jobs também marcam ambiente
 bloqueado. O formato, o hash e a `KeyStore` são contrato entre os três, não
 detalhe de um.
 
+## `RedisClient`
+
+Duas implementações, nenhuma dependência: `upstashRedis({ url, token })` fala a
+API REST (serve em Worker, só precisa de `fetch`) e `nodeRedis(client)` recebe
+um cliente no formato do `ioredis`, injetado como o `kvKeyStore` recebe o
+binding do KV. O pacote não importa o `ioredis`; quem roda self-host é que o
+traz.
+
+```ts
+const redis = prefixedRedis(nodeRedis(new Redis(process.env.REDIS_URL)), 'prod')
+```
+
+**Script roda por hash, não por texto.** As duas implementações guardam o SHA do
+`SCRIPT LOAD` e chamam `EVALSHA` depois disso; se o servidor esquecer o script
+(reinício, failover), elas recebem `NOSCRIPT`, mandam o texto uma vez e voltam ao
+hash. Isso importa no Upstash, onde o plano gratuito conta **comandos**, e o
+script do OTP tem dezenas de linhas que seriam reenviadas a cada login.
+
+Erro que não é `NOSCRIPT` sobe: um `READONLY` de réplica não pode virar "mando o
+script de novo", porque esconderia o problema real.
+
+**O prefixo por ambiente também vale dentro do script.** O `prefixedRedis`
+prefixa os `KEYS` que o `eval` recebe, e **não** os `ARGV` — argumento é dado,
+não endereço. Sem isso, `dev` e `prod` dividindo o mesmo Upstash leriam a sessão
+um do outro, que é exatamente o que a seção 17 do plano manda evitar.
+
 ## Publicado no npm
 
 Este pacote é publicado porque o

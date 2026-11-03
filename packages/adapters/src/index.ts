@@ -50,5 +50,15 @@ export {
 export type { MemoryQuotaStore } from './quotas/memory-quota-store.ts'
 export { memoryQuotaStore } from './quotas/memory-quota-store.ts'
 export type { RateLimiter, RateLimitResult } from './rate-limiter.ts'
+export type { NodeRedisLike } from './redis/node-redis.ts'
+export { isNoScript, nodeRedis } from './redis/node-redis.ts'
+export { assertPrefix, prefixedRedis } from './redis/prefixed-redis.ts'
+export type {
+  FetchLike,
+  HttpRequestLike,
+  HttpResponseLike,
+  UpstashRedisOptions,
+} from './redis/upstash-redis.ts'
+export { assertUpstashUrl, UpstashRedisError, upstashRedis } from './redis/upstash-redis.ts'
 export type { RedisClient } from './redis-client.ts'
 export type { EnvironmentUsage, UsageStore } from './usage-store.ts'
