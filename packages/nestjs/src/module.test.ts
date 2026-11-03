@@ -68,10 +68,34 @@ describe('the access log switch', () => {
     expect(ran({ accessLog: false })).toEqual([])
   })
 
-  it('writes nothing when it is turned off, even on a failure', () => {
+  it('writes only the error when the access log is off and the handler threw', () => {
+    const events = ran({ accessLog: false }, { handle: () => throwError(() => new Error('boom')) })
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.message).toBe('boom')
+    expect(events[0]?.error?.type).toBe('Error')
+  })
+
+  it('writes nothing at all when both are off', () => {
     expect(
-      ran({ accessLog: false }, { handle: () => throwError(() => new Error('boom')) }),
+      ran(
+        { accessLog: false, errorLog: false },
+        { handle: () => throwError(() => new Error('boom')) },
+      ),
     ).toEqual([])
+  })
+})
+
+describe('an error the handler threw', () => {
+  it('is logged with its stack, beside the access line', () => {
+    const events = ran({}, { handle: () => throwError(() => new Error('the database refused')) })
+
+    expect(events.map((event) => event.message)).toEqual([
+      'the database refused',
+      'GET /orders/:id 500',
+    ])
+    expect(events[0]?.error?.stack).toContain('the database refused')
+    expect(events[0]?.level).toBe('error')
   })
 })
 

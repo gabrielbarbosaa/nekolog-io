@@ -26,6 +26,7 @@ export type HttpResponse = {
 
 export type InterceptorOptions = {
   accessLog?: boolean
+  errorLog?: boolean
   newRequestId?: () => string
   random?: () => number
   now?: () => number
@@ -107,10 +108,9 @@ export class NekologInterceptor implements NestInterceptor {
     const { accessLog } = this.options
     const logger = this.logger
 
+    const { errorLog } = this.options
+
     const record = (failed?: { error: unknown }): void => {
-      if (accessLog === false) {
-        return
-      }
       const status = failed === undefined ? statusOf(response) : statusOfError(failed.error)
       const line = {
         method: typeof request.method === 'string' ? request.method : 'UNKNOWN',
@@ -118,8 +118,15 @@ export class NekologInterceptor implements NestInterceptor {
         status,
         durationMs: now() - startedAt,
       }
+      const level = levelForStatus(status)
+
       try {
-        logger.log(levelForStatus(status), accessMessage(line), accessAttributes(line))
+        if (failed !== undefined && errorLog !== false) {
+          logger.log(level, failed.error, accessAttributes(line))
+        }
+        if (accessLog !== false) {
+          logger.log(level, accessMessage(line), accessAttributes(line))
+        }
       } catch {
         return
       }

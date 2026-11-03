@@ -1,0 +1,29 @@
+{
+  "name": "@examples/nestjs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "start": "node --env-file-if-exists=../../.env dist/main.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nekolog-io/nestjs": "workspace:*",
+    "@nekolog-io/node": "workspace:*",
+    "@nestjs/common": "^12.3.2",
+    "@nestjs/core": "^12.3.2",
+    "@nestjs/platform-express": "^12.3.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@apps/ingest": "workspace:*",
+    "@internal/seed": "workspace:*",
+    "@nekolog-io/clickhouse": "workspace:*",
+    "@types/node": "^24.0.0",
+    "tsdown": "^0.23.2",
+    "vitest": "^5.0.5"
+  }
+}

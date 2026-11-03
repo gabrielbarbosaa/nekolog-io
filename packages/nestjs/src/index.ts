@@ -3,6 +3,7 @@ export {
   addContext,
   bindContext,
   currentContext,
+  installProcessHooks,
   runWithContext,
   TRACEPARENT_HEADER,
   traceForRequest,
