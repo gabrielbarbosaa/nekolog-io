@@ -16,7 +16,7 @@ import type { TraceTuning } from './tracing.ts'
 import { type BreadcrumbTuning, DEFAULT_ATTACH_FROM, withBreadcrumbs } from './trail.ts'
 import { SDK_NAME, SDK_VERSION } from './version.ts'
 
-export type BrowserLoggerOptions = Omit<LoggerOptions, 'runtime' | 'sdk'> & {
+export type BrowserLoggerOptions = Omit<LoggerOptions, 'runtime'> & {
   page?: PageDetail
   fetch?: FetchLike
   sendBeacon?: SendBeaconLike | false
@@ -109,7 +109,7 @@ export function createLogger(options: BrowserLoggerOptions = {}): Logger {
     apiKey,
     transport,
     runtime: 'browser',
-    sdk: { name: SDK_NAME, version: SDK_VERSION },
+    sdk: options.sdk ?? { name: SDK_NAME, version: SDK_VERSION },
     contextProvider: options.contextProvider ?? browserContext({ page }),
     beforeSend: beforeSendWith(options),
   })
