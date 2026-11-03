@@ -1,3 +1,4 @@
+import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 
 const browser = process.env.NEKOLOG_BROWSER ?? 'chromium'
@@ -8,7 +9,7 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
-      provider: 'playwright',
+      provider: playwright(),
       instances: [{ browser }],
     },
   },

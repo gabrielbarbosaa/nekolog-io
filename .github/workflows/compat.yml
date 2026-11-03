@@ -120,7 +120,7 @@ jobs:
           name: compat-smoke
 
       - name: Run the smoke test
-        run: deno run --allow-net smoke.mjs
+        run: deno run --allow-net --allow-env smoke.mjs
 
   browsers:
     name: ${{ matrix.browser }}
