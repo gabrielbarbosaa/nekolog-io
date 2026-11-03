@@ -1,4 +1,5 @@
 import {
+  type BeforeSend,
   createLogger as createCoreLogger,
   type FetchLike,
   type Logger,
@@ -9,12 +10,14 @@ import { BEACON_MAX_BYTES, createSender, type SendBeaconLike } from './beacon.ts
 import { browserContext } from './context.ts'
 import { publicKeyOnly } from './keys.ts'
 import type { PageDetail } from './page.ts'
+import { type BreadcrumbTuning, DEFAULT_ATTACH_FROM, withBreadcrumbs } from './trail.ts'
 import { SDK_NAME, SDK_VERSION } from './version.ts'
 
 export type BrowserLoggerOptions = Omit<LoggerOptions, 'runtime' | 'sdk'> & {
   page?: PageDetail
   fetch?: FetchLike
   sendBeacon?: SendBeaconLike | false
+  breadcrumbs?: BreadcrumbTuning
 }
 
 function warn(onError: ((error: unknown) => void) | undefined, message: string): void {
@@ -35,8 +38,21 @@ function defaultWarning(error: unknown): void {
   }
 }
 
+function beforeSendWith(options: BrowserLoggerOptions): BeforeSend | undefined {
+  const attachFrom = options.breadcrumbs?.attachFrom ?? DEFAULT_ATTACH_FROM
+  if (attachFrom === false) {
+    return options.beforeSend
+  }
+
+  const next = options.beforeSend
+  return (event) => {
+    const enriched = withBreadcrumbs(event, attachFrom)
+    return next === undefined ? enriched : next(enriched)
+  }
+}
+
 export function createLogger(options: BrowserLoggerOptions = {}): Logger {
-  const { page, fetch: fetchLike, sendBeacon, ...rest } = options
+  const { page, fetch: fetchLike, sendBeacon, breadcrumbs, ...rest } = options
   const { apiKey, refusal } = publicKeyOnly(options.apiKey)
 
   if (refusal !== undefined) {
@@ -62,5 +78,6 @@ export function createLogger(options: BrowserLoggerOptions = {}): Logger {
     runtime: 'browser',
     sdk: { name: SDK_NAME, version: SDK_VERSION },
     contextProvider: options.contextProvider ?? browserContext({ page }),
+    beforeSend: beforeSendWith(options),
   })
 }

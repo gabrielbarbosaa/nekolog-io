@@ -1,0 +1,5 @@
+---
+'@nekolog-io/browser': minor
+---
+
+Record what the person did before the error: clicks, navigation and fetch. The trail is a ring of 20 kept in memory and rides along only with `error` and `fatal`, because payload v1 has no breadcrumb field — it travels as one `breadcrumbs` attribute, capped at 4 KB, and 4 KB on each of 500 events would be a 2 MB batch the server refuses. It is trimmed from the oldest end until it fits, never mid-record, so what arrives is always valid JSON. A click records `button#pay`, never the label, because a label can name a person and `value` is what somebody typed; navigation and fetch addresses lose the query string the same way `page.url` does; the request body and headers are never read; and the SDK's own batch is skipped so a flush does not become a breadcrumb of the next one. The two monkey-patches — `window.fetch` and `history.pushState`/`replaceState` — call through, return what the original returned, rethrow what it rejected, and restore only if nobody patched after us.

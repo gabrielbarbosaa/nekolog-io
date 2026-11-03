@@ -1,6 +1,16 @@
+export type ListenerOptions = { capture?: boolean; passive?: boolean; once?: boolean }
+
 export type EventTargetLike = {
-  addEventListener(type: string, listener: (event: Event) => void): void
-  removeEventListener(type: string, listener: (event: Event) => void): void
+  addEventListener(
+    type: string,
+    listener: (event: Event) => void,
+    options?: ListenerOptions | boolean,
+  ): void
+  removeEventListener(
+    type: string,
+    listener: (event: Event) => void,
+    options?: ListenerOptions | boolean,
+  ): void
 }
 
 export type DocumentLike = EventTargetLike & {
