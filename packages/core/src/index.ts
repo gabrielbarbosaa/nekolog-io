@@ -40,6 +40,7 @@ export type { Pipeline, PipelineOptions } from './pipeline.ts'
 export { createPipeline, redactionPolicyFrom, samplingPolicyFrom } from './pipeline.ts'
 export type { BoundedQueue } from './queue.ts'
 export { boundedQueue, DEFAULT_MAX_QUEUE_EVENTS } from './queue.ts'
+export { fillRandom, hexOf, randomHex } from './random.ts'
 export type { KeyMatcher, RedactionPolicy } from './redact.ts'
 export {
   cpfValid,
@@ -62,6 +63,27 @@ export {
 } from './sampling.ts'
 export type { ConsoleLike } from './sinks.ts'
 export { consoleSink, memorySink, nullSink } from './sinks.ts'
+export type {
+  IncomingTrace,
+  RequestTrace,
+  TraceTarget,
+  TraceTargetMatcher,
+  TraceTargetOptions,
+} from './trace.ts'
+export {
+  childSpan,
+  createTraceTargetMatcher,
+  newSpanId,
+  newTraceId,
+  parseTraceparent,
+  SAMPLED_FLAG,
+  SPAN_ID_BYTES,
+  TRACE_ID_BYTES,
+  TRACE_VERSION,
+  TRACEPARENT_HEADER,
+  traceForRequest,
+  traceparentOf,
+} from './trace.ts'
 export type {
   DropReason,
   Envelope,

@@ -1,4 +1,12 @@
-import { DEFAULT_ENDPOINT, isoTimestamp, requestUrlFor } from '@nekolog-io/core'
+import {
+  DEFAULT_ENDPOINT,
+  isoTimestamp,
+  requestUrlFor,
+  TRACEPARENT_HEADER,
+  type TraceContext,
+  type TraceTargetMatcher,
+  traceparentOf,
+} from '@nekolog-io/core'
 import type { Trail } from './breadcrumbs.ts'
 import { globalHref } from './globals.ts'
 import { DEFAULT_PAGE_DETAIL, type PageDetail, pageUrl } from './page.ts'
@@ -64,10 +72,44 @@ export type FetchBreadcrumbOptions = {
   target?: { fetch?: unknown }
 }
 
-export function installFetchBreadcrumbs(
-  trail: Trail,
-  options: FetchBreadcrumbOptions = {},
-): () => void {
+export type TracePatch = {
+  matches: TraceTargetMatcher
+  spanFor: () => TraceContext
+}
+
+export type FetchPatchOptions = FetchBreadcrumbOptions & {
+  trail?: Trail
+  trace?: TracePatch
+}
+
+export function withTraceparent(args: FetchArgs, header: string): FetchArgs {
+  const [input, init] = args
+  const existing = (init as { headers?: unknown } | undefined)?.headers
+
+  if (existing instanceof Headers) {
+    const headers = new Headers(existing)
+    headers.set(TRACEPARENT_HEADER, header)
+    return [input, { ...(init as object), headers }]
+  }
+  if (Array.isArray(existing)) {
+    return [input, { ...(init as object), headers: [...existing, [TRACEPARENT_HEADER, header]] }]
+  }
+  if (existing !== undefined && existing !== null) {
+    return [
+      input,
+      { ...(init as object), headers: { ...(existing as object), [TRACEPARENT_HEADER]: header } },
+    ]
+  }
+  if (typeof input === 'object' && input !== null && 'headers' in input) {
+    const request = input as Request
+    const headers = new Headers(request.headers)
+    headers.set(TRACEPARENT_HEADER, header)
+    return [new Request(request, { headers }), init]
+  }
+  return [input, { ...(init as object), headers: { [TRACEPARENT_HEADER]: header } }]
+}
+
+export function installFetchPatch(options: FetchPatchOptions = {}): () => void {
   const target = options.target ?? (globalThis as { fetch?: unknown })
   const original = target.fetch
   if (typeof original !== 'function') {
@@ -79,8 +121,13 @@ export function installFetchBreadcrumbs(
   const detail = options.page ?? DEFAULT_PAGE_DETAIL
   const ignore = options.ignore ?? ingestMatcher(options.endpoint)
   const previous = original as AnyFetch
+  const trail = options.trail
+  const trace = options.trace
 
   const record = (message: string, started: number, status?: number): void => {
+    if (trail === undefined) {
+      return
+    }
     try {
       trail.add({
         at: isoTimestamp(started),
@@ -99,19 +146,25 @@ export function installFetchBreadcrumbs(
   const installed: AnyFetch = function nekologFetch(this: unknown, ...args: FetchArgs) {
     let described: string | undefined
     let started = 0
+    let outgoing = args
 
     try {
       const raw = urlOf(args[0])
       const shown = raw === undefined ? undefined : describeRequestUrl(raw, detail, href())
-      if (raw !== undefined && shown !== undefined && !ignore(raw) && !ignore(shown)) {
-        described = `${methodOf(args[0], args[1])} ${shown}`
-        started = now()
+      if (trail !== undefined && raw !== undefined && shown !== undefined) {
+        if (!ignore(raw) && !ignore(shown)) {
+          described = `${methodOf(args[0], args[1])} ${shown}`
+          started = now()
+        }
+      }
+      if (trace !== undefined && raw !== undefined && !ignore(raw) && trace.matches(raw)) {
+        outgoing = withTraceparent(args, traceparentOf(trace.spanFor()))
       }
     } catch {
       described = undefined
     }
 
-    const answer = previous.apply(this, args)
+    const answer = previous.apply(this, outgoing)
     if (described === undefined) {
       return answer
     }
@@ -136,4 +189,11 @@ export function installFetchBreadcrumbs(
       target.fetch = previous
     }
   }
+}
+
+export function installFetchBreadcrumbs(
+  trail: Trail,
+  options: FetchBreadcrumbOptions = {},
+): () => void {
+  return installFetchPatch({ ...options, trail })
 }

@@ -7,6 +7,7 @@ import { publicKeyOnly } from './keys.ts'
 import { type BrowserLoggerOptions, createLogger } from './logger.ts'
 import { installOnlineReplay, replayOnce } from './offline.ts'
 import type { SessionOptions } from './session.ts'
+import { nextSpan, traceMatcherFor } from './tracing.ts'
 import {
   addBreadcrumb,
   clearBreadcrumbs,
@@ -62,6 +63,10 @@ export function init(options: InitOptions = {}): BrowserClient {
       ...options.breadcrumbs,
       page: options.page,
       endpoint: options.transport?.endpoint,
+      trace:
+        options.trace === false
+          ? undefined
+          : { matches: traceMatcherFor(options.trace), spanFor: nextSpan },
       ...breadcrumbOptions,
     }),
   )
