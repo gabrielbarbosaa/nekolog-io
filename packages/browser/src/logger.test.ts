@@ -163,6 +163,21 @@ describe('the key', () => {
     expect(fetch.calls[0]?.init.headers.Authorization).toBe(`Bearer ${PUBLIC_KEY}`)
   })
 
+  it('takes the fetch from the transport options too, instead of ignoring it', async () => {
+    const fetch = recordingFetch()
+
+    const logger = createLogger({
+      apiKey: PUBLIC_KEY,
+      sendBeacon: false,
+      offline: false,
+      transport: { fetch: fetch.send },
+    })
+    logger.error('boom')
+    await logger.flush()
+
+    expect(fetch.calls).toHaveLength(1)
+  })
+
   it('keeps batches small enough for the beacon to take them', async () => {
     const fetch = recordingFetch()
 
