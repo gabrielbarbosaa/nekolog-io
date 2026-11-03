@@ -169,7 +169,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 - [x] **3.6** `feat/next-sdk` — integração via `instrumentation.ts`, no servidor e no cliente.
 - [x] **3.7** `feat/server-middlewares` — Express, Fastify e Hono.
 - [x] **3.8** `feat/nestjs` — módulo e interceptor.
-- [ ] **3.9** `feat/log-transports` — transports para pino e winston.
+- [x] **3.9** `feat/log-transports` — transports para pino e winston.
 - [ ] **3.11** `feat/examples` — um exemplo para cada integração, usados no e2e.
 - [ ] **3.12** `ci/compat-matrix` — testes em Node 22, 24 e 26, Bun e Deno, Chromium, Firefox e WebKit; `size-limit` no SDK de browser.
 - [ ] **3.13** `feat/cli-init` — `npx @nekolog-io/cli init`: detecta o framework, instala o SDK e cria o `.env`.
