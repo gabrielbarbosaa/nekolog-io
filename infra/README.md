@@ -18,7 +18,24 @@ envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
 repo/                 rulesets do GitHub; não é um ambiente, é o repositório
 vm/                   a VM; também não é um ambiente — é uma máquina para os três
 vercel/               os três projetos da Vercel; também não é por ambiente
+email/                SPF, DKIM, DMARC e o encaminhamento; o domínio é um só
 ```
+
+## E-mail: o domínio é um só, então a raiz é uma só
+
+`infra/email` publica o subdomínio de envio (`mail.nekolog.io`), o SPF e o DKIM
+que a Resend exige, o DMARC do apex e o Email Routing que encaminha `security@`,
+`dmarc@` e `contato@`. Nada disso é por ambiente: é o mesmo domínio para os três.
+
+O DMARC começa em `p=none` por variável, não por acidente — subir direto para
+`reject` sem ler relatório nenhum derruba e-mail legítimo que você ainda nem sabe
+que existe. `adkim=s` e `aspf=s` ficam estritos desde o começo, porque o envio é
+de um subdomínio nosso, não de um provedor compartilhado.
+
+As chaves DKIM só existem depois que o domínio é adicionado na Resend, então elas
+entram por variável (`TF_VAR_dkim_records`) e não têm default. **O endereço para
+onde o Email Routing encaminha é secret separado**, porque é uma caixa pessoal e
+apareceria no plano — mesmo motivo da separação entre nome e valor na Vercel.
 
 ## Por que a Vercel não tem uma raiz por ambiente
 

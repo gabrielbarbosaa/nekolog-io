@@ -108,6 +108,35 @@ A comparação é exata (`ada@example.com`) ou por domínio (`@nekolog.io`). Um
 `ada+tag@example.com` **não** passa por `ada@example.com`, e
 `ada@example.com.evil.test` não passa por prefixo.
 
+### Quem já devolveu não recebe de novo
+
+`suppressedMailer(inner, list)` consulta a lista de endereços suprimidos antes
+de mandar. Insistir num endereço que deu *hard bounce* ou que marcou como spam é
+o jeito mais rápido de o domínio inteiro perder reputação e os e-mails de login
+de todo mundo irem para o lixo eletrônico.
+
+Ele também **falha fechado**: se a consulta à lista der erro, nada é enviado.
+"Não consigo saber" não pode virar "não está suprimido", pela mesma razão que
+vale no `quota-block`. E a conferência de cabeçalho acontece antes da consulta,
+então um destinatário forjado é recusado sem nem tocar no banco.
+
+### O webhook de bounce é verificado antes de ser lido
+
+`verifyWebhook({ secret, headers, body })` confere a assinatura no formato que a
+Resend usa (Svix): HMAC-SHA256 sobre `id.timestamp.corpo`, comparado em tempo
+constante. Sem isso, qualquer um que descobrisse a URL poderia marcar o endereço
+de outra pessoa como inválido e cortar o login dela — negação de serviço com um
+POST.
+
+Ele recusa também o que a assinatura sozinha não resolve: cabeçalho ausente,
+timestamp fora da tolerância de 5 minutos (reenvio de uma captura antiga),
+timestamp no futuro, e assinatura que é só um prefixo da certa. Aceita mais de
+uma assinatura no mesmo cabeçalho, que é como uma rotação de segredo acontece
+sem derrubar nada.
+
+O pacote continua sem dependência: tudo sai da Web Crypto, então roda em Worker
+e em Node do mesmo jeito.
+
 ## Publicado no npm
 
 Este pacote é publicado porque o
