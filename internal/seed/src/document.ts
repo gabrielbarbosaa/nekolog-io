@@ -1,4 +1,4 @@
-import type { ApiKeyKind } from '@internal/adapters'
+import type { ApiKeyKind } from '@nekolog-io/adapters'
 import type { Scope, Seed } from './model.ts'
 
 export const SEED_VERSION = 1

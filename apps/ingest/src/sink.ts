@@ -1,10 +1,10 @@
-import type { BlobStore, LogStore } from '@internal/adapters'
 import {
   deduplicationTokenFor,
   encodeSpoolEnvelope,
   SPOOL_CONTENT_TYPE,
   spoolKey,
 } from '@internal/spool'
+import type { BlobStore, LogStore } from '@nekolog-io/adapters'
 import type { BatchSink } from './app.ts'
 import type { AttributeBudget } from './attributes.ts'
 import { countryOf, rowsFor } from './rows.ts'

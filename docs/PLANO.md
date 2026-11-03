@@ -21,7 +21,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 | Nome | NekoLog: site `nekolog.io`, escopo `@nekolog-io` no npm, org `nekolog-io` no GitHub | `@nekolog` e `nekolog` já estavam ocupados; o mesmo nome nos três lugares |
 | Modelo | Open-core, projeto pessoal de estudo | Liberdade de escolhas, portfólio público e um produto hospedado que não expõe o código do dashboard a terceiros |
 | Repositórios | Dois: `nekolog-io` (público, MIT — SDKs, ingestão, jobs, API de leitura, site, docs) e `nekolog-dashboard` (privado — dashboard Next.js, só roda na instância hospedada) | Dashboard fechado para terceiros não terem acesso ao código; o resto continua aberto e self-hostável |
-| Código comum aos dois | `schema`, `adapters`, `clickhouse` e `db` ficam em `packages/` e são publicados no npm como `@nekolog-io/*` | O dashboard escreve no mesmo Postgres; duplicar essa definição é a única divergência que nenhum teste dos dois lados consegue pegar (ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md)) |
+| Código comum aos dois | `adapters`, `clickhouse`, `config` e `db` ficam em `packages/` e são publicados no npm como `@nekolog-io/*` | O dashboard escreve no mesmo Postgres; duplicar essa definição é a única divergência que nenhum teste dos dois lados consegue pegar (ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md)) |
 | Escopo | Plano completo até a 1.0, executado em marcos | Evita retrabalho de arquitetura depois do MVP |
 | Hospedagem | Só serviços gratuitos; o único gasto é o domínio `nekolog.io` (~US$ 50/ano no Cloudflare) | Projeto de estudo; o domínio é exigido pela Resend e pelo Cloudflare Tunnel |
 | Logs | ClickHouse numa VM Oracle Always Free | Banco colunar, rápido em agregações; o ClickHouse Cloud só tem trial |
@@ -55,7 +55,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 
 **Decididas em 03/11/2026, antes do M2:**
 
-- **Compartilhamento de código entre os dois repositórios:** `schema`, `adapters`, `clickhouse` e `db` saem de `internal/`, vão para `packages/` e são publicados no npm como `@nekolog-io/*` — ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md). É a etapa 2.0. O `internal/auth` (senhas, OTP, JWT, sessões) é exclusivo do dashboard e nasce direto no `nekolog-dashboard`, não aqui.
+- **Compartilhamento de código entre os dois repositórios:** os pacotes comuns saem de `internal/`, vão para `packages/` e são publicados no npm como `@nekolog-io/*` — ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md). A etapa 2.0 publicou `adapters`, `clickhouse` e `config`; o `db` nasce assim na 2.2. O ADR lista `schema` no lugar de `config`, e a implementação corrigiu os dois: o `clickhouse` depende do `config` em runtime, e pacote publicado não pode depender de pacote privado; já o `schema` não tem consumidor fora deste repositório e seus schemas Valibot precisam de uma passagem de anotação de tipos que merece etapa própria. O `internal/auth` (senhas, OTP, JWT, sessões) é exclusivo do dashboard e nasce direto no `nekolog-dashboard`, não aqui.
 - **Divisão do M2:** feita no [ETAPAS.md](ETAPAS.md). Ficam neste repositório as etapas 2.0, 2.2, 2.3, 2.4, 2.12 e 2.21 a 2.25; as de dashboard, autenticação e interface acontecem no repositório privado, com o número preservado para as issues já abertas aqui continuarem valendo.
 
 ---
@@ -757,10 +757,10 @@ Este é o repositório **público** (`nekolog-io`). O dashboard tem seu próprio
 packages/       # publicados no npm
   core/         # SDKs: core, browser, node, react, next, express, fastify,
   …             # hono, nestjs, pino, winston, cli, bundler-plugin
-  schema/       # formato do payload (SDK ↔ ingest)
   db/           # Drizzle + migrations (orgs, projetos, alert_rules…)
   clickhouse/   # migrations, query builder, parser da busca
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
+  config/       # schemas e carga das variáveis de ambiente
                 # Estes quatro são publicados porque o nekolog-dashboard
                 # consome os mesmos: ele escreve no mesmo Postgres e consulta o
                 # mesmo ClickHouse (ADR 0016). internal/auth (senhas, OTP, JWT,
@@ -771,7 +771,8 @@ apps/
   web/          # site público (landing page), tema, i18n — não é o dashboard
   docs/         # Starlight (i18n nativo)
 internal/       # não publicados: só fazem sentido dentro deste repositório
-  config/       # leitura e validação de variáveis de ambiente
+  schema/       # formato do payload (SDK ↔ ingest); publicado quando alguém
+                # de fora precisar dele
   spool/        # formato da contingência entre ingest e jobs
   seed/         # cria org, projeto, ambientes e keys antes de existir o dashboard
   tracking/     # projeta o docs/ETAPAS.md no GitHub (milestones e issues)

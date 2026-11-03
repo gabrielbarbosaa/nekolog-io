@@ -1,4 +1,3 @@
-import type { BlobStore, LogStore } from '@internal/adapters'
 import {
   decodeSpoolEnvelope,
   parseSpoolKey,
@@ -6,6 +5,7 @@ import {
   SPOOL_CONTENT_TYPE,
   SPOOL_PREFIX,
 } from '@internal/spool'
+import type { BlobStore, LogStore } from '@nekolog-io/adapters'
 import type { Task, TaskContext } from '../task.ts'
 
 export const SPOOL_RESEND_TASK = 'spool-resend'

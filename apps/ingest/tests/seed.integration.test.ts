@@ -1,5 +1,3 @@
-import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@internal/clickhouse'
-import { clickHouseLogStore } from '@internal/clickhouse/log-store'
 import {
   buildSeed,
   keyStoreFromDocument,
@@ -7,6 +5,8 @@ import {
   type SeedDocument,
   toDocument,
 } from '@internal/seed'
+import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@nekolog-io/clickhouse'
+import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createIngestApp } from '../src/app.ts'
 import { createKeyAuthenticator } from '../src/authenticate.ts'

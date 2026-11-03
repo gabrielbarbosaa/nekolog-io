@@ -1,4 +1,4 @@
-import { hashApiKey, parseApiKey } from '@internal/adapters'
+import { hashApiKey, parseApiKey } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import {
   HINT_CHARS,

@@ -6,7 +6,7 @@ import {
   type KeyStore,
   memoryKeyStore,
   memoryQuotaStore,
-} from '@internal/adapters'
+} from '@nekolog-io/adapters'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createKeyAuthenticator, QUOTA_RETRY_AFTER_SECONDS } from './authenticate.ts'
 import { keyFromRequest } from './keys.ts'

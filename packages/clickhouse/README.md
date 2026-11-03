@@ -1,4 +1,4 @@
-# @internal/clickhouse
+# @nekolog-io/clickhouse
 
 Esquema do ClickHouse do NekoLog e o runner que o aplica. Implementa a
 [especificação 3](../../docs/ESPECIFICACOES.md#3-runner-de-migrations-do-clickhouse)
@@ -10,9 +10,9 @@ Pacote interno: não vai para o npm.
 
 | Import | O que traz | Roda em |
 |---|---|---|
-| `@internal/clickhouse` | tudo, inclusive o runner | Node |
-| `@internal/clickhouse/client` | só o cliente HTTP | qualquer runtime |
-| `@internal/clickhouse/log-store` | o `LogStore` da ingestão | qualquer runtime |
+| `@nekolog-io/clickhouse` | tudo, inclusive o runner | Node |
+| `@nekolog-io/clickhouse/client` | só o cliente HTTP | qualquer runtime |
+| `@nekolog-io/clickhouse/log-store` | o `LogStore` da ingestão | qualquer runtime |
 
 A separação existe porque o runner lê arquivos do disco (`node:fs`), e a
 ingestão roda em Cloudflare Workers, onde isso não existe. Quem importa a raiz
@@ -102,7 +102,7 @@ deploy do CI, com um grupo de `concurrency` por ambiente.
 ## Testes
 
 ```bash
-pnpm --filter @internal/clickhouse test
+pnpm --filter @nekolog-io/clickhouse test
 ```
 
 Os testes de `runner.integration.test.ts` rodam contra um ClickHouse **de
@@ -161,3 +161,23 @@ GRANT SELECT(project_id, environment_id, timestamp, received_at, level, service)
 descrita na seção 7 do plano. Em dev o `deploy/clickhouse-users.dev.xml` está
 montado em `users.d/` e o ClickHouse recarrega o arquivo sozinho, sem restart;
 em qualquer outro lugar a ordem é responsabilidade de quem faz o deploy.
+
+## Publicado no npm
+
+Este pacote é publicado porque o
+[`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard),
+que é um repositório privado, consome o mesmo código — ADR
+[0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md). Ele existe para ser
+compartilhado entre os dois repositórios do NekoLog, não como uma API pública de
+uso geral; o semver vale do mesmo jeito, e mudança incompatível vira major.
+
+**Dentro deste repositório ele resolve pelo fonte**, não pelo `dist/`: o
+`exports` do `package.json` aponta para `./src/`, e o mapeamento para `dist/`
+fica no `publishConfig`, que o `pnpm pack` aplica na hora de publicar. É o que
+deixa os CLIs e os apps carregarem `.ts` direto, sem build. Por isso o script de
+`lint` empacota antes de rodar `publint` e `attw`: é o tarball que precisa ser
+conferido, não o diretório.
+
+O pacote é **ESM apenas**. Os consumidores são Node 24, Workers e Next, todos
+ESM, e o `attw` roda com `--profile esm-only` — o aviso de "require resolveu
+para um arquivo ESM" é o resultado esperado, não uma falha.

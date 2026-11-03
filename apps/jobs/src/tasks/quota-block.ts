@@ -1,4 +1,4 @@
-import type { QuotaBlock, QuotaStore, UsageStore } from '@internal/adapters'
+import type { QuotaBlock, QuotaStore, UsageStore } from '@nekolog-io/adapters'
 import type { Task, TaskContext } from '../task.ts'
 
 export const QUOTA_BLOCK_TASK = 'quota-block'

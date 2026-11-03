@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { type ParsedBatch, parseBatch } from '@internal/schema'
+import { MIGRATIONS_DIR } from '@nekolog-io/clickhouse'
 import { describe, expect, it } from 'vitest'
 import type { IngestPrincipal } from './app.ts'
 import {
@@ -17,16 +17,7 @@ const RECEIVED_AT = Date.UTC(2026, 9, 31, 15, 30, 45, 125)
 
 const PRINCIPAL: IngestPrincipal = { projectId: 'p_1', environmentId: 'e_1' }
 
-const MIGRATION = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  'internal',
-  'clickhouse',
-  'migrations',
-  '0001_create_logs.sql',
-)
+const MIGRATION = resolve(MIGRATIONS_DIR, '0001_create_logs.sql')
 
 function logsTableColumns(): string[] {
   const sql = readFileSync(MIGRATION, 'utf8')

@@ -1,8 +1,9 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 .pnpm-store/
 
 # Build output
+package.tgz
 dist/
 build/
 out/

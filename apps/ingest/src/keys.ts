@@ -1,4 +1,4 @@
-import { type ApiKey, parseApiKey } from '@internal/adapters'
+import { type ApiKey, parseApiKey } from '@nekolog-io/adapters'
 
 export const KEY_QUERY_PARAM = 'key'
 

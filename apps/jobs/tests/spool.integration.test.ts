@@ -1,4 +1,5 @@
 import { createIngestApp, createKeyAuthenticator, createLogStoreSink } from '@apps/ingest'
+import { SPOOL_PREFIX } from '@internal/spool'
 import {
   generateApiKey,
   hashApiKey,
@@ -6,10 +7,9 @@ import {
   type LogStore,
   memoryBlobStore,
   memoryKeyStore,
-} from '@internal/adapters'
-import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@internal/clickhouse'
-import { clickHouseLogStore } from '@internal/clickhouse/log-store'
-import { SPOOL_PREFIX } from '@internal/spool'
+} from '@nekolog-io/adapters'
+import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@nekolog-io/clickhouse'
+import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { spoolResendTask } from '../src/tasks/spool-resend.ts'
 

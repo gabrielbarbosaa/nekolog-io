@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import type { ApiKeyKind } from '@internal/adapters'
+import type { ApiKeyKind } from '@nekolog-io/adapters'
 import {
   keyHint,
   parseSeedDocument,

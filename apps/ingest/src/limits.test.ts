@@ -1,5 +1,5 @@
-import { memoryRateLimiter, type RateLimiter } from '@internal/adapters'
 import type { ParsedBatch } from '@internal/schema'
+import { memoryRateLimiter, type RateLimiter } from '@nekolog-io/adapters'
 import { describe, expect, it, vi } from 'vitest'
 import {
   type Authenticator,

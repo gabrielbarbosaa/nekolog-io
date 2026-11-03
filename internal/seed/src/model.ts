@@ -1,4 +1,4 @@
-import { type ApiKeyKind, generateApiKey, hashApiKey, type KeyRecord } from '@internal/adapters'
+import { type ApiKeyKind, generateApiKey, hashApiKey, type KeyRecord } from '@nekolog-io/adapters'
 import {
   ENVIRONMENT_PREFIX,
   id,

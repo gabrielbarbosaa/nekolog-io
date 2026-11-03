@@ -1,6 +1,6 @@
 ---
-"@internal/clickhouse": minor
-"@internal/config": minor
+"@nekolog-io/clickhouse": minor
+"@nekolog-io/config": minor
 ---
 
 Add the ClickHouse schema and the migration runner.

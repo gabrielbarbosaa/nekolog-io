@@ -29,7 +29,7 @@ batch suppress another's.
 New `@internal/spool` holds the format both sides use: a zero-padded timestamp
 key so listing the first N objects returns the oldest N, strict decoding, and
 batch-id validation on the way into a file name. New `BlobStore` implementations
-in `@internal/adapters` (memory and R2), and `BlobStore.list` now takes a limit
+in `@nekolog-io/adapters` (memory and R2), and `BlobStore.list` now takes a limit
 so the sweep does not walk the whole bucket every minute.
 
 A task's returned object now reaches the run summary as `detail`, so the sweep
