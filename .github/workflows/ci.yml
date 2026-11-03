@@ -52,6 +52,16 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      mailpit:
+        image: axllent/mailpit:v1.28
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -95,6 +105,9 @@ jobs:
           POSTGRES_TEST_URL: postgres://nekolog:nekolog@localhost:5432/nekolog_dev
           REDIS_TEST_REQUIRED: "1"
           REDIS_TEST_URL: redis://localhost:6379
+          MAILPIT_TEST_REQUIRED: "1"
+          MAILPIT_TEST_URL: http://localhost:8025
+          SMTP_TEST_URL: smtp://localhost:1025
           FUZZ_RUNS: "1000"
 
       - name: Build
