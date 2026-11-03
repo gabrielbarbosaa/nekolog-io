@@ -117,6 +117,8 @@ export {
   memoryBatchStore,
   STORE_NAME,
 } from './store.ts'
+export type { TraceTuning } from './tracing.ts'
+export { currentTrace, nextSpan, resetTrace, traceMatcherFor } from './tracing.ts'
 export type { BreadcrumbTuning, InstallBreadcrumbOptions } from './trail.ts'
 export {
   addBreadcrumb,

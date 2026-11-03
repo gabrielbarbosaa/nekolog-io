@@ -14,7 +14,7 @@ export const SERVICE_ENV = 'NEKOLOG_SERVICE'
 export const RELEASE_ENV = 'NEKOLOG_RELEASE'
 export const LEVEL_ENV = 'NEKOLOG_LEVEL'
 
-export type NodeLoggerOptions = Omit<LoggerOptions, 'runtime' | 'sdk'>
+export type NodeLoggerOptions = Omit<LoggerOptions, 'runtime'>
 
 function environment(): Record<string, string | undefined> {
   return (
@@ -46,7 +46,7 @@ export function createLogger(options: NodeLoggerOptions = {}): Logger {
   return createCoreLogger({
     ...options,
     runtime: 'node',
-    sdk: { name: SDK_NAME, version: SDK_VERSION },
+    sdk: options.sdk ?? { name: SDK_NAME, version: SDK_VERSION },
     apiKey,
     service: options.service ?? text(env[SERVICE_ENV]),
     release: options.release ?? text(env[RELEASE_ENV]),
