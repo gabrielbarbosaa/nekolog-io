@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nekolog-io/express": "workspace:*",
     "@nekolog-io/node": "workspace:*",
     "express": "^5.1.0"
   },

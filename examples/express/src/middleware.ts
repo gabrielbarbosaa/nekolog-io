@@ -1,110 +1,32 @@
-import { randomUUID } from 'node:crypto'
 import {
-  bindContext,
-  currentContext,
-  type LogContext,
-  type Logger,
-  type LogLevel,
-  runWithContext,
-  TRACEPARENT_HEADER,
-  traceForRequest,
-  traceparentOf,
-} from '@nekolog-io/node'
-import type { ErrorRequestHandler, Request, RequestHandler } from 'express'
+  type ExpressErrorHandler,
+  withErrorLog as logTheError,
+  statusOfError,
+} from '@nekolog-io/express'
+import type { Logger } from '@nekolog-io/node'
+import type { ErrorRequestHandler } from 'express'
 import { publicMessageOf, statusOf } from './errors.ts'
 
-export const REQUEST_ID_HEADER = 'x-request-id'
-export const MAX_REQUEST_ID_CHARS = 64
-
-const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]+$/
-
-export type MiddlewareOptions = {
-  random?: () => number
-  newRequestId?: () => string
-  now?: () => number
-}
-
-export function requestIdFrom(header: unknown, fallback: () => string): string {
-  if (typeof header !== 'string') {
-    return fallback()
-  }
-  const trimmed = header.trim()
-  if (trimmed === '' || trimmed.length > MAX_REQUEST_ID_CHARS || !SAFE_REQUEST_ID.test(trimmed)) {
-    return fallback()
-  }
-  return trimmed
-}
-
-export function levelForStatus(status: number): LogLevel {
-  if (status >= 500) {
-    return 'error'
-  }
-  return status >= 400 ? 'warn' : 'info'
-}
-
-export function routeOf(request: Request): string {
-  const path = (request.route as { path?: unknown } | undefined)?.path
-  return typeof path === 'string' ? `${request.baseUrl}${path}` : 'unmatched'
-}
-
-export function withLogContext(options: MiddlewareOptions = {}): RequestHandler {
-  const newRequestId = options.newRequestId ?? randomUUID
-  return (request, response, next) => {
-    const { trace, parentSpanId, sampled } = traceForRequest(
-      request.get(TRACEPARENT_HEADER),
-      options.random,
-    )
-    const requestId = requestIdFrom(request.get(REQUEST_ID_HEADER), newRequestId)
-
-    response.setHeader(TRACEPARENT_HEADER, traceparentOf(trace, sampled))
-    response.setHeader(REQUEST_ID_HEADER, requestId)
-
-    const context: LogContext = {
-      trace,
-      attributes: {
-        'request.id': requestId,
-        ...(parentSpanId === undefined ? {} : { 'trace.parentSpanId': parentSpanId }),
-      },
-    }
-
-    runWithContext(context, next)
-  }
-}
-
-export function withAccessLog(logger: Logger, options: MiddlewareOptions = {}): RequestHandler {
-  const now = options.now ?? Date.now
-  return (request, response, next) => {
-    const startedAt = now()
-    const context = currentContext()
-
-    const emit = (): void => {
-      const route = routeOf(request)
-      logger.log(
-        levelForStatus(response.statusCode),
-        `${request.method} ${route} ${response.statusCode}`,
-        {
-          'http.method': request.method,
-          'http.route': route,
-          'http.status': response.statusCode,
-          'http.durationMs': now() - startedAt,
-        },
-      )
-    }
-
-    response.on('finish', context === undefined ? emit : bindContext(context, emit))
-    next()
-  }
-}
+export type { MiddlewareOptions } from '@nekolog-io/express'
+export { routeOf, withAccessLog, withLogContext } from '@nekolog-io/express'
+export {
+  levelForStatus,
+  MAX_REQUEST_ID_CHARS,
+  REQUEST_ID_HEADER,
+  requestIdFrom,
+} from '@nekolog-io/node'
 
 export function withErrorLog(logger: Logger): ErrorRequestHandler {
-  return (error, _request, response, next) => {
-    const status = statusOf(error)
-    logger.log(levelForStatus(status), error)
+  const log = logTheError(logger, { statusOf }) as ExpressErrorHandler
+
+  return (error, request, response, next) => {
+    log(error, request as never, response as never, () => undefined)
 
     if (response.headersSent) {
       next(error)
       return
     }
+    const status = statusOf(error) || statusOfError(error)
     response.status(status).json({ error: { message: publicMessageOf(error, status) } })
   }
 }
