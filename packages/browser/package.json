@@ -52,6 +52,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
+    "fake-indexeddb": "^6.2.7",
     "happy-dom": "^21.0.4",
     "publint": "^0.3.25",
     "tsdown": "^0.23.2",

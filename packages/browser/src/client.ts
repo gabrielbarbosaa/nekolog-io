@@ -1,9 +1,11 @@
-import type { Logger } from '@nekolog-io/core'
+import type { FetchLike, Logger } from '@nekolog-io/core'
 import type { BreadcrumbData } from './breadcrumbs.ts'
 import { configureSession, resetSession, sessionId, setUser } from './context.ts'
 import { installFlushOnHide } from './flush.ts'
 import { installGlobalHandlers } from './handlers.ts'
+import { publicKeyOnly } from './keys.ts'
 import { type BrowserLoggerOptions, createLogger } from './logger.ts'
+import { installOnlineReplay, replayOnce } from './offline.ts'
 import type { SessionOptions } from './session.ts'
 import {
   addBreadcrumb,
@@ -18,6 +20,10 @@ export type InitOptions = BrowserLoggerOptions & {
   flushOnHide?: boolean
   session?: SessionOptions
   breadcrumbOptions?: InstallBreadcrumbOptions
+}
+
+function globalFetch(): FetchLike | undefined {
+  return (globalThis as { fetch?: FetchLike }).fetch
 }
 
 export type BrowserClient = {
@@ -59,6 +65,24 @@ export function init(options: InitOptions = {}): BrowserClient {
       ...breadcrumbOptions,
     }),
   )
+
+  const { apiKey } = publicKeyOnly(options.apiKey)
+  if (options.offline !== false && apiKey !== undefined) {
+    const send = options.fetch ?? globalFetch()
+    if (send !== undefined) {
+      installed.push(
+        installOnlineReplay(() => {
+          void replayOnce({
+            ...options.offline,
+            apiKey,
+            send,
+            store: options.offlineStore,
+            onError: options.onError,
+          })
+        }),
+      )
+    }
+  }
 
   return {
     get logger() {
