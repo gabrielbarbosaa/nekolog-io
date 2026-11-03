@@ -1,0 +1,78 @@
+{
+  "name": "@nekolog-io/next",
+  "version": "0.0.0",
+  "description": "NekoLog SDK for Next.js: register in instrumentation.ts, on the server and on the client.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",
+    "directory": "packages/next"
+  },
+  "homepage": "https://nekolog.io",
+  "bugs": "https://github.com/gabrielbarbosaa/nekolog-io/issues",
+  "keywords": [
+    "logging",
+    "logger",
+    "observability",
+    "nextjs",
+    "nekolog"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./client": {
+      "import": {
+        "types": "./dist/client.d.mts",
+        "default": "./dist/client.mjs"
+      },
+      "require": {
+        "types": "./dist/client.d.cts",
+        "default": "./dist/client.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "lint": "pnpm run build && publint && attw --pack . --profile node16"
+  },
+  "peerDependencies": {
+    "next": ">=14",
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@nekolog-io/browser": "workspace:*",
+    "@nekolog-io/core": "workspace:*",
+    "@nekolog-io/node": "workspace:*",
+    "@nekolog-io/react": "workspace:*"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "publint": "^0.3.25",
+    "react": "^19.3.1",
+    "tsdown": "^0.23.2",
+    "vitest": "^5.0.5"
+  }
+}

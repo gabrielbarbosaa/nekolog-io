@@ -166,7 +166,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 - [x] **3.3** `feat/browser-offline` — fila offline no IndexedDB.
 - [x] **3.4** `feat/trace-propagation` — `traceparent` só nos domínios configurados, no browser e no Node.
 - [x] **3.5** `feat/react-sdk` — Provider, `ErrorBoundary` e `useLogger`.
-- [ ] **3.6** `feat/next-sdk` — integração via `instrumentation.ts`, no servidor e no cliente.
+- [x] **3.6** `feat/next-sdk` — integração via `instrumentation.ts`, no servidor e no cliente.
 - [ ] **3.7** `feat/server-middlewares` — Express, Fastify e Hono.
 - [ ] **3.8** `feat/nestjs` — módulo e interceptor.
 - [ ] **3.9** `feat/log-transports` — transports para pino e winston.
