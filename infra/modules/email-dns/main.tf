@@ -74,8 +74,9 @@ resource "cloudflare_dns_record" "dmarc" {
 }
 
 resource "cloudflare_email_routing_settings" "this" {
+  count = length(var.forwarded_addresses) > 0 ? 1 : 0
+
   zone_id = var.zone_id
-  enabled = length(var.forwarded_addresses) > 0
 }
 
 resource "cloudflare_email_routing_address" "destination" {
