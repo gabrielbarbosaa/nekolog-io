@@ -29,37 +29,52 @@ variable "dashboard_repo" {
 }
 
 variable "site_variables" {
-  description = "Environment variables of the site project, by name."
+  description = "Which environment variables the site project has, by name. Never a value."
   type = map(object({
-    value      = string
     target     = list(string)
     git_branch = optional(string)
     sensitive  = optional(bool, true)
   }))
-  default   = {}
-  sensitive = true
+  default = {}
+}
+
+variable "site_values" {
+  description = "Value of each variable of the site project."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
 }
 
 variable "docs_variables" {
-  description = "Environment variables of the documentation project, by name."
+  description = "Which environment variables the documentation project has, by name. Never a value."
   type = map(object({
-    value      = string
     target     = list(string)
     git_branch = optional(string)
     sensitive  = optional(bool, true)
   }))
-  default   = {}
-  sensitive = true
+  default = {}
+}
+
+variable "docs_values" {
+  description = "Value of each variable of the documentation project."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
 }
 
 variable "dashboard_variables" {
-  description = "Environment variables of the dashboard project, by name. One value per environment, never shared."
+  description = "Which environment variables the dashboard project has, by name. Never a value."
   type = map(object({
-    value      = string
     target     = list(string)
     git_branch = optional(string)
     sensitive  = optional(bool, true)
   }))
-  default   = {}
-  sensitive = true
+  default = {}
+}
+
+variable "dashboard_values" {
+  description = "Value of each variable of the dashboard project."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
 }

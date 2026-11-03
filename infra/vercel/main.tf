@@ -24,6 +24,7 @@ module "site" {
   root_directory    = "apps/web"
   zone_name         = var.zone_name
   variables         = var.site_variables
+  values            = var.site_values
 
   domains = {
     (var.zone_name)             = {}
@@ -43,6 +44,7 @@ module "docs" {
   root_directory    = "apps/docs"
   zone_name         = var.zone_name
   variables         = var.docs_variables
+  values            = var.docs_values
 
   domains = {
     "docs.${var.zone_name}"     = {}
@@ -60,6 +62,7 @@ module "dashboard" {
   framework         = "nextjs"
   zone_name         = var.zone_name
   variables         = var.dashboard_variables
+  values            = var.dashboard_values
 
   domains = {
     "app.${var.zone_name}" = {}

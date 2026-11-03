@@ -63,13 +63,18 @@ variable "domains" {
 }
 
 variable "variables" {
-  description = "Environment variables of the project, by name."
+  description = "Which environment variables the project has and where each one reaches. Names and targets only — never a value."
   type = map(object({
-    value      = string
     target     = list(string)
     git_branch = optional(string)
     sensitive  = optional(bool, true)
   }))
-  default   = {}
-  sensitive = true
+  default = {}
+}
+
+variable "values" {
+  description = "The value of each variable declared above, by the same name."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
 }

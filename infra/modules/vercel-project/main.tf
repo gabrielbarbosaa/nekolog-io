@@ -34,6 +34,10 @@ locals {
     for name, variable in var.variables :
     name if coalesce(variable.sensitive, true) && contains(variable.target, "preview") && variable.git_branch == null
   ]
+
+  named = keys(var.variables)
+
+  valued = nonsensitive(keys(var.values))
 }
 
 resource "vercel_project" "this" {
@@ -75,6 +79,11 @@ resource "vercel_project" "this" {
       condition     = length(local.shared_between_environments) == 0
       error_message = "A secret for preview has to name its branch, or dev and qa share the same value: ${join(", ", local.shared_between_environments)}"
     }
+
+    precondition {
+      condition     = setequal(local.named, local.valued)
+      error_message = "Every declared variable needs a value and every value needs a declaration. Declared without a value: ${join(", ", setsubtract(local.named, local.valued))}. Value without a declaration: ${join(", ", setsubtract(local.valued, local.named))}"
+    }
   }
 }
 
@@ -91,7 +100,7 @@ resource "vercel_project_environment_variable" "this" {
 
   project_id = vercel_project.this.id
   key        = each.key
-  value      = each.value.value
+  value      = var.values[each.key]
   target     = each.value.target
   git_branch = each.value.git_branch
   sensitive  = each.value.sensitive

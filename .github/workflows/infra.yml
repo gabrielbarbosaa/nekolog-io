@@ -58,16 +58,6 @@ jobs:
           done
           test "$failed" -eq 0
 
-      - name: Bootstrap the lock file of a new root
-        run: |
-          set -euo pipefail
-          for root in infra/vercel; do
-            test -f "$root/.terraform.lock.hcl" && continue
-            tofu -chdir="$root" init -backend=false -input=false
-            echo "::group::$root/.terraform.lock.hcl"
-            cat "$root/.terraform.lock.hcl"
-            echo "::endgroup::"
-          done
       - name: Validate every root module
         run: |
           set -euo pipefail
@@ -153,9 +143,12 @@ jobs:
           TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}
           TF_VAR_vercel_api_token: ${{ secrets.VERCEL_API_TOKEN }}
           TF_VAR_vercel_team_id: ${{ vars.VERCEL_TEAM_ID }}
-          TF_VAR_site_variables: ${{ secrets.VERCEL_SITE_VARIABLES }}
-          TF_VAR_docs_variables: ${{ secrets.VERCEL_DOCS_VARIABLES }}
-          TF_VAR_dashboard_variables: ${{ secrets.VERCEL_DASHBOARD_VARIABLES }}
+          TF_VAR_site_variables: ${{ vars.VERCEL_SITE_VARIABLES }}
+          TF_VAR_site_values: ${{ secrets.VERCEL_SITE_VALUES }}
+          TF_VAR_docs_variables: ${{ vars.VERCEL_DOCS_VARIABLES }}
+          TF_VAR_docs_values: ${{ secrets.VERCEL_DOCS_VALUES }}
+          TF_VAR_dashboard_variables: ${{ vars.VERCEL_DASHBOARD_VARIABLES }}
+          TF_VAR_dashboard_values: ${{ secrets.VERCEL_DASHBOARD_VALUES }}
   apply:
     name: Apply (${{ github.ref_name }})
     needs: check
@@ -234,6 +227,9 @@ jobs:
           TF_VAR_state_endpoint: ${{ vars.TOFU_STATE_ENDPOINT }}
           TF_VAR_vercel_api_token: ${{ secrets.VERCEL_API_TOKEN }}
           TF_VAR_vercel_team_id: ${{ vars.VERCEL_TEAM_ID }}
-          TF_VAR_site_variables: ${{ secrets.VERCEL_SITE_VARIABLES }}
-          TF_VAR_docs_variables: ${{ secrets.VERCEL_DOCS_VARIABLES }}
-          TF_VAR_dashboard_variables: ${{ secrets.VERCEL_DASHBOARD_VARIABLES }}
+          TF_VAR_site_variables: ${{ vars.VERCEL_SITE_VARIABLES }}
+          TF_VAR_site_values: ${{ secrets.VERCEL_SITE_VALUES }}
+          TF_VAR_docs_variables: ${{ vars.VERCEL_DOCS_VARIABLES }}
+          TF_VAR_docs_values: ${{ secrets.VERCEL_DOCS_VALUES }}
+          TF_VAR_dashboard_variables: ${{ vars.VERCEL_DASHBOARD_VARIABLES }}
+          TF_VAR_dashboard_values: ${{ secrets.VERCEL_DASHBOARD_VALUES }}
