@@ -1,3 +1,4 @@
+import { isoTimestamp } from '@nekolog-io/core'
 import type { Breadcrumb, Trail } from './breadcrumbs.ts'
 import { type DocumentLike, globalDocument } from './globals.ts'
 
@@ -82,7 +83,7 @@ export function installClickBreadcrumbs(
       if (message === null) {
         return
       }
-      const crumb: Breadcrumb = { at: now(), kind: 'click', message }
+      const crumb: Breadcrumb = { at: isoTimestamp(now()), kind: 'click', message }
       trail.add(crumb)
     } catch {
       return

@@ -1,4 +1,4 @@
-import { DEFAULT_ENDPOINT, requestUrlFor } from '@nekolog-io/core'
+import { DEFAULT_ENDPOINT, isoTimestamp, requestUrlFor } from '@nekolog-io/core'
 import type { Trail } from './breadcrumbs.ts'
 import { globalHref } from './globals.ts'
 import { DEFAULT_PAGE_DETAIL, type PageDetail, pageUrl } from './page.ts'
@@ -43,10 +43,16 @@ export function describeRequestUrl(
   base: string | undefined,
 ): string | undefined {
   const resolved = pageUrl(raw, detail, base ?? RELATIVE_BASE)
-  if (resolved === undefined) {
-    return undefined
+  if (resolved === undefined || base !== undefined) {
+    return resolved
   }
-  return resolved.startsWith(RELATIVE_BASE) ? resolved.slice(RELATIVE_BASE.length) : resolved
+
+  try {
+    const { origin } = new URL(resolved)
+    return origin === RELATIVE_BASE ? resolved.slice(origin.length) : resolved
+  } catch {
+    return resolved
+  }
 }
 
 export type FetchBreadcrumbOptions = {
@@ -77,7 +83,7 @@ export function installFetchBreadcrumbs(
   const record = (message: string, started: number, status?: number): void => {
     try {
       trail.add({
-        at: started,
+        at: isoTimestamp(started),
         kind: 'fetch',
         message,
         data:

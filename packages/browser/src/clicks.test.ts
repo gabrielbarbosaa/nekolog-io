@@ -89,7 +89,9 @@ describe('a real click', () => {
 
     button.click()
 
-    expect(trail.list()).toEqual([{ at: 1_000, kind: 'click', message: 'button#pay.primary' }])
+    expect(trail.list()).toEqual([
+      { at: '1970-01-01T00:00:01.000Z', kind: 'click', message: 'button#pay.primary' },
+    ])
   })
 
   it('is seen even when the app stops the event from bubbling', () => {

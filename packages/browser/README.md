@@ -169,6 +169,15 @@ A trilha passa pelo filtro de dados sensíveis do core como qualquer outro
 atributo (cartão, CPF, `Bearer …`, key do NekoLog). **E-mail não está nesse
 filtro** — é uma decisão do core, não um esquecimento deste pacote.
 
+### O horário é texto, e isso não é enfeite
+
+`at` vai em ISO-8601, não em milissegundos. Milissegundo desde 1970 tem 13
+dígitos, e **mais ou menos 1 em cada 10 passa no teste de Luhn** — o filtro de
+cartão do core trocava o número por `[redacted]`, fora das aspas, e o JSON da
+trilha inteira deixava de ser JSON. Com 20 registros, quebrar era quase certo.
+Tem teste que percorre 2000 milissegundos seguidos nas duas formas: com texto
+nenhum quebra, com número alguns quebram.
+
 ### Os remendos
 
 Dois: `window.fetch` e `history.pushState`/`replaceState`. Os dois chamam o

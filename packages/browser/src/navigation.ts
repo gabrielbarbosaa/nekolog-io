@@ -1,3 +1,4 @@
+import { isoTimestamp } from '@nekolog-io/core'
 import type { Trail } from './breadcrumbs.ts'
 import { type EventTargetLike, globalHref, globalWindow } from './globals.ts'
 import { DEFAULT_PAGE_DETAIL, type PageDetail, pageUrl } from './page.ts'
@@ -45,7 +46,7 @@ export function installNavigationBreadcrumbs(
         return
       }
       trail.add({
-        at: now(),
+        at: isoTimestamp(now()),
         kind: 'navigation',
         message: to,
         ...(from === undefined ? {} : { data: { from } }),

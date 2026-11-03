@@ -81,6 +81,12 @@ describe('the address a breadcrumb shows', () => {
     expect(describeRequestUrl('/orders', 'path', undefined)).toBe('/orders')
   })
 
+  it('does not mistake a lookalike host for the one it resolves against', () => {
+    expect(describeRequestUrl('https://relative.invalid.evil.test/x', 'path', undefined)).toBe(
+      'https://relative.invalid.evil.test/x',
+    )
+  })
+
   it('drops the query, where api keys and tokens travel', () => {
     expect(describeRequestUrl('/orders?token=abc123', 'path', 'https://shop.test/')).toBe(
       'https://shop.test/orders',
@@ -104,7 +110,7 @@ describe('a request the page makes', () => {
 
     expect(trail.list()).toEqual([
       {
-        at: 1_005,
+        at: '1970-01-01T00:00:01.005Z',
         kind: 'fetch',
         message: 'POST https://api.test/orders',
         data: { [STATUS_DATA_KEY]: 201, [DURATION_DATA_KEY]: 5 },

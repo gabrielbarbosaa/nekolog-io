@@ -65,7 +65,7 @@ describe('moving around a single page app', () => {
 
     expect(trail.list()).toEqual([
       {
-        at: 1_000,
+        at: '1970-01-01T00:00:01.000Z',
         kind: 'navigation',
         message: 'https://shop.test/checkout',
         data: { from: 'https://shop.test/cart' },

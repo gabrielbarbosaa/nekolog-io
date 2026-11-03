@@ -1,4 +1,4 @@
-import { MAX_ATTRIBUTE_VALUE_BYTES } from '@nekolog-io/core'
+import { MAX_ATTRIBUTE_VALUE_BYTES, redactText } from '@nekolog-io/core'
 import { describe, expect, it } from 'vitest'
 import {
   type Breadcrumb,
@@ -9,7 +9,7 @@ import {
 } from './breadcrumbs.ts'
 
 function crumb(message: string, at = 1_000): Breadcrumb {
-  return { at, kind: 'custom', message }
+  return { at: new Date(at).toISOString(), kind: 'custom', message }
 }
 
 describe('the trail', () => {
@@ -109,11 +109,11 @@ describe('what goes into the attribute', () => {
     const parsed = JSON.parse(text) as Breadcrumb[]
 
     expect(parsed.length).toBeLessThan(crumbs.length)
-    expect(parsed[parsed.length - 1]?.at).toBe(39)
+    expect(parsed[parsed.length - 1]?.at).toBe(new Date(39).toISOString())
   })
 
   it('counts the limit in bytes, not characters', () => {
-    const wide = [{ at: 1, kind: 'custom', message: '😿'.repeat(50) }] as Breadcrumb[]
+    const wide = [crumb('😿'.repeat(50))]
 
     expect(JSON.stringify(wide).length).toBeLessThan(200)
     expect(serialiseTrail(wide, 200)).toBeUndefined()
@@ -122,5 +122,35 @@ describe('what goes into the attribute', () => {
 
   it('gives up rather than send half a record', () => {
     expect(serialiseTrail([crumb('x'.repeat(200))], 10)).toBeUndefined()
+  })
+
+  it('still parses after the sensitive data filter has been over it', () => {
+    const start = Date.UTC(2026, 10, 3, 21, 30)
+    let survivors = 0
+
+    for (let offset = 0; offset < 2_000; offset++) {
+      const text = serialiseTrail([crumb('clicked pay', start + offset)]) as string
+
+      expect(() => JSON.parse(redactText(text))).not.toThrow()
+      survivors += 1
+    }
+
+    expect(survivors).toBe(2_000)
+  })
+
+  it('would not have parsed with the milliseconds written as a number', () => {
+    const start = Date.UTC(2026, 10, 3, 21, 30)
+    let broken = 0
+
+    for (let offset = 0; offset < 2_000; offset++) {
+      const text = JSON.stringify([{ at: start + offset, kind: 'custom', message: 'clicked pay' }])
+      try {
+        JSON.parse(redactText(text))
+      } catch {
+        broken += 1
+      }
+    }
+
+    expect(broken).toBeGreaterThan(0)
   })
 })

@@ -9,7 +9,7 @@ export type BreadcrumbKind = 'click' | 'navigation' | 'fetch' | 'custom'
 export type BreadcrumbData = Record<string, string | number | boolean>
 
 export type Breadcrumb = {
-  at: number
+  at: string
   kind: BreadcrumbKind
   message: string
   data?: BreadcrumbData

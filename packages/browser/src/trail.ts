@@ -1,4 +1,4 @@
-import { type LogEvent, type LogLevel, passesThreshold } from '@nekolog-io/core'
+import { isoTimestamp, type LogEvent, type LogLevel, passesThreshold } from '@nekolog-io/core'
 import {
   BREADCRUMBS_ATTRIBUTE,
   type Breadcrumb,
@@ -45,7 +45,7 @@ export function addBreadcrumb(
   if (typeof message !== 'string' || message === '') {
     return
   }
-  const crumb: Breadcrumb = { at: Date.now(), kind, message }
+  const crumb: Breadcrumb = { at: isoTimestamp(Date.now()), kind, message }
   breadcrumbTrail().add(data === undefined ? crumb : { ...crumb, data })
 }
 
