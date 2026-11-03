@@ -2,7 +2,7 @@ import { type ClickHouseConfig, databaseExists, execute, queryRows } from './cli
 import { loadMigrations, type Migration, renderSql } from './migrations.ts'
 
 export const MIGRATIONS_TABLE = '_migrations'
-export const DATABASE_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
+export const DATABASE_NAME_PATTERN: RegExp = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 export type MigrationState = 'applied' | 'pending' | 'drifted'
 

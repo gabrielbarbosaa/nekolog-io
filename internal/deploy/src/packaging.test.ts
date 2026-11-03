@@ -1,0 +1,121 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+import { isJsonObject, type JsonObject, readJsonObject } from './config.ts'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+
+const SHARED = ['adapters', 'clickhouse', 'config']
+
+function manifestOf(folder: string): JsonObject {
+  return readJsonObject(join(ROOT, 'packages', folder, 'package.json'))
+}
+
+function published(): Array<[string, JsonObject]> {
+  return readdirSync(join(ROOT, 'packages'))
+    .map((folder): [string, JsonObject] => [folder, manifestOf(folder)])
+    .filter(([, manifest]) => manifest.private !== true)
+}
+
+function dependenciesOf(manifest: JsonObject): string[] {
+  const declared = manifest.dependencies
+  return isJsonObject(declared) ? Object.keys(declared) : []
+}
+
+function exportTargets(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return [value]
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(exportTargets)
+  }
+  if (typeof value === 'object' && value !== null) {
+    return Object.values(value).flatMap(exportTargets)
+  }
+  return []
+}
+
+describe('every package this repository publishes', () => {
+  it.each(published())('%s carries what npm needs', (folder, manifest) => {
+    expect(manifest.license).toBe('MIT')
+    expect(manifest.files).toBeDefined()
+    expect((manifest.repository as JsonObject).directory).toBe(`packages/${folder}`)
+  })
+
+  it.each(published())('%s depends on nothing private', (_folder, manifest) => {
+    for (const dependency of dependenciesOf(manifest)) {
+      expect(dependency.startsWith('@internal/')).toBe(false)
+      expect(dependency.startsWith('@apps/')).toBe(false)
+    }
+  })
+
+  it.each(published())('%s ships every file its exports point at', (folder, manifest) => {
+    const shipped = manifest.files as string[]
+    const targets = exportTargets(manifest.publishConfig ?? manifest.exports)
+
+    expect(targets.length).toBeGreaterThan(0)
+    for (const target of targets) {
+      const top = target.replace(/^\.\//, '').split('/')[0] ?? ''
+      expect(shipped, `${folder} publishes ${target} but does not ship ${top}`).toContain(top)
+    }
+  })
+})
+
+describe('the packages the dashboard consumes', () => {
+  it.each(SHARED)('%s resolves to its source inside this workspace', (folder) => {
+    for (const target of exportTargets(manifestOf(folder).exports)) {
+      expect(target.startsWith('./src/')).toBe(true)
+      expect(target.endsWith('.ts')).toBe(true)
+    }
+  })
+
+  it.each(SHARED)('%s resolves to its build once published', (folder) => {
+    const config = manifestOf(folder).publishConfig
+
+    expect(isJsonObject(config)).toBe(true)
+    const targets = exportTargets((config as JsonObject).exports)
+    expect(targets.length).toBeGreaterThan(0)
+    for (const target of targets) {
+      expect(target.startsWith('./dist/')).toBe(true)
+    }
+  })
+
+  it.each(SHARED)('%s is checked against the tarball, not the directory', (folder) => {
+    const scripts = manifestOf(folder).scripts as JsonObject
+
+    expect(scripts.lint).toContain('pnpm pack')
+    expect(scripts.lint).toContain('publint package.tgz')
+    expect(scripts.lint).toContain('attw package.tgz')
+  })
+})
+
+describe('the ClickHouse package, which carries more than code', () => {
+  const manifest = manifestOf('clickhouse')
+
+  it('ships the migrations the runner reads at runtime', () => {
+    expect(manifest.files).toContain('migrations')
+
+    const sql = readdirSync(join(ROOT, 'packages', 'clickhouse', 'migrations'))
+    expect(sql.length).toBeGreaterThan(0)
+    expect(sql.every((file) => file.endsWith('.sql'))).toBe(true)
+  })
+
+  it('exposes the runner as a command, with the shebang that makes it one', () => {
+    const bin = (manifest.publishConfig as JsonObject).bin as JsonObject
+    const entry = Object.values(bin)[0]
+
+    expect(entry).toBe('./dist/cli.mjs')
+    expect(readFileSync(join(ROOT, 'packages', 'clickhouse', 'src', 'cli.ts'), 'utf8')).toMatch(
+      /^#!\/usr\/bin\/env node\n/,
+    )
+  })
+
+  it('keeps the entry points a Worker needs away from the one that reads the disk', () => {
+    const targets = Object.keys(manifest.exports as JsonObject)
+
+    expect(targets).toContain('./log-store')
+    expect(targets).toContain('./client')
+    expect(targets).toContain('./usage-store')
+  })
+})

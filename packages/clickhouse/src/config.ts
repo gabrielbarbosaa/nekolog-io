@@ -1,4 +1,4 @@
-import { loadEnv, migrationsEnvSchema } from '@internal/config'
+import { loadEnv, migrationsEnvSchema } from '@nekolog-io/config'
 import type { ClickHouseConfig } from './client.ts'
 
 export function configFromEnv(

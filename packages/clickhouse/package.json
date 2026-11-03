@@ -1,0 +1,78 @@
+{
+  "name": "@nekolog-io/clickhouse",
+  "version": "0.0.0",
+  "description": "ClickHouse side of NekoLog: the forward-only migration runner, the HTTP client and the log and usage stores.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",
+    "directory": "packages/clickhouse"
+  },
+  "homepage": "https://nekolog.io",
+  "bugs": "https://github.com/gabrielbarbosaa/nekolog-io/issues",
+  "keywords": [
+    "logging",
+    "observability",
+    "clickhouse",
+    "nekolog"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./log-store": "./src/log-store.ts",
+    "./usage-store": "./src/usage-store.ts"
+  },
+  "publishConfig": {
+    "bin": {
+      "nekolog-clickhouse": "./dist/cli.mjs"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "./client": {
+        "types": "./dist/client.d.mts",
+        "default": "./dist/client.mjs"
+      },
+      "./log-store": {
+        "types": "./dist/log-store.d.mts",
+        "default": "./dist/log-store.mjs"
+      },
+      "./usage-store": {
+        "types": "./dist/usage-store.d.mts",
+        "default": "./dist/usage-store.mjs"
+      }
+    },
+    "main": "./dist/index.mjs",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "ch": "node src/cli.ts",
+    "lint": "pnpm run build && pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+  },
+  "dependencies": {
+    "@nekolog-io/adapters": "workspace:*",
+    "@nekolog-io/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^24.0.0",
+    "publint": "^0.3.25",
+    "tsdown": "^0.23.2",
+    "vitest": "^5.0.5"
+  }
+}

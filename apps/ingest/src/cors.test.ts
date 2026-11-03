@@ -1,4 +1,4 @@
-import { generateApiKey, hashApiKey, type KeyRecord, memoryKeyStore } from '@internal/adapters'
+import { generateApiKey, hashApiKey, type KeyRecord, memoryKeyStore } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import { createIngestApp, type IngestPrincipal } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'

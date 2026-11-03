@@ -97,7 +97,7 @@ A última é a que prova que a restrição é de rede, e não senha errada. O
 ClickHouse não diz "endereço não permitido" — ele responde a mesma coisa de uma
 senha errada, de propósito.
 
-O que roda no CI é o [`grants.test.ts`](../../internal/clickhouse/src/grants.test.ts),
+O que roda no CI é o [`grants.test.ts`](../../packages/clickhouse/src/grants.test.ts),
 que lê este template **e** o do dev e exige as mesmas invariantes de *grant*.
 Ele não sobe container nenhum: alguém alargar um `GRANT` quebra o teste na hora,
 que é a regressão realista.

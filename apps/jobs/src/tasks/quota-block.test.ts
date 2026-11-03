@@ -1,5 +1,5 @@
-import type { EnvironmentUsage, QuotaStore, UsageStore } from '@internal/adapters'
-import { memoryQuotaStore } from '@internal/adapters'
+import type { EnvironmentUsage, QuotaStore, UsageStore } from '@nekolog-io/adapters'
+import { memoryQuotaStore } from '@nekolog-io/adapters'
 import { describe, expect, it, vi } from 'vitest'
 import type { TaskContext } from '../task.ts'
 import {

@@ -2,8 +2,8 @@ import { type ChildProcess, spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { type LocalIngestServer, startLocalIngest } from '@apps/ingest'
-import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@internal/clickhouse'
 import { buildSeed, type Seed, toDocument } from '@internal/seed'
+import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@nekolog-io/clickhouse'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const base: Omit<ClickHouseConfig, 'database'> = {

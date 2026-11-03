@@ -1,5 +1,5 @@
-import type { RateLimiter, RateLimitResult } from '@internal/adapters'
 import { type BatchErrorCode, type ParsedBatch, parseBatch } from '@internal/schema'
+import type { RateLimiter, RateLimitResult } from '@nekolog-io/adapters'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
 import { corsHeadersFor, preflightHeadersFor, withCors } from './cors.ts'

@@ -14,7 +14,44 @@ const hasSelfHostRedis = (env: { REDIS_URL?: string }) => env.REDIS_URL !== unde
 const hasCloudMailer = (env: { RESEND_API_KEY?: string }) => env.RESEND_API_KEY !== undefined
 const hasSelfHostMailer = (env: { SMTP_URL?: string }) => env.SMTP_URL !== undefined
 
-export const webEnvSchema = v.pipe(
+export type AppEnvironment = 'dev' | 'qa' | 'prod'
+
+export type WebEnv = {
+  APP_ENV: AppEnvironment
+  APP_URL: string
+  DATABASE_URL: string
+  UPSTASH_REDIS_REST_URL?: string
+  UPSTASH_REDIS_REST_TOKEN?: string
+  REDIS_URL?: string
+  CLICKHOUSE_URL: string
+  CLICKHOUSE_DB: string
+  CLICKHOUSE_READ_USER: string
+  CLICKHOUSE_READ_PASSWORD: string
+  CF_ACCESS_CLIENT_ID: string
+  CF_ACCESS_CLIENT_SECRET: string
+  CF_ACCOUNT_ID: string
+  CF_KV_NAMESPACE_ID: string
+  CF_KV_API_TOKEN: string
+  R2_ENDPOINT: string
+  R2_BUCKET: string
+  R2_ACCESS_KEY_ID: string
+  R2_SECRET_ACCESS_KEY: string
+  AUTH_JWT_PRIVATE_KEY: string
+  AUTH_JWT_PUBLIC_KEY: string
+  AUTH_JWT_KID: string
+  AUTH_JWT_PREVIOUS_PUBLIC_KEY?: string
+  AUTH_OTP_SECRET: string
+  ENCRYPTION_KEY: string
+  RESEND_API_KEY?: string
+  SMTP_URL?: string
+  EMAIL_FROM: string
+  EMAIL_ALLOWLIST?: string
+  TURNSTILE_SITE_KEY: string
+  TURNSTILE_SECRET_KEY: string
+  NEKOLOG_SELF_KEY: string
+}
+
+export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
   v.object({
     APP_ENV: appEnv,
     APP_URL: urlString,
@@ -68,9 +105,16 @@ export const webEnvSchema = v.pipe(
   ),
 )
 
-export type WebEnv = v.InferOutput<typeof webEnvSchema>
+export type IngestEnv = {
+  CLICKHOUSE_URL: string
+  CLICKHOUSE_DB: string
+  CLICKHOUSE_INSERT_USER: string
+  CLICKHOUSE_INSERT_PASSWORD: string
+  CF_ACCESS_CLIENT_ID: string
+  CF_ACCESS_CLIENT_SECRET: string
+}
 
-export const ingestEnvSchema = v.object({
+export const ingestEnvSchema: v.GenericSchema<unknown, IngestEnv> = v.object({
   CLICKHOUSE_URL: urlString,
   CLICKHOUSE_DB: nonEmptyString,
   CLICKHOUSE_INSERT_USER: nonEmptyString,
@@ -79,9 +123,20 @@ export const ingestEnvSchema = v.object({
   CF_ACCESS_CLIENT_SECRET: nonEmptyString,
 })
 
-export type IngestEnv = v.InferOutput<typeof ingestEnvSchema>
+export type JobsEnv = {
+  DATABASE_URL: string
+  CLICKHOUSE_JOBS_USER: string
+  CLICKHOUSE_JOBS_PASSWORD: string
+  CF_ACCESS_CLIENT_ID: string
+  CF_ACCESS_CLIENT_SECRET: string
+  RESEND_API_KEY?: string
+  SMTP_URL?: string
+  EMAIL_FROM: string
+  BETTERSTACK_HEARTBEAT_URL: string
+  OPS_DISCORD_WEBHOOK_URL: string
+}
 
-export const jobsEnvSchema = v.pipe(
+export const jobsEnvSchema: v.GenericSchema<unknown, JobsEnv> = v.pipe(
   v.object({
     DATABASE_URL: nonEmptyString,
     CLICKHOUSE_JOBS_USER: nonEmptyString,
@@ -100,9 +155,16 @@ export const jobsEnvSchema = v.pipe(
   ),
 )
 
-export type JobsEnv = v.InferOutput<typeof jobsEnvSchema>
+export type MigrationsEnv = {
+  CLICKHOUSE_URL: string
+  CLICKHOUSE_DB: string
+  CLICKHOUSE_MIGRATOR_USER: string
+  CLICKHOUSE_MIGRATOR_PASSWORD: string
+  CF_ACCESS_CLIENT_ID?: string
+  CF_ACCESS_CLIENT_SECRET?: string
+}
 
-export const migrationsEnvSchema = v.object({
+export const migrationsEnvSchema: v.GenericSchema<unknown, MigrationsEnv> = v.object({
   CLICKHOUSE_URL: urlString,
   CLICKHOUSE_DB: nonEmptyString,
   CLICKHOUSE_MIGRATOR_USER: nonEmptyString,
@@ -110,8 +172,6 @@ export const migrationsEnvSchema = v.object({
   CF_ACCESS_CLIENT_ID: v.optional(nonEmptyString),
   CF_ACCESS_CLIENT_SECRET: v.optional(nonEmptyString),
 })
-
-export type MigrationsEnv = v.InferOutput<typeof migrationsEnvSchema>
 
 export class EnvValidationError extends Error {
   constructor(appName: string, issues: ReadonlyArray<v.BaseIssue<unknown>>) {

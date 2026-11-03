@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { existsSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { configFromEnv } from './config.ts'

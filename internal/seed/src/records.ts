@@ -1,4 +1,4 @@
-import { type KeyRecord, type KeyStore, memoryKeyStore } from '@internal/adapters'
+import { type KeyRecord, type KeyStore, memoryKeyStore } from '@nekolog-io/adapters'
 import type { SeedDocument } from './document.ts'
 
 export type SeedKeyRecord = {

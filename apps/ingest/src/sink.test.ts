@@ -1,3 +1,4 @@
+import { decodeSpoolEnvelope, SPOOL_PREFIX, spoolKey } from '@internal/spool'
 import {
   generateApiKey,
   hashApiKey,
@@ -6,8 +7,7 @@ import {
   type LogStoreInsertOptions,
   memoryBlobStore,
   memoryKeyStore,
-} from '@internal/adapters'
-import { decodeSpoolEnvelope, SPOOL_PREFIX, spoolKey } from '@internal/spool'
+} from '@nekolog-io/adapters'
 import { describe, expect, it, vi } from 'vitest'
 import { createIngestApp } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'

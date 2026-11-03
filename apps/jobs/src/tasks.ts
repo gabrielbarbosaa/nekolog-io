@@ -1,4 +1,4 @@
-import type { BlobStore, LogStore, QuotaStore, UsageStore } from '@internal/adapters'
+import type { BlobStore, LogStore, QuotaStore, UsageStore } from '@nekolog-io/adapters'
 import { registerTasks } from './schedule.ts'
 import type { Task } from './task.ts'
 import { type QuotaBlockEvent, quotaBlockTask } from './tasks/quota-block.ts'

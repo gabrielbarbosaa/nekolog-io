@@ -1,4 +1,4 @@
-import type { EnvironmentUsage, UsageStore } from '@internal/adapters'
+import type { EnvironmentUsage, UsageStore } from '@nekolog-io/adapters'
 import { type ClickHouseConfig, queryRows } from './client.ts'
 import { assertIdentifier } from './log-store.ts'
 

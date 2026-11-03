@@ -1,16 +1,16 @@
 ﻿import {
-  type LogStore,
-  type LogStoreInsertOptions,
-  type MemoryBlobStore,
-  memoryBlobStore,
-} from '@internal/adapters'
-import {
   encodeSpoolEnvelope,
   QUARANTINE_PREFIX,
   SPOOL_PREFIX,
   type SpoolRow,
   spoolKey,
 } from '@internal/spool'
+import {
+  type LogStore,
+  type LogStoreInsertOptions,
+  type MemoryBlobStore,
+  memoryBlobStore,
+} from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import { runDueTasks } from '../run.ts'
 import {

@@ -6,10 +6,10 @@ import {
   type KeyRecord,
   memoryKeyStore,
   memoryQuotaStore,
-} from '@internal/adapters'
-import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@internal/clickhouse'
-import { clickHouseLogStore } from '@internal/clickhouse/log-store'
-import { clickHouseUsageStore } from '@internal/clickhouse/usage-store'
+} from '@nekolog-io/adapters'
+import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@nekolog-io/clickhouse'
+import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
+import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { quotaBlockTask, startOfUtcDay } from '../src/tasks/quota-block.ts'
 

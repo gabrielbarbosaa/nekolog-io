@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
-    "@internal/adapters": "workspace:*",
-    "@internal/clickhouse": "workspace:*",
+    "@nekolog-io/adapters": "workspace:*",
+    "@nekolog-io/clickhouse": "workspace:*",
     "@internal/schema": "workspace:*",
     "@internal/seed": "workspace:*",
     "@internal/spool": "workspace:*",

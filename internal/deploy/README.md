@@ -1,7 +1,9 @@
 # @internal/deploy
 
 O que separa a configuração do `wrangler` que fica no repositório dos valores
-que só existem dentro da conta da Cloudflare.
+que só existem dentro da conta da Cloudflare — e, junto, os testes que travam
+as afirmações que este repositório faz sobre **o que ele publica**: os
+hostnames, o que vai para a VM e o formato dos pacotes `@nekolog-io/*`.
 
 ## O problema
 
@@ -76,3 +78,21 @@ publica.
 E o workflow `Workers` roda `wrangler deploy --dry-run` nos três ambientes em
 todo PR. Ele compila o Worker de verdade, então um import quebrado ou um bundle
 que não fecha falham ali, sem conta nenhuma.
+
+## O que `packaging.test.ts` impede
+
+Desde a etapa 2.0 este repositório publica `@nekolog-io/adapters`,
+`@nekolog-io/clickhouse` e `@nekolog-io/config` no npm, e isso cria um tipo de
+erro que só aparece depois de publicar — tarde demais. O teste exige, de cada
+pacote publicado, que:
+
+- nenhuma dependência seja privada (`@internal/*` ou `@apps/*`) — isso instala
+  quebrado na máquina de quem baixa, e nada aqui dentro perceberia;
+- tudo para onde o `exports` aponta esteja na lista `files`;
+- o `exports` do workspace aponte para `./src/*.ts` e o do `publishConfig` para
+  `./dist/`, porque é esse par que deixa os CLIs rodarem sem build e mesmo assim
+  publica um pacote compilado;
+- o `lint` confira o **tarball**, não o diretório, já que é só no tarball que o
+  `publishConfig` existe;
+- o `@nekolog-io/clickhouse` leve as migrations e o `src/cli.ts` comece com o
+  shebang, sem o qual o `bin` não executa.

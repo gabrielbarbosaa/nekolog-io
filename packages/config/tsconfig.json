@@ -4,6 +4,7 @@
     "rootDir": "src",
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "isolatedDeclarations": true,
     "types": ["node"]
   },
   "include": ["src"]

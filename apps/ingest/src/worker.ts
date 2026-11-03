@@ -7,8 +7,8 @@ import {
   memoryRateLimiter,
   type R2BucketLike,
   r2BlobStore,
-} from '@internal/adapters'
-import { clickHouseLogStore } from '@internal/clickhouse/log-store'
+} from '@nekolog-io/adapters'
+import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import type { Hono } from 'hono'
 import { createIngestApp } from './app.ts'
 import { createAttributeBudget } from './attributes.ts'

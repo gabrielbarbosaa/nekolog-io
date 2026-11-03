@@ -251,12 +251,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)
-      '@internal/adapters':
-        specifier: workspace:*
-        version: link:../../internal/adapters
-      '@internal/clickhouse':
-        specifier: workspace:*
-        version: link:../../internal/clickhouse
       '@internal/schema':
         specifier: workspace:*
         version: link:../../internal/schema
@@ -266,6 +260,12 @@ importers:
       '@internal/spool':
         specifier: workspace:*
         version: link:../../internal/spool
+      '@nekolog-io/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@nekolog-io/clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/clickhouse
       hono:
         specifier: ^4.10.6
         version: 4.13.14
@@ -291,15 +291,15 @@ importers:
 
   apps/jobs:
     dependencies:
-      '@internal/adapters':
-        specifier: workspace:*
-        version: link:../../internal/adapters
-      '@internal/clickhouse':
-        specifier: workspace:*
-        version: link:../../internal/clickhouse
       '@internal/spool':
         specifier: workspace:*
         version: link:../../internal/spool
+      '@nekolog-io/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@nekolog-io/clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/clickhouse
       hono:
         specifier: ^4.10.6
         version: 4.13.14
@@ -384,53 +384,15 @@ importers:
       '@apps/ingest':
         specifier: workspace:*
         version: link:../../apps/ingest
-      '@internal/clickhouse':
-        specifier: workspace:*
-        version: link:../../internal/clickhouse
       '@internal/seed':
         specifier: workspace:*
         version: link:../../internal/seed
+      '@nekolog-io/clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/clickhouse
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.19.2
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  internal/adapters:
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.19.2
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  internal/clickhouse:
-    dependencies:
-      '@internal/adapters':
-        specifier: workspace:*
-        version: link:../adapters
-      '@internal/config':
-        specifier: workspace:*
-        version: link:../config
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.19.2
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  internal/config:
-    dependencies:
-      valibot:
-        specifier: ^1.5.0
-        version: 1.5.0(typescript@7.0.2)
-    devDependencies:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -465,9 +427,9 @@ importers:
 
   internal/seed:
     dependencies:
-      '@internal/adapters':
+      '@nekolog-io/adapters':
         specifier: workspace:*
-        version: link:../adapters
+        version: link:../../packages/adapters
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -490,6 +452,71 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/adapters:
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: ^0.18.5
+        version: 0.18.5
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      publint:
+        specifier: ^0.3.25
+        version: 0.3.25
+      tsdown:
+        specifier: ^0.23.2
+        version: 0.23.2(@arethetypeswrong/core@0.18.5)(publint@0.3.25)(typescript@7.0.2)
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/clickhouse:
+    dependencies:
+      '@nekolog-io/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@nekolog-io/config':
+        specifier: workspace:*
+        version: link:../config
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: ^0.18.5
+        version: 0.18.5
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      publint:
+        specifier: ^0.3.25
+        version: 0.3.25
+      tsdown:
+        specifier: ^0.23.2
+        version: 0.23.2(@arethetypeswrong/core@0.18.5)(publint@0.3.25)(typescript@7.0.2)
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/config:
+    dependencies:
+      valibot:
+        specifier: ^1.5.0
+        version: 1.5.0(typescript@7.0.2)
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: ^0.18.5
+        version: 0.18.5
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      publint:
+        specifier: ^0.3.25
+        version: 0.3.25
+      tsdown:
+        specifier: ^0.23.2
+        version: 0.23.2(@arethetypeswrong/core@0.18.5)(publint@0.3.25)(typescript@7.0.2)
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))

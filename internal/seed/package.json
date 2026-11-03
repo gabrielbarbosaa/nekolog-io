@@ -12,7 +12,7 @@
     "seed": "node src/cli.ts"
   },
   "dependencies": {
-    "@internal/adapters": "workspace:*"
+    "@nekolog-io/adapters": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

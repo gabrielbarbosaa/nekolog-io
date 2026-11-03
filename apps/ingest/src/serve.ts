@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ping } from '@internal/clickhouse/client'
 import { parseSeedDocument } from '@internal/seed'
+import { ping } from '@nekolog-io/clickhouse/client'
 import { localIngestConfigFrom, startLocalIngest } from './local.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')

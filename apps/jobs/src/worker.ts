@@ -1,6 +1,11 @@
-import { type KvNamespace, kvQuotaStore, type R2BucketLike, r2BlobStore } from '@internal/adapters'
-import { clickHouseLogStore } from '@internal/clickhouse/log-store'
-import { clickHouseUsageStore } from '@internal/clickhouse/usage-store'
+import {
+  type KvNamespace,
+  kvQuotaStore,
+  type R2BucketLike,
+  r2BlobStore,
+} from '@nekolog-io/adapters'
+import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
+import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
 import type { Hono } from 'hono'
 import { createJobsApp } from './app.ts'
 import { type RunSummary, runDueTasks } from './run.ts'

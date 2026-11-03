@@ -3,10 +3,14 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const MIGRATION_FILE_PATTERN = /^(\d{4})_([a-z0-9]+(?:_[a-z0-9]+)*)\.sql$/
+export const MIGRATION_FILE_PATTERN: RegExp = /^(\d{4})_([a-z0-9]+(?:_[a-z0-9]+)*)\.sql$/
 export const DATABASE_PLACEHOLDER = '{{database}}'
 
-export const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
+export const MIGRATIONS_DIR: string = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'migrations',
+)
 
 export type Migration = {
   version: number

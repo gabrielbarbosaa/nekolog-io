@@ -164,7 +164,7 @@ A publicação no npm não usa nenhum token: é feita por trusted publishing.
 
 ## 3. Runner de migrations do ClickHouse
 
-- **Arquivos:** `internal/clickhouse/migrations/0001_create_logs.sql`, `0002_…`. **Um comando SQL por arquivo**, porque a API HTTP do ClickHouse executa um comando por requisição.
+- **Arquivos:** `packages/clickhouse/migrations/0001_create_logs.sql`, `0002_…`. **Um comando SQL por arquivo**, porque a API HTTP do ClickHouse executa um comando por requisição.
 - **Controle:** tabela `_migrations (version UInt32, name String, checksum String, applied_at DateTime)`.
 - **Execução:** aplica em ordem as migrations que ainda não estão em `_migrations` e grava o checksum de cada uma.
 - **Proteção:** se o checksum de uma migration já aplicada mudar, o runner para com erro. Migration aplicada nunca é editada.

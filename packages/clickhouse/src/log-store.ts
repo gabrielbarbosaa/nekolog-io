@@ -1,4 +1,4 @@
-import type { LogStore, LogStoreInsertOptions, LogStoreInsertResult } from '@internal/adapters'
+import type { LogStore, LogStoreInsertOptions, LogStoreInsertResult } from '@nekolog-io/adapters'
 import { type ClickHouseConfig, execute } from './client.ts'
 
 export const LOGS_TABLE = 'logs'

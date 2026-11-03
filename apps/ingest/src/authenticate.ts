@@ -4,7 +4,7 @@ import {
   type KeyRecord,
   type KeyStore,
   originAllowed,
-} from '@internal/adapters'
+} from '@nekolog-io/adapters'
 import type { Authenticator, AuthOutcome, IngestPrincipal } from './app.ts'
 import { keyFromRequest } from './keys.ts'
 

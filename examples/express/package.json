@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@apps/ingest": "workspace:*",
-    "@internal/clickhouse": "workspace:*",
+    "@nekolog-io/clickhouse": "workspace:*",
     "@internal/seed": "workspace:*",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",

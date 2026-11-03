@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { generateApiKey, hashApiKey, type KeyRecord, memoryKeyStore } from '@internal/adapters'
+import { generateApiKey, hashApiKey, type KeyRecord, memoryKeyStore } from '@nekolog-io/adapters'
 import { createLogger } from '@nekolog-io/node'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createIngestApp, createKeyAuthenticator } from '../src/index.ts'
