@@ -148,6 +148,19 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 
 ## M3 — Front e integrações
 
+> **Nota (03/11/2026):** como o M2, este marco está separado entre os dois
+> repositórios. As etapas **com caixa** são as que têm branch e PR **aqui** —
+> os SDKs, os exemplos, a CLI, a matriz de compatibilidade e os guias. As duas
+> de interface estão em "O que acontece no nekolog-dashboard", no fim do marco.
+> Os números e os nomes de branch **não mudaram**, pelo mesmo motivo do M2: as
+> issues 3.1 a 3.15 já existem, e o `internal/tracking` nunca renomeia nada.
+>
+> **O M4, o M5 e o M6 ainda não foram separados**, e isso é deliberado. Lá a
+> divisão quase nunca é por etapa inteira: a busca tem o parser aqui e a tela
+> lá, o alerta é avaliado pelos jobs daqui e configurado lá, a exportação é
+> gerada aqui e baixada lá. Decidir agora onde cada metade começa seria desenhar
+> no escuro; cada marco é separado quando começa, como este e como o M2.
+
 - [ ] **3.1** `feat/browser-sdk` — `@nekolog-io/browser`: erros globais, sessão, `setUser` e envio no `pagehide`.
 - [ ] **3.2** `feat/browser-breadcrumbs` — cliques, navegação e fetch.
 - [ ] **3.3** `feat/browser-offline` — fila offline no IndexedDB.
@@ -157,14 +170,22 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 - [ ] **3.7** `feat/server-middlewares` — Express, Fastify e Hono.
 - [ ] **3.8** `feat/nestjs` — módulo e interceptor.
 - [ ] **3.9** `feat/log-transports` — transports para pino e winston.
-- [ ] **3.10** `feat/trace-view` — linha do tempo por `trace_id` no dashboard.
 - [ ] **3.11** `feat/examples` — um exemplo para cada integração, usados no e2e.
 - [ ] **3.12** `ci/compat-matrix` — testes em Node 22, 24 e 26, Bun e Deno, Chromium, Firefox e WebKit; `size-limit` no SDK de browser.
 - [ ] **3.13** `feat/cli-init` — `npx @nekolog-io/cli init`: detecta o framework, instala o SDK e cria o `.env`.
-- [ ] **3.14** `feat/onboarding` — passo a passo "envie seu primeiro log", esperando o log chegar em tempo real.
 - [ ] **3.15** `docs/sdk-guides` — guia de cada framework nos três idiomas, incluindo o CORS do `traceparent`.
 
-**Pronto quando:** um clique no front e a request no back aparecem na mesma linha do tempo.
+### O que acontece no nekolog-dashboard
+
+O escopo continua valendo; só a branch e o PR mudam de endereço. As duas etapas
+abaixo são tela, e dependem do que este marco entrega aqui: sem o `traceparent`
+da 3.4 não há linha do tempo para desenhar, e sem a CLI da 3.13 não há comando
+para o passo a passo mostrar.
+
+- **3.10** `feat/trace-view` — linha do tempo por `trace_id`, com o clique no front e a request no back na mesma tela.
+- **3.14** `feat/onboarding` — passo a passo "envie seu primeiro log" (a rota `…/setup` do mapa de telas da seção 10.1 do plano), esperando o log chegar em tempo real.
+
+**Pronto quando:** um clique no front e a request no back aparecem na mesma linha do tempo. *(Como no M2, o critério atravessa os dois repositórios: a propagação do `traceparent` e os SDKs são daqui, a linha do tempo é de lá.)*
 
 ## M4 — Investigação
 
