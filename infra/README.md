@@ -13,10 +13,66 @@ modules/
   environment/   junta os cinco; é o que cada ambiente chama
   oracle-vm/     a VM, a rede sem entrada e o cloud-init
   ssh-access/    a aplicação Access na frente do SSH da máquina
+  vercel-project/ um projeto na Vercel, seus domínios e suas variáveis
 envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
 repo/                 rulesets do GitHub; não é um ambiente, é o repositório
 vm/                   a VM; também não é um ambiente — é uma máquina para os três
+vercel/               os três projetos da Vercel; também não é por ambiente
 ```
+
+## Por que a Vercel não tem uma raiz por ambiente
+
+Nas outras raízes, ambiente é diretório. Na Vercel não dá: a unidade lá é o
+**projeto**, e um projeto já contém os três — produção é a `main`, e `qa` e
+`dev` são preview de branch. Três projetos por aplicação dariam três histórias
+de deploy desconectadas para a mesma aplicação, e domínio de preview por branch
+é o recurso que a Vercel oferece exatamente para isso.
+
+Então `infra/vercel` declara **três projetos**: o site (`apps/web`), a
+documentação (`apps/docs`) e o dashboard, que vem do repositório privado —
+porque toda a infraestrutura mora aqui, mesmo a de lá.
+
+O que separa os ambientes é o segredo, não o projeto, e o módulo recusa
+configuração que não separe:
+
+- variável sem nenhum `target` não chega a deployment nenhum;
+- variável de produção com `git_branch` faria produção ler o valor de uma
+  branch;
+- **variável sensível com `target = ["preview"]` e sem `git_branch`** é a mesma
+  senha em `dev` e em `qa`, que é o que a etapa 2.22 pede para não acontecer;
+- domínio fora da zona que o módulo administra.
+
+**Nome e valor são duas variáveis diferentes, e isso não é estilo.** O
+`for_each` do OpenTofu não aceita valor sensível — a chave do recurso apareceria
+em claro —, então `*_variables` diz só quais variáveis existem e onde cada uma
+chega, e `*_values` carrega os valores. A primeira vem de uma *variable* do
+repositório e aparece no plano; a segunda vem de um *secret* e não aparece. O
+módulo recusa declaração sem valor e valor sem declaração, que é o jeito de as
+duas não se separarem na prática.
+
+O provedor da Vercel é instalado sem assinatura GPG: o registro do OpenTofu não
+tem chave publicada para ele. O que prende a versão é o `.terraform.lock.hcl`
+com os hashes do artefato, gerado pelo CI e commitado, como nas outras raízes.
+
+## A documentação sai do site, mas não pelo mesmo CSP
+
+`nekolog.io/docs` é reescrito para o projeto da documentação
+(`next.config.ts`, `rewrites`), porque o Astro é construído com `base: '/docs'`
+e o plano diz que site e docs moram no mesmo endereço.
+
+Por isso o `proxy.ts` do `apps/web` **exclui `/docs` do matcher**: o CSP com
+nonce do site e o CSP com hashes da documentação não podem valer para a mesma
+resposta, e se o do site ganhasse, todo script do Starlight seria bloqueado —
+página em branco, sem erro de build.
+
+O teste que guarda isso lê o `functions-config-manifest.json` do build e confere
+em quais caminhos o proxy **foi compilado** para rodar. Foi a segunda tentativa:
+a primeira pedia `/docs/...` ao servidor de produção e conferia que não vinha
+`content-security-policy` — e passava dos dois jeitos, porque sem a documentação
+no ar a reescrita falha antes e a resposta sai sem cabeçalho nenhum. Um teste que
+não distingue as duas configurações não guarda nada. **O comportamento em
+produção, com o destino da reescrita existindo, continua sem verificação até
+haver conta na Vercel.**
 
 A `vm` lê os três estados de ambiente com `terraform_remote_state`, para montar
 o arquivo de credenciais de cada `cloudflared`. Ela aplica depois deles, e só
