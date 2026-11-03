@@ -30,6 +30,20 @@ export type { KvNamespace } from './kv.ts'
 export type { MemoryRateLimiterOptions } from './limits/memory-rate-limiter.ts'
 export { DEFAULT_RATE_LIMIT_ENTRIES, memoryRateLimiter } from './limits/memory-rate-limiter.ts'
 export type { LogStore, LogStoreInsertOptions, LogStoreInsertResult } from './log-store.ts'
+export {
+  assertAddress,
+  assertMessage,
+  EmailRefused,
+  MAX_SUBJECT_CHARS,
+  normaliseAddress,
+} from './mail/address.ts'
+export { allowedBy, allowlistedMailer, parseAllowlist } from './mail/allowlist.ts'
+export type { MemoryMailer } from './mail/memory-mailer.ts'
+export { memoryMailer } from './mail/memory-mailer.ts'
+export type { ResendMailerOptions } from './mail/resend-mailer.ts'
+export { RESEND_ENDPOINT, ResendError, resendMailer } from './mail/resend-mailer.ts'
+export type { SmtpEnvelope, SmtpMailerOptions, SmtpTransportLike } from './mail/smtp-mailer.ts'
+export { smtpMailer } from './mail/smtp-mailer.ts'
 export type { EmailMessage, Mailer } from './mailer.ts'
 export type { QuotaBlock, QuotaStore } from './quota-store.ts'
 export type {

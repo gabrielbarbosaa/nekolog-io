@@ -26,6 +26,9 @@
         "POSTGRES_TEST_URL",
         "REDIS_TEST_REQUIRED",
         "REDIS_TEST_URL",
+        "MAILPIT_TEST_REQUIRED",
+        "MAILPIT_TEST_URL",
+        "SMTP_TEST_URL",
         "FUZZ_RUNS"
       ]
     }
