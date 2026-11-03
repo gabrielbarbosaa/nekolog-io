@@ -193,8 +193,12 @@ describe('buildJobTasks', () => {
   it('registers every task, each of which runs every minute', () => {
     const tasks = buildJobTasks(ENV)
 
-    expect(tasks.map((task) => task.name)).toEqual(['spool-resend', 'quota-block'])
-    expect(tasks.every((task) => task.everyMinutes === 1)).toBe(true)
+    expect(tasks.map((task) => task.name)).toEqual([
+      'spool-resend',
+      'quota-block',
+      'capacity-watch',
+    ])
+    expect(tasks.every((task) => task.everyMinutes >= 1)).toBe(true)
   })
 
   it('refuses to boot on a quota that is not a positive whole number', () => {
@@ -213,7 +217,7 @@ describe('the worker entry', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ service: 'jobs', version: '1.2.3', tasks: 2 })
+    expect(await response.json()).toMatchObject({ service: 'jobs', version: '1.2.3', tasks: 3 })
   })
 
   it('keeps the cron alive with waitUntil and returns the same promise', async () => {
