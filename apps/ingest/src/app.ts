@@ -1,9 +1,20 @@
 import { type BatchErrorCode, type ParsedBatch, parseBatch } from '@internal/schema'
 import type { RateLimiter, RateLimitResult } from '@nekolog-io/adapters'
+import { uuidv7 } from '@nekolog-io/core'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
 import { corsHeadersFor, preflightHeadersFor, withCors } from './cors.ts'
 import { errorBody, statusFor } from './errors.ts'
+import { OtlpError, type OtlpTranslation, translateOtlp } from './otlp.ts'
+
+export function partialSuccessFor(rejected: number): Record<string, string> {
+  return rejected === 0
+    ? {}
+    : {
+        rejectedLogRecords: String(rejected),
+        errorMessage: `${rejected} log record(s) were not accepted`,
+      }
+}
 
 export type IngestPrincipal = {
   projectId: string
@@ -50,6 +61,7 @@ export type IngestDeps = {
   onError?: (error: unknown) => void
   now?: () => number
   body?: ReadBodyOptions
+  newBatchId?: () => string
 }
 
 export const DENIED_WITHOUT_A_KEY_STORE: AuthOutcome = {
@@ -185,6 +197,67 @@ export function createIngestApp(deps: IngestDeps): Hono {
       { accepted: parsed.batch.accepted.length, rejected: parsed.batch.rejected },
       202,
       corsHeadersFor(origin),
+    )
+  })
+
+  app.post('/v1/otlp/logs', async (c) => {
+    const auth = await deps.authenticate(c.req.raw)
+    if (!auth.ok) {
+      return fail(auth.code, auth.message, auth.retryAfter ?? null)
+    }
+
+    const body = await readBatchBody(c.req.raw, deps.body)
+    if (!body.ok) {
+      return fail(body.code, body.message)
+    }
+
+    const receivedAt = (deps.now ?? Date.now)()
+
+    let translated: OtlpTranslation
+    try {
+      translated = translateOtlp(body.value, receivedAt)
+    } catch (error) {
+      return fail('invalid_payload', error instanceof OtlpError ? error.message : 'Unreadable OTLP')
+    }
+
+    if (translated.events.length === 0) {
+      return c.json({ partialSuccess: partialSuccessFor(translated.dropped) }, 200)
+    }
+
+    const parsed = parseBatch({
+      schemaVersion: 1,
+      batchId: (deps.newBatchId ?? uuidv7)(),
+      sdk: { name: 'otlp', version: '1' },
+      resource: translated.resource,
+      events: translated.events,
+    })
+    if (!parsed.ok) {
+      return fail(parsed.code, parsed.message)
+    }
+
+    const verdict = await measure(deps, auth.principal.environmentId, parsed.batch.accepted.length)
+    if (verdict !== null && !verdict.allowed) {
+      return fail('rate_limited', 'Too many events for this environment', verdict.retryAfterSeconds)
+    }
+
+    const written = (async () => {
+      try {
+        await deps.sink(parsed.batch, auth.principal, { request: c.req.raw, receivedAt })
+      } catch (error) {
+        report(deps, error)
+      }
+    })()
+
+    const deferred = platformDefer(c) ?? deps.defer
+    if (deferred) {
+      deferred(written)
+    } else {
+      await written
+    }
+
+    return c.json(
+      { partialSuccess: partialSuccessFor(translated.dropped + parsed.batch.rejected.length) },
+      200,
     )
   })
 

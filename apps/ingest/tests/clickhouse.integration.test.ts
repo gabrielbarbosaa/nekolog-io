@@ -432,6 +432,90 @@ describe.skipIf(!reachable)('a log from the sdk reaching ClickHouse', () => {
     expect(row?.message).not.toContain('ana@example.com')
   })
 
+  it('carries an OTLP record all the way to a row', async () => {
+    const at = Date.now()
+    const response = await fetch(`${endpoint}/v1/otlp/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        resourceLogs: [
+          {
+            resource: {
+              attributes: [
+                { key: 'service.name', value: { stringValue: 'otlp-sender' } },
+                { key: 'service.version', value: { stringValue: '2.0.0' } },
+                { key: 'telemetry.sdk.language', value: { stringValue: 'nodejs' } },
+              ],
+            },
+            scopeLogs: [
+              {
+                scope: { name: 'instrumentation' },
+                logRecords: [
+                  {
+                    timeUnixNano: String(BigInt(at) * 1000000n),
+                    severityNumber: 17,
+                    severityText: 'ERROR',
+                    body: { stringValue: 'otlp said the gateway timed out' },
+                    traceId: 'c'.repeat(32),
+                    spanId: 'd'.repeat(16),
+                    attributes: [{ key: 'orderId', value: { stringValue: 'ord_otlp' } }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    })
+
+    const [row] = await storedWhere("service = 'otlp-sender'")
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ partialSuccess: {} })
+    expect(row).toMatchObject({
+      project_id: 'p_demo',
+      environment_id: 'e_dev',
+      level: 'error',
+      message: 'otlp said the gateway timed out',
+      release: '2.0.0',
+      source: 'node',
+      trace_id: 'c'.repeat(32),
+      span_id: 'd'.repeat(16),
+    })
+    expect(row?.attributes).toMatchObject({ orderId: 'ord_otlp' })
+  })
+
+  it('gives an OTLP error the same fingerprint machinery as a native one', async () => {
+    const at = Date.now()
+
+    await fetch(`${endpoint}/v1/otlp/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        resourceLogs: [
+          {
+            resource: { attributes: [{ key: 'service.name', value: { stringValue: 'otlp-fp' } }] },
+            scopeLogs: [
+              {
+                logRecords: [1, 2].map(() => ({
+                  timeUnixNano: String(BigInt(at) * 1000000n),
+                  severityNumber: 17,
+                  body: { stringValue: 'the same thing broke' },
+                })),
+              },
+            ],
+          },
+        ],
+      }),
+    })
+
+    const rows = await storedWhere("service = 'otlp-fp'")
+
+    expect(rows).toHaveLength(2)
+    expect(new Set(rows.map((row) => String(row.fingerprint))).size).toBe(1)
+    expect(String(rows[0]?.fingerprint)).not.toBe('0')
+  })
+
   it('writes nothing at all for a key the store does not know', async () => {
     const before = await queryRows<{ total: string }>(
       config,

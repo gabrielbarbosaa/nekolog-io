@@ -326,7 +326,7 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 > anteriores. A que perdeu a caixa continua aberta aqui, órfã, como as outras
 > seis.
 
-- [ ] **6.1** `feat/otlp` — endpoint OTLP/HTTP. *(Inteira daqui: é uma rota no `apps/ingest`.)*
+- [x] **6.1** `feat/otlp` — endpoint OTLP/HTTP. *(Inteira daqui: é uma rota no `apps/ingest`.)*
 - [ ] **6.2** `infra/self-host` — docker-compose de produção em um comando e guia de instalação. *(Inteira daqui. O dashboard não entra, por ser fechado.)*
 - [ ] **6.3** `docs/complete` — documentação completa e versionada nos três idiomas. *(Daqui: a documentação do `apps/docs`, incluindo a referência da API pública da 5.9. O que é só da tela é de lá.)*
 - [ ] **6.4** `test/load` — teste de carga com k6 e ajustes de desempenho. *(Inteira daqui: mede a ingestão, os jobs e a API pública.)*
