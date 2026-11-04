@@ -2,13 +2,17 @@ import type {
   IssuePage,
   IssueQuery,
   IssueReader,
+  Release,
   ReleaseInput,
   ReleaseStore,
 } from '@nekolog-io/adapters'
 import {
   assertCommit,
   assertVersion,
+  blobSourceMapStore,
   encodeIssueCursor,
+  MAX_SOURCE_MAP_BYTES,
+  memoryBlobStore,
   memoryRateLimiter,
 } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
@@ -48,25 +52,33 @@ function listing(issues: IssuePage['issues'], seen: IssueQuery[]): IssueReader {
   }
 }
 
-function recording(seen: ReleaseInput[]): ReleaseStore {
+const RELEASE_ID = 'rel_0123456789ABCDEFGHJKMNPQRS'
+
+const MAP: string = JSON.stringify({ version: 3, sources: ['src/app.ts'], mappings: 'AAAA' })
+
+function recording(seen: ReleaseInput[], counted: Array<[string, number]> = []): ReleaseStore {
+  const made = (input: ReleaseInput): Release => ({
+    id: RELEASE_ID,
+    projectId: input.projectId,
+    environmentId: input.environmentId,
+    version: input.version,
+    commit: input.commit ?? null,
+    sourcemapCount: 0,
+    releasedAt: '2026-11-04T12:00:00.000Z',
+    createdAt: '2026-11-04T12:00:00.000Z',
+  })
+
   return {
     record: async (input) => {
       assertVersion(input.version)
       assertCommit(input.commit)
       seen.push(input)
-      return {
-        created: true,
-        release: {
-          id: 'rel_0123456789ABCDEFGHJKMNPQRS',
-          projectId: input.projectId,
-          environmentId: input.environmentId,
-          version: input.version,
-          commit: input.commit ?? null,
-          sourcemapCount: 0,
-          releasedAt: '2026-11-04T12:00:00.000Z',
-          createdAt: '2026-11-04T12:00:00.000Z',
-        },
-      }
+      return { created: true, release: made(input) }
+    },
+    byVersion: async (environmentId, version) =>
+      made({ projectId: PRINCIPAL.projectId, environmentId, version }),
+    countSourceMaps: async (releaseId, total) => {
+      counted.push([releaseId, total])
     },
   }
 }
@@ -284,9 +296,11 @@ describe('the public read API', () => {
       }
     }
 
-    for (const method of ['GET', 'PUT', 'PATCH', 'DELETE']) {
-      const response = await app.request('http://api.test/v1/releases', { method })
-      expect(response.status, `${method} /v1/releases`).toBe(404)
+    for (const path of ['/v1/releases', '/v1/sourcemaps']) {
+      for (const method of ['GET', 'PUT', 'PATCH', 'DELETE']) {
+        const response = await app.request(`http://api.test${path}`, { method })
+        expect(response.status, `${method} ${path}`).toBe(404)
+      }
     }
 
     expect(asked).toHaveLength(0)
@@ -378,6 +392,147 @@ describe('the public read API', () => {
 
     expect(response.status).toBe(404)
     expect(await body(response)).toMatchObject({ error: { code: 'not_found' } })
+  })
+
+  it('stores a source map against a release that exists', async () => {
+    const blobs = memoryBlobStore()
+    const counted: Array<[string, number]> = []
+    const { app } = build({
+      releases: recording([], counted),
+      sourceMaps: blobSourceMapStore(blobs),
+    })
+
+    const response = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+    )
+
+    expect(response.status).toBe(201)
+    expect(await body(response)).toMatchObject({
+      sourceMap: { name: 'app.js.map' },
+      release: { version: '1.4.2', sourcemapCount: 1 },
+    })
+    expect(await blobs.list('')).toEqual([
+      'sourcemaps/prj_1/rel_0123456789ABCDEFGHJKMNPQRS/app.js.map',
+    ])
+    expect(counted).toEqual([['rel_0123456789ABCDEFGHJKMNPQRS', 1]])
+  })
+
+  it('keys the map on the principal, whatever the caller puts in the query string', async () => {
+    const blobs = memoryBlobStore()
+    const { app } = build({ releases: recording([], []), sourceMaps: blobSourceMapStore(blobs) })
+
+    const response = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map&project=prj_2&environment=env_2&releaseId=rel_evil',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+    )
+
+    expect(response.status).toBe(201)
+    const keys = await blobs.list('')
+    expect(keys).toEqual([`sourcemaps/prj_1/${RELEASE_ID}/app.js.map`])
+    expect(keys.join()).not.toContain('prj_2')
+    expect(keys.join()).not.toContain('rel_evil')
+  })
+
+  it('refuses a release this environment never recorded, and writes nothing', async () => {
+    const blobs = memoryBlobStore()
+    const { app } = build({
+      releases: { ...recording([], []), byVersion: async () => null },
+      sourceMaps: blobSourceMapStore(blobs),
+    })
+
+    const response = await app.request(
+      'http://api.test/v1/sourcemaps?release=9.9.9&name=app.js.map',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+    )
+
+    expect(response.status).toBe(404)
+    expect(JSON.stringify(await body(response))).toContain('Record it first')
+    expect(await blobs.list('')).toEqual([])
+  })
+
+  it('refuses a name that could reach out of its own directory', async () => {
+    const blobs = memoryBlobStore()
+    const { app } = build({ releases: recording([], []), sourceMaps: blobSourceMapStore(blobs) })
+
+    for (const name of ['../escape.map', 'a%2Fb.map', 'app.js', '']) {
+      const response = await app.request(
+        `http://api.test/v1/sourcemaps?release=1.4.2&name=${encodeURIComponent(name)}`,
+        { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+      )
+      expect(response.status, JSON.stringify(name)).toBe(400)
+    }
+
+    expect(await blobs.list('')).toEqual([])
+  })
+
+  it('answers 413 for a map over the limit, by what arrived as well as what was declared', async () => {
+    const blobs = memoryBlobStore()
+    const { app } = build({ releases: recording([], []), sourceMaps: blobSourceMapStore(blobs) })
+
+    const declared = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': String(MAX_SOURCE_MAP_BYTES + 1),
+        },
+        body: MAP,
+      },
+    )
+    expect(declared.status).toBe(413)
+
+    const arrived = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: new Uint8Array(MAX_SOURCE_MAP_BYTES + 1).fill(0x7b),
+      },
+    )
+    expect(arrived.status).toBe(413)
+    expect(await blobs.list('')).toEqual([])
+  })
+
+  it('needs a key that may write, and says which release it wants', async () => {
+    const blobs = memoryBlobStore()
+    const { app } = build({
+      releases: recording([], []),
+      sourceMaps: blobSourceMapStore(blobs),
+      authenticateWrite: () => ({
+        ok: false,
+        code: 'insufficient_scope',
+        message: 'no logs:write',
+      }),
+    })
+
+    const refused = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+    )
+    expect(refused.status).toBe(403)
+
+    const { app: open } = build({
+      releases: recording([], []),
+      sourceMaps: blobSourceMapStore(memoryBlobStore()),
+    })
+    const nameless = await open.request('http://api.test/v1/sourcemaps?name=app.js.map', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: MAP,
+    })
+    expect(nameless.status).toBe(400)
+  })
+
+  it('says plainly that it stores no source maps when nothing wired a store', async () => {
+    const { app } = build({ releases: recording([], []) })
+    const response = await app.request(
+      'http://api.test/v1/sourcemaps?release=1.4.2&name=app.js.map',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: MAP },
+    )
+
+    expect(response.status).toBe(404)
   })
 
   it('answers 404 for an endpoint that does not exist', async () => {

@@ -53,9 +53,12 @@ describe('the OpenAPI document, which is how this API is documented', () => {
     ).toEqual(routesOfTheApp())
   })
 
-  it('writes on exactly one route, and says which scope each refusal is about', () => {
+  it('writes only on POST, and says which scope each refusal is about', () => {
     const writes = operations().filter(([named]) => !named.startsWith('GET '))
-    expect(writes.map(([named]) => named)).toEqual(['POST /v1/releases'])
+    expect(writes.map(([named]) => named).sort()).toEqual([
+      'POST /v1/releases',
+      'POST /v1/sourcemaps',
+    ])
 
     for (const [named, operation] of operations()) {
       const forbidden = dig(operation, 'responses', '403')

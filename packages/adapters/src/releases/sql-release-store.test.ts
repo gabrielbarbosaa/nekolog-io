@@ -152,6 +152,44 @@ describe('the sql release store, which is the only thing this API writes', () =>
     ).rejects.toThrow(/no project and environment/)
   })
 
+  it('looks a release up inside one environment, never across them', async () => {
+    const { run, calls } = recorder([row()])
+    const found = await sqlReleaseStore(run, options).byVersion('env_1', '1.4.2')
+
+    expect(calls[0]?.text).toMatch(/\nwhere environment_id = \$1 and version = \$2\n/)
+    expect(calls[0]?.params).toEqual(['env_1', '1.4.2'])
+    expect(found?.id).toBe(ID)
+
+    const empty = recorder([])
+    expect(await sqlReleaseStore(empty.run, options).byVersion('env_1', '9.9.9')).toBeNull()
+  })
+
+  it('refuses to look one up with no environment, or under a version it would not write', async () => {
+    const { run, calls } = recorder([row()])
+    const store = sqlReleaseStore(run, options)
+
+    await expect(store.byVersion('', '1.4.2')).rejects.toThrow(/no environment/)
+    await expect(store.byVersion('env_1', ' 1.4.2')).rejects.toBeInstanceOf(InvalidRelease)
+    expect(calls).toHaveLength(0)
+  })
+
+  it('writes a source map count only for a release and only as a whole number', async () => {
+    const { run, calls } = recorder([])
+    const store = sqlReleaseStore(run, options)
+
+    await store.countSourceMaps(ID, 3)
+    expect(calls[0]?.text).toContain('update releases set sourcemap_count = $2 where id = $1')
+    expect(calls[0]?.params).toEqual([ID, 3])
+
+    for (const total of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(store.countSourceMaps(ID, total), String(total)).rejects.toThrow(
+        /Refusing to record/,
+      )
+    }
+    await expect(store.countSourceMaps('', 1)).rejects.toThrow(/no release/)
+    expect(calls).toHaveLength(1)
+  })
+
   it('mints an id of the shape the database demands', () => {
     const id = newReleaseId()
 

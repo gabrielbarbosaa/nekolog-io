@@ -77,6 +77,8 @@ curl -H "Authorization: Bearer $NEKOLOG_KEY" \
 | `GET /v1/histogram` | contagem por balde e por nível: `q`, `from`, `to`, `bucket` |
 | `GET /v1/issues` | erros agrupados por fingerprint: `status`, `since`, `until`, `cursor` |
 | `GET /openapi.json` | o contrato inteiro, para gerar um cliente ou só para ler |
+| `POST /v1/releases` | registra que uma versão saiu — `nekolog releases create` |
+| `POST /v1/sourcemaps` | sobe um mapa para uma release — `nekolog sourcemaps upload` |
 
 O `q` é a mesma linguagem de busca do Explorer hospedado:
 `level:error service:api @status>=500 "timeout"`. A única coisa que ela não
@@ -86,8 +88,10 @@ esse filtro em toda query por conta própria.
 Três regras valem saber antes de escrever um script. A key vai no cabeçalho
 `Authorization` e uma requisição com `?key=` é **recusada**, porque URL acaba em
 log de acesso e no histórico do navegador. Uma key **pública** também é
-recusada: ela está publicada em todo navegador que abre sua página. E a API só
-lê — um `POST` em qualquer dessas rotas é 404.
+recusada: ela está publicada em todo navegador que abre sua página. E as duas
+rotas que escrevem são as únicas que escrevem: `POST` em `/v1/logs` é 404,
+`GET` em `/v1/releases` é 404, e escrever pede `logs:write` onde ler pede
+`logs:read`.
 
 :::danger[Ponha TLS na frente desta também]
 A porta 8789 carrega uma key capaz de ler todo log do ambiente.
@@ -119,8 +123,10 @@ Três coisas faltam, e nenhuma delas é um defeito para contornar:
   bucket S3. Isso precisa de armazenamento de objetos e de credenciais que este
   stack não pede, então as tarefas de exportação simplesmente não estão ligadas
   no container de jobs — em vez de ligadas e falhando a cada minuto.
-- **Resolução de source map.** Precisa de um lugar para subir os mapas, que
-  ainda está sendo desenhado.
+- **Resolução de source map.** Subir os mapas funciona — o
+  `nekolog sourcemaps upload` guarda num volume Docker só deles, do mesmo jeito
+  que o serviço hospedado guarda num bucket. Aplicar um mapa a um stack trace
+  acontece numa tela, e as telas são do dashboard.
 
 Todo o resto roda: ingestão, OTLP, remoção de dado sensível, amostragem, nível
 mínimo, cotas, agrupamento de erros e alertas para um webhook.

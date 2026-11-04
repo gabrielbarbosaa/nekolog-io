@@ -12,7 +12,7 @@ RUN node -e "const f='package.json';const p=JSON.parse(require('fs').readFileSyn
 
 RUN corepack install \
   && pnpm install --frozen-lockfile \
-  && mkdir -p /var/lib/nekolog/spool /var/lib/nekolog/kv /var/lib/nekolog/state \
+  && mkdir -p /var/lib/nekolog/spool /var/lib/nekolog/kv /var/lib/nekolog/state /var/lib/nekolog/sourcemaps \
   && chown -R node:node /var/lib/nekolog /app \
   && chmod -R a+rX /opt/corepack
 

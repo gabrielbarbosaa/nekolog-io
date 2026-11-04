@@ -27,6 +27,8 @@ export interface RecordedRelease {
 
 export interface ReleaseStore {
   record(input: ReleaseInput): Promise<RecordedRelease>
+  byVersion(environmentId: string, version: string): Promise<Release | null>
+  countSourceMaps(releaseId: string, total: number): Promise<void>
 }
 
 export class InvalidRelease extends Error {

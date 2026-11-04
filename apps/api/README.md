@@ -17,7 +17,8 @@ request arrived on.
 | `GET /v1/logs` | Search, with `q`, `from`, `to`, `limit`, `order`. |
 | `GET /v1/histogram` | Counts per bucket and level, with `q`, `from`, `to`, `bucket`. |
 | `GET /v1/issues` | Errors grouped by fingerprint, with `status`, `since`, `until`, `limit`, `cursor`. |
-| `POST /v1/releases` | Record that a version went out. The only route that writes. |
+| `POST /v1/releases` | Record that a version went out. |
+| `POST /v1/sourcemaps` | Upload one `.map` against a release that already exists. |
 
 ```
 curl -H "Authorization: Bearer nekolog_sk_…" \
@@ -42,12 +43,21 @@ ends up in access logs, proxies and browser history.
 key that may read a tenant's logs cannot be one. The seed mints `logs:write` only for a
 public key, and this API demands `logs:read`.
 
-**It writes on exactly one route, and that one asks for a different scope.**
-`POST /v1/releases` needs `logs:write`; every other route needs `logs:read` and is a
+**The two routes that write ask for a different scope.** `POST /v1/releases` and
+`POST /v1/sourcemaps` need `logs:write`; every other route needs `logs:read` and is a
 `GET`. A `POST` to `/v1/logs` is a 404, not a method error, and a `GET` on
 `/v1/releases` is a 404 too. The ClickHouse credential is `nekolog_reader`, which holds
-`SELECT` on one database and no grant on S3 or on `system`, and there is no R2 binding
-in `wrangler.json` at all — the one write this app does goes to Postgres.
+`SELECT` on one database and no grant on S3 or on `system` — nothing this app writes
+goes to ClickHouse. Its only R2 binding is `SOURCEMAPS`; there is no `SPOOL` and no
+`EXPORTS`.
+
+**A source map is keyed by the release id, never by the version.** A version may
+legally hold a `/` or a `+`, and a key with either in it would not survive a
+filesystem. The upload must name a release that already exists, so the count on that
+release cannot drift, and re-uploading a name replaces it without raising the count.
+The body is **checked, not parsed**: the first 4 KB must open a JSON object and name
+`mappings` or `sections`, and a declared `version` must be 3. Parsing megabytes of JSON
+does not fit a Worker's CPU budget, and the map is parsed where it is used.
 
 **Recording a release is idempotent.** Sending the same version again returns the row
 that already exists with `created: false`, keeps the earliest `releasedAt` (`least`, the

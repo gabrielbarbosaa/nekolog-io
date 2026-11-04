@@ -39,6 +39,24 @@ returning
   (xmax = 0) as created
 `
 
+const FIND_RELEASE = `
+select
+  id,
+  project_id,
+  environment_id,
+  version,
+  commit,
+  sourcemap_count,
+  released_at,
+  created_at
+from releases
+where environment_id = $1 and version = $2
+`
+
+const COUNT_SOURCE_MAPS = `
+update releases set sourcemap_count = $2 where id = $1
+`
+
 function moment(value: unknown): string {
   if (value instanceof Date) {
     return value.toISOString()
@@ -95,6 +113,25 @@ export function sqlReleaseStore(
       }
 
       return { release: releaseOf(row), created: row.created === true }
+    },
+
+    async byVersion(environmentId: string, version: string): Promise<Release | null> {
+      if (environmentId === '') {
+        throw new Error('Refusing to look for a release with no environment to scope it to.')
+      }
+      const rows = await run(FIND_RELEASE, [environmentId, assertVersion(version)])
+      const row = rows[0]
+      return row === undefined ? null : releaseOf(row)
+    },
+
+    async countSourceMaps(releaseId: string, total: number): Promise<void> {
+      if (releaseId === '') {
+        throw new Error('Refusing to count source maps against no release.')
+      }
+      if (!Number.isInteger(total) || total < 0) {
+        throw new Error(`Refusing to record ${String(total)} source maps.`)
+      }
+      await run(COUNT_SOURCE_MAPS, [releaseId, total])
     },
   }
 }

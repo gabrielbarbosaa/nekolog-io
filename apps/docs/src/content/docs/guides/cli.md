@@ -96,6 +96,36 @@ your key on the wire:
   with a certificate in front of your self-host. `http://localhost` is allowed,
   because nothing leaves the machine.
 
+## Uploading source maps
+
+```bash
+npx @nekolog-io/cli sourcemaps upload 1.4.2 --dir dist
+```
+
+Record the release first — the upload refuses a version this environment has
+never seen, so the count on the release stays true. Then this walks `--dir`,
+takes every `.map` it finds, and posts each one. A nested path is flattened into
+a single name (`assets/index.mjs.map` becomes `assets-index.mjs.map`), and
+`node_modules` and dotted folders are skipped because they are not your build.
+
+| | |
+|---|---|
+| `--key <key>` | the **secret** key of the environment (default: `$NEKOLOG_KEY`) |
+| `--dir <path>` | the build output to walk (default: `dist`) |
+| `--api <url>` | where the public API answers |
+
+Uploading the same name again replaces it and does not raise the count, so a
+rerun is as harmless as rerunning `releases create`. A map over 8 MB is
+**skipped and named**, not silently dropped, and an upload the server refuses
+stops the whole run with the file name and the server's own reason.
+
+:::note[Why the server does not parse your map]
+It checks the shape — the first kilobytes must open a JSON object and name
+`mappings` or `sections`, and a declared `version` must be 3 — and stores the
+rest unread. Parsing megabytes of JSON does not fit the CPU budget of a Worker,
+and the map is parsed where it is actually used.
+:::
+
 ## After it runs
 
 Open the guide for what it installed: [Browser](/docs/guides/browser/),

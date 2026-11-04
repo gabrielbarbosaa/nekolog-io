@@ -2,7 +2,10 @@ import {
   COMMIT_PATTERN,
   ISSUE_STATUSES,
   MAX_ISSUE_ROWS,
+  MAX_SOURCE_MAP_BYTES,
   MAX_VERSION_CHARS,
+  SOURCE_MAP_HEAD_BYTES,
+  SOURCE_MAP_NAME,
 } from '@nekolog-io/adapters'
 import {
   DEFAULT_HISTOGRAM_BUCKET,
@@ -327,6 +330,75 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
             '404': errorResponse('This deployment records no releases.'),
             '413': errorResponse('The body is over 4 KB.'),
             '415': errorResponse('The body was not declared as `application/json`.'),
+            '429': errorResponse('Too many requests for this key.'),
+          },
+        },
+      },
+      '/v1/sourcemaps': {
+        post: {
+          tags: ['releases'],
+          operationId: 'uploadSourceMap',
+          summary: 'Upload one source map against a release that already exists.',
+          description: `Needs a key carrying \`logs:write\`. The body is the map itself, at most ${MAX_SOURCE_MAP_BYTES} bytes. The release must have been recorded first, so the count on it stays true. Uploading the same name again replaces it and does not raise the count.\n\nThe shape is checked, not parsed: the first ${SOURCE_MAP_HEAD_BYTES} bytes must open a JSON object and name \`mappings\` or \`sections\`, and a declared \`version\` must be 3. Parsing megabytes of JSON would not fit a Worker's CPU budget, and the map is parsed where it is used.`,
+          parameters: [
+            {
+              name: 'release',
+              in: 'query',
+              required: true,
+              description: 'The version, exactly as it was recorded.',
+              schema: { type: 'string' },
+              example: '1.4.2',
+            },
+            {
+              name: 'name',
+              in: 'query',
+              required: true,
+              description:
+                'The file name, one segment ending in `.map`. No directories: a name carrying a slash, a backslash or `..` is refused.',
+              schema: { type: 'string', pattern: SOURCE_MAP_NAME.source },
+              example: 'app.js.map',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '201': {
+              description: 'The map was stored, with the release’s new count.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['sourceMap', 'release'],
+                    properties: {
+                      sourceMap: {
+                        type: 'object',
+                        required: ['name', 'bytes'],
+                        properties: {
+                          name: { type: 'string' },
+                          bytes: { type: 'integer' },
+                        },
+                      },
+                      release: {
+                        type: 'object',
+                        required: ['id', 'version', 'sourcemapCount'],
+                        properties: {
+                          id: { type: 'string' },
+                          version: { type: 'string' },
+                          sourcemapCount: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '400': errorResponse('The name, the release or the body was not usable.'),
+            '401': errorResponse('No key, an unknown key, or a key in the URL.'),
+            '403': errorResponse('The key does not carry `logs:write`.'),
+            '404': errorResponse('No such release here, or this deployment stores no source maps.'),
+            '413': errorResponse(`The map is over ${MAX_SOURCE_MAP_BYTES} bytes.`),
             '429': errorResponse('Too many requests for this key.'),
           },
         },

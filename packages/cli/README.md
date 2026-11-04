@@ -36,6 +36,23 @@ E recusa três coisas **antes de abrir o socket**, para a key nunca ir para a
 rede por engano: key pública, commit que não é o que o `git rev-parse` imprime,
 e HTTP puro para fora desta máquina.
 
+```bash
+npx @nekolog-io/cli sourcemaps upload 1.4.2 --dir dist
+```
+
+Percorre o build, pega todo `.map`, achata caminho aninhado num nome só e manda
+um por um. Pula `node_modules` e pastas com ponto. Registre a release antes: o
+upload recusa uma versão que o ambiente nunca viu.
+
+| | |
+|---|---|
+| `--key <key>` | a key **secreta** do ambiente (padrão `$NEKOLOG_KEY`) |
+| `--dir <path>` | a saída do build (padrão `dist`) |
+| `--api <url>` | onde a API responde |
+
+Mapa acima de 8 MB é **pulado e nomeado**, não descartado em silêncio. Subir o
+mesmo nome de novo substitui e não aumenta a contagem.
+
 ## O que ele escolhe, e por quê
 
 A ordem importa, porque projeto de verdade tem mais de uma dessas:

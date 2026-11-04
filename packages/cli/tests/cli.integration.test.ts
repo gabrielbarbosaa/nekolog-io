@@ -315,3 +315,63 @@ describe('recording a release, as it ships', () => {
     expect(result.out).toContain('nekolog releases create')
   })
 })
+
+describe('uploading source maps, as it ships', () => {
+  const MAP = JSON.stringify({ version: 3, sources: ['src/app.ts'], mappings: 'AAAA' })
+
+  it('walks a build and posts every map it finds', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'nekolog-cli-'))
+    folders.push(folder)
+    await writeFile(join(folder, 'app.js'), 'console.log(1)')
+    await writeFile(join(folder, 'app.js.map'), MAP)
+
+    const { result, received } = await withApi(
+      {
+        status: 201,
+        body: {
+          sourceMap: { name: 'app.js.map', bytes: MAP.length },
+          release: { sourcemapCount: 1 },
+        },
+      },
+      (base) =>
+        run(['sourcemaps', 'upload', '1.4.2', '--key', SECRET, '--dir', folder, '--api', base]),
+    )
+
+    expect(result.code, result.err).toBe(0)
+    expect(received).toHaveLength(1)
+    expect(received[0]?.method).toBe('POST')
+    expect(received[0]?.url).toBe('/v1/sourcemaps?release=1.4.2&name=app.js.map')
+    expect(received[0]?.authorization).toBe(`Bearer ${SECRET}`)
+    expect(received[0]?.body).toBe(MAP)
+    expect(result.out).toContain('uploaded 1 source map(s) for 1.4.2')
+    expect(result.out).not.toContain(SECRET)
+  })
+
+  it('refuses a public key without reading the build at all', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'nekolog-cli-'))
+    folders.push(folder)
+    await writeFile(join(folder, 'app.js.map'), MAP)
+
+    const { result, received } = await withApi({ status: 201, body: {} }, (base) =>
+      run(['sourcemaps', 'upload', '1.4.2', '--key', PUBLIC, '--dir', folder, '--api', base]),
+    )
+
+    expect(result.code).toBe(1)
+    expect(received).toHaveLength(0)
+    expect(result.err).toContain('public key')
+  })
+
+  it('says there was nothing to upload instead of reporting success', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'nekolog-cli-'))
+    folders.push(folder)
+    await writeFile(join(folder, 'app.js'), 'console.log(1)')
+
+    const { result, received } = await withApi({ status: 201, body: {} }, (base) =>
+      run(['sourcemaps', 'upload', '1.4.2', '--key', SECRET, '--dir', folder, '--api', base]),
+    )
+
+    expect(result.code).toBe(1)
+    expect(received).toHaveLength(0)
+    expect(result.err).toContain('no .map file')
+  })
+})

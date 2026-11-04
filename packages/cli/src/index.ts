@@ -30,3 +30,15 @@ export {
 } from './releases.ts'
 export type { Parsed } from './run.ts'
 export { main, parseArgs, runnerAt, USAGE, workspaceAt } from './run.ts'
+export type { UploadedMap, UploadOptions, UploadReport } from './sourcemaps.ts'
+export {
+  describeUpload,
+  findSourceMaps,
+  flatName,
+  MAX_DEPTH,
+  MAX_SOURCE_MAP_BYTES,
+  SOURCE_MAP_NAME,
+  SOURCEMAPS_PATH,
+  uploadRequest,
+  uploadSourceMaps,
+} from './sourcemaps.ts'
