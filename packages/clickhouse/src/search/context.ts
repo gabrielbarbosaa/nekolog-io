@@ -8,6 +8,7 @@ export const LOG_COLUMNS: readonly string[] = [
   'environment_id',
   'timestamp',
   'received_at',
+  'clock_skew_ms',
   'level',
   'message',
   'service',

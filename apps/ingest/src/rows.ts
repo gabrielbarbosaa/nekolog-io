@@ -1,5 +1,6 @@
 import type { ParsedBatch } from '@internal/schema'
 import type { IngestPrincipal } from './app.ts'
+import { boundedTimestampMs, clockSkewMs } from './clock-skew.ts'
 import { fingerprintFor, NO_FINGERPRINT } from './fingerprint.ts'
 
 export const DEFAULT_RETENTION_DAYS = 30
@@ -69,11 +70,16 @@ export async function rowsFor(
       attributes[ERROR_MESSAGE_ATTRIBUTE] = errorMessage
     }
 
+    const clientAt = Date.parse(event.timestamp)
+
     return {
       project_id: principal.projectId,
       environment_id: principal.environmentId,
-      timestamp: clickHouseTimestamp(event.timestamp),
+      timestamp: clickHouseTimestamp(
+        boundedTimestampMs(clientAt, context.receivedAt, retentionDays),
+      ),
       received_at: receivedAt,
+      clock_skew_ms: clockSkewMs(clientAt, context.receivedAt),
       level: event.level,
       message: event.message,
       service: batch.resource.service,

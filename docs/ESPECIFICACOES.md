@@ -70,7 +70,8 @@ Content-Encoding: gzip                    (opcional)
 
 - **Nomes em camelCase** no JSON; as colunas do ClickHouse usam snake_case.
 - **Campos desconhecidos são ignorados**, para SDKs mais novos funcionarem com servidores mais antigos dentro da mesma versão.
-- **O servidor adiciona** `project_id` e `environment_id` (vindos da key), `received_at`, `country`, `fingerprint` (calculado) e `retention_days`.
+- **O servidor adiciona** `project_id` e `environment_id` (vindos da key), `received_at`, `clock_skew_ms`, `country`, `fingerprint` (calculado) e `retention_days`.
+- **O `timestamp` gravado é limitado à janela que o ClickHouse consegue guardar.** O `clock_skew_ms` é `received_at - timestamp` do cliente, em milissegundos, sempre com a diferença real: positivo quando o cliente está atrasado, negativo quando está adiantado. O `timestamp` gravado, porém, é preso entre `received_at - (retention_days - 1h)` e `received_at + 5min`. Sem esse limite, um relógio atrasado além da retenção faz o `TTL` descartar a linha **no próprio insert** (ela não chega a existir) e um relógio adiantado grava numa partição que nenhuma consulta por período alcança e que o `TTL` nunca apaga. O horário original continua recuperável: é `received_at - clock_skew_ms`.
 - **Key:** a `nekolog_pk_` pode ir no header ou na URL; a `nekolog_sk_` só no header. Uma key secreta na URL é recusada, porque URLs aparecem em logs de proxies.
 - **`text/plain` aceito:** o `sendBeacon` entre domínios só envia tipos simples, sem preflight, então o corpo pode vir como `text/plain` contendo JSON.
 - **Evento inválido não derruba o lote:** os válidos são aceitos, e os inválidos voltam na resposta.
