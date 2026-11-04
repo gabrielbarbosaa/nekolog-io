@@ -1,5 +1,10 @@
-import type { IssueReader, IssueStatus, RateLimiter } from '@nekolog-io/adapters'
-import { ISSUE_STATUSES, IssueCursorError, MAX_ISSUE_ROWS } from '@nekolog-io/adapters'
+import type { IssueReader, IssueStatus, RateLimiter, ReleaseStore } from '@nekolog-io/adapters'
+import {
+  InvalidRelease,
+  ISSUE_STATUSES,
+  IssueCursorError,
+  MAX_ISSUE_ROWS,
+} from '@nekolog-io/adapters'
 import {
   bucketSecondsFor,
   DEFAULT_HISTOGRAM_BUCKET,
@@ -14,6 +19,7 @@ import {
 } from '@nekolog-io/clickhouse/search'
 import { Hono } from 'hono'
 import type { ApiPrincipal, Authenticator } from './authenticate.ts'
+import { readJsonObject } from './body.ts'
 import { ApiError, type ApiErrorCode, errorBody, statusFor } from './errors.ts'
 import { parseCount, parseMoment, parsePeriod } from './period.ts'
 
@@ -33,9 +39,11 @@ export type ApiLimits = {
 
 export type ApiDeps = {
   authenticate: Authenticator
+  authenticateWrite?: Authenticator
   query: ClickHouseQuery
   database: string
   issues?: IssueReader
+  releases?: ReleaseStore
   openapi?: (origin: string) => unknown
   limits?: ApiLimits
   onError?: (error: unknown) => void
@@ -128,14 +136,23 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
   }
 
-  const admit = async (request: Request): Promise<ApiPrincipal | Response> => {
-    const auth = await deps.authenticate(request)
+  const admitWith = async (
+    authenticate: Authenticator,
+    request: Request,
+  ): Promise<ApiPrincipal | Response> => {
+    const auth = await authenticate(request)
     if (!auth.ok) {
       return fail(auth.code, auth.message)
     }
     const refused = await allow(auth.principal)
     return refused ?? auth.principal
   }
+
+  const admit = (request: Request): Promise<ApiPrincipal | Response> =>
+    admitWith(deps.authenticate, request)
+
+  const admitWriter = (request: Request): Promise<ApiPrincipal | Response> =>
+    admitWith(deps.authenticateWrite ?? deps.authenticate, request)
 
   const upstream = async (
     sql: string,
@@ -273,6 +290,35 @@ export function createApiApp(deps: ApiDeps): Hono {
     })
   })
 
+  app.post('/v1/releases', async (c) => {
+    const store = deps.releases
+    if (store === undefined) {
+      return fail('not_found', 'This deployment records no releases')
+    }
+
+    const admitted = await admitWriter(c.req.raw)
+    if (admitted instanceof Response) {
+      return admitted
+    }
+
+    const body = await readJsonObject(c.req.raw)
+    const rawReleasedAt = body.releasedAt
+
+    const recorded = await store.record({
+      projectId: admitted.projectId,
+      environmentId: admitted.environmentId,
+      version: body.version as string,
+      commit: (body.commit ?? null) as string | null,
+      ...(rawReleasedAt === undefined || rawReleasedAt === null
+        ? {}
+        : { releasedAt: parseMoment(String(rawReleasedAt), 'releasedAt') }),
+    })
+
+    return c.json({ release: recorded.release, created: recorded.created }, 201, {
+      'cache-control': 'no-store',
+    })
+  })
+
   app.notFound(() => fail('not_found', 'No such endpoint'))
 
   app.onError((error) => {
@@ -284,6 +330,9 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
     if (error instanceof IssueCursorError) {
       return fail('invalid_query', error.message)
+    }
+    if (error instanceof InvalidRelease) {
+      return fail('invalid_query', `${error.field}: ${error.message}`)
     }
     report(deps, error)
     return fail('internal_error', 'Unexpected error')

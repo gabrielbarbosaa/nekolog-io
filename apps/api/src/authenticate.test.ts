@@ -7,7 +7,12 @@ import {
   SECRET_KEY_PREFIX,
 } from '@nekolog-io/adapters'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createReadAuthenticator, READ_SCOPE } from './authenticate.ts'
+import {
+  createReadAuthenticator,
+  createWriteAuthenticator,
+  READ_SCOPE,
+  WRITE_SCOPE,
+} from './authenticate.ts'
 
 const SECRET = `${SECRET_KEY_PREFIX}${'a'.repeat(32)}`
 const PUBLIC = `${PUBLIC_KEY_PREFIX}${'b'.repeat(32)}`
@@ -94,6 +99,46 @@ describe('the read authenticator, which is the only way into this API', () => {
     }
 
     expect(await authenticate(asking({}))).toMatchObject({ ok: false, code: 'invalid_key' })
+  })
+
+  it('tells the two scopes apart, so a reader cannot write and a writer cannot read', async () => {
+    const readOnly = `${SECRET_KEY_PREFIX}${'e'.repeat(32)}`
+    const writeOnly = `${SECRET_KEY_PREFIX}${'f'.repeat(32)}`
+    await store.set(await hashApiKey(readOnly), { ...RECORD, scopes: ['logs:read'] })
+    await store.set(await hashApiKey(writeOnly), { ...RECORD, scopes: ['logs:write'] })
+
+    const read = createReadAuthenticator({ keyStore: store })
+    const write = createWriteAuthenticator({ keyStore: store })
+
+    expect(await read(asking({ authorization: `Bearer ${readOnly}` }))).toMatchObject({ ok: true })
+    expect(await write(asking({ authorization: `Bearer ${readOnly}` }))).toMatchObject({
+      ok: false,
+      code: 'insufficient_scope',
+      message: expect.stringContaining(WRITE_SCOPE),
+    })
+
+    expect(await write(asking({ authorization: `Bearer ${writeOnly}` }))).toMatchObject({
+      ok: true,
+    })
+    expect(await read(asking({ authorization: `Bearer ${writeOnly}` }))).toMatchObject({
+      ok: false,
+      code: 'insufficient_scope',
+      message: expect.stringContaining(READ_SCOPE),
+    })
+  })
+
+  it('refuses a public key and a key in the URL on the writing side too', async () => {
+    const write = createWriteAuthenticator({ keyStore: store })
+
+    expect(await write(asking({ authorization: `Bearer ${PUBLIC}` }))).toMatchObject({
+      ok: false,
+      code: 'invalid_key',
+    })
+    expect(
+      await write(
+        asking({ authorization: `Bearer ${SECRET}` }, `https://api.nekolog.io/v1/releases?key=x`),
+      ),
+    ).toMatchObject({ ok: false, code: 'secret_key_in_url' })
   })
 
   it('carries the retention of the environment when the record has one', async () => {

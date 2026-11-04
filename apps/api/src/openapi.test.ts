@@ -29,19 +29,42 @@ function routesOfTheApp(): string[] {
   return [
     ...new Set(
       app.routes
-        .filter((route) => route.method === 'GET' && route.path !== '/*')
-        .map((route) => route.path),
+        .filter((route) => route.path !== '/*' && route.method !== 'ALL')
+        .map((route) => `${route.method} ${route.path}`),
     ),
   ].sort()
 }
 
 function operations(): Array<[string, Json]> {
-  return PATHS.map((path) => [path, dig(DOCUMENT, 'paths', path, 'get') as Json])
+  return PATHS.flatMap((path) =>
+    Object.keys(dig(DOCUMENT, 'paths', path) as Json).map((method) => [
+      `${method.toUpperCase()} ${path}`,
+      dig(DOCUMENT, 'paths', path, method) as Json,
+    ]),
+  ) as Array<[string, Json]>
 }
 
 describe('the OpenAPI document, which is how this API is documented', () => {
   it('describes exactly the routes the app serves, in both directions', () => {
-    expect(PATHS.slice().sort()).toEqual(routesOfTheApp())
+    expect(
+      operations()
+        .map(([named]) => named)
+        .sort(),
+    ).toEqual(routesOfTheApp())
+  })
+
+  it('writes on exactly one route, and says which scope each refusal is about', () => {
+    const writes = operations().filter(([named]) => !named.startsWith('GET '))
+    expect(writes.map(([named]) => named)).toEqual(['POST /v1/releases'])
+
+    for (const [named, operation] of operations()) {
+      const forbidden = dig(operation, 'responses', '403')
+      if (forbidden === undefined) {
+        continue
+      }
+      const wanted = named.startsWith('GET ') ? 'logs:read' : 'logs:write'
+      expect(JSON.stringify(forbidden), named).toContain(wanted)
+    }
   })
 
   it('is an OpenAPI 3.1 document with one server and no placeholder in it', () => {
@@ -53,9 +76,9 @@ describe('the OpenAPI document, which is how this API is documented', () => {
   it('asks for a bearer key everywhere except the two routes that need none', () => {
     expect(DOCUMENT.security).toEqual([{ bearerAuth: [] }])
 
-    for (const [path, operation] of operations()) {
-      const open = path === '/health' || path === '/openapi.json'
-      expect(operation.security, path).toEqual(open ? [] : undefined)
+    for (const [named, operation] of operations()) {
+      const open = named === 'GET /health' || named === 'GET /openapi.json'
+      expect(operation.security, named).toEqual(open ? [] : undefined)
     }
   })
 
@@ -86,10 +109,11 @@ describe('the OpenAPI document, which is how this API is documented', () => {
   it('answers each documented status with a status the app really produces', () => {
     const produced = new Set(Object.values(STATUS_FOR_CODE).map(String))
     produced.add('200')
+    produced.add('201')
 
-    for (const [path, operation] of operations()) {
+    for (const [named, operation] of operations()) {
       for (const status of Object.keys(operation.responses as Json)) {
-        expect(produced, `${path} ${status}`).toContain(status)
+        expect(produced, `${named} ${status}`).toContain(status)
       }
     }
   })

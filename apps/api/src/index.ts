@@ -2,11 +2,21 @@ export type { ApiDeps, ApiLimits, ClickHouseQuery } from './app.ts'
 export { createApiApp, DEFAULT_REQUESTS_PER_MINUTE, RATE_WINDOW_SECONDS } from './app.ts'
 export type {
   ApiPrincipal,
+  ApiScope,
   Authenticator,
   AuthOutcome,
   KeyAuthenticatorOptions,
+  ScopedAuthenticatorOptions,
 } from './authenticate.ts'
-export { createReadAuthenticator, KEY_QUERY_PARAM, READ_SCOPE } from './authenticate.ts'
+export {
+  createReadAuthenticator,
+  createScopedAuthenticator,
+  createWriteAuthenticator,
+  KEY_QUERY_PARAM,
+  READ_SCOPE,
+  WRITE_SCOPE,
+} from './authenticate.ts'
+export { ACCEPTED_CONTENT_TYPE, MAX_BODY_BYTES, readJsonObject } from './body.ts'
 export type { ApiErrorBody, ApiErrorCode } from './errors.ts'
 export { API_ERROR_CODES, ApiError, errorBody, STATUS_FOR_CODE, statusFor } from './errors.ts'
 export type { LocalApiConfig, LocalApiEnv, LocalApiOptions, LocalApiServer } from './local.ts'

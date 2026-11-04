@@ -64,6 +64,38 @@ It also refuses a folder with no `package.json` rather than inventing a project.
 If the install fails, the `.env` **stays written** and the message says what is
 left to run.
 
+## Recording a release
+
+```bash
+npx @nekolog-io/cli releases create 1.4.2 --commit "$(git rev-parse HEAD)"
+```
+
+It reads the key from `--key` or from `NEKOLOG_KEY`, and the key already says
+which project and environment the release belongs to — you never pass either.
+
+| | |
+|---|---|
+| `--key <key>` | the **secret** key of the environment (default: `$NEKOLOG_KEY`) |
+| `--commit <sha>` | 7 to 40 lowercase hex characters |
+| `--at <moment>` | when it went out, ISO 8601 (default: now) |
+| `--api <url>` | where the public API answers (default: `https://api.nekolog.io`) |
+
+Put it at the end of your deploy job. It is **idempotent**: running it again for
+the same version changes nothing, keeps the moment the version first went out
+and never drops a commit it already knows, so a rerun of a pipeline is harmless
+and the exit code still means what it says.
+
+Three things it refuses **before it opens a socket**, so a mistake never puts
+your key on the wire:
+
+- **a public key**, because it ships in every browser bundle;
+- **a commit that is not what `git rev-parse` prints** — uppercase, too short or
+  not hexadecimal;
+- **plain HTTP to anywhere but this machine.** A secret key in the clear is a
+  secret key given away. Point `--api` at `https://…`, or put a reverse proxy
+  with a certificate in front of your self-host. `http://localhost` is allowed,
+  because nothing leaves the machine.
+
 ## After it runs
 
 Open the guide for what it installed: [Browser](/docs/guides/browser/),

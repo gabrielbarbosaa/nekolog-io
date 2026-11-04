@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -156,5 +158,160 @@ describe('how the package manager is started', () => {
     folders.push(folder)
 
     await expect(runnerAt(folder)('a-program-that-is-not-installed', [])).resolves.toBe(127)
+  })
+})
+
+type Received = { method: string; url: string; authorization: string; body: string }
+
+async function withApi(
+  answer: { status: number; body: unknown },
+  run: (base: string) => Promise<Run>,
+): Promise<{ result: Run; received: Received[] }> {
+  const received: Received[] = []
+  const server = createServer((incoming, outgoing) => {
+    const chunks: Buffer[] = []
+    incoming.on('data', (chunk: Buffer) => chunks.push(chunk))
+    incoming.once('end', () => {
+      received.push({
+        method: incoming.method ?? '',
+        url: incoming.url ?? '',
+        authorization: String(incoming.headers.authorization ?? ''),
+        body: Buffer.concat(chunks).toString(),
+      })
+      outgoing.writeHead(answer.status, { 'content-type': 'application/json' })
+      outgoing.end(JSON.stringify(answer.body))
+    })
+  })
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
+  const port = (server.address() as AddressInfo).port
+
+  try {
+    return { result: await run(`http://127.0.0.1:${port}`), received }
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+}
+
+const RELEASE = {
+  created: true,
+  release: {
+    id: 'rel_0123456789ABCDEFGHJKMNPQRS',
+    version: '1.4.2',
+    commit: '9f3a1c7',
+    environmentId: 'env_01HZY',
+    releasedAt: '2026-11-04T12:00:00.000Z',
+    sourcemapCount: 0,
+  },
+}
+
+const SECRET = `nekolog_sk_${'a'.repeat(32)}`
+const PUBLIC = `nekolog_pk_${'b'.repeat(32)}`
+
+describe('recording a release, as it ships', () => {
+  it('posts the version over real http and prints what came back', async () => {
+    const { result, received } = await withApi({ status: 201, body: RELEASE }, (base) =>
+      run(['releases', 'create', '1.4.2', '--key', SECRET, '--commit', '9f3a1c7', '--api', base]),
+    )
+
+    expect(result.code, result.err).toBe(0)
+    expect(received).toHaveLength(1)
+    expect(received[0]?.method).toBe('POST')
+    expect(received[0]?.url).toBe('/v1/releases')
+    expect(received[0]?.authorization).toBe(`Bearer ${SECRET}`)
+    expect(JSON.parse(received[0]?.body ?? '{}')).toEqual({
+      version: '1.4.2',
+      commit: '9f3a1c7',
+    })
+    expect(result.out).toContain('recorded 1.4.2')
+    expect(result.out).toContain('rel_0123456789ABCDEFGHJKMNPQRS')
+    expect(result.out).not.toContain(SECRET)
+  })
+
+  it('reads the key from the environment the way a CI job would', async () => {
+    const received: Received[] = []
+    const server = createServer((incoming, outgoing) => {
+      received.push({
+        method: incoming.method ?? '',
+        url: incoming.url ?? '',
+        authorization: String(incoming.headers.authorization ?? ''),
+        body: '',
+      })
+      outgoing.writeHead(201, { 'content-type': 'application/json' })
+      outgoing.end(JSON.stringify(RELEASE))
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
+    const port = (server.address() as AddressInfo).port
+
+    const result = await new Promise<Run>((settle) => {
+      const child = spawn(
+        process.execPath,
+        [CLI, 'releases', 'create', '1.4.2', '--api', `http://127.0.0.1:${port}`],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, NEKOLOG_KEY: SECRET },
+        },
+      )
+      let out = ''
+      let err = ''
+      child.stdout.on('data', (chunk: Buffer) => {
+        out += chunk.toString()
+      })
+      child.stderr.on('data', (chunk: Buffer) => {
+        err += chunk.toString()
+      })
+      child.once('exit', (code) => settle({ code: code ?? 1, out, err }))
+    })
+
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+
+    expect(result.code, result.err).toBe(0)
+    expect(received[0]?.authorization).toBe(`Bearer ${SECRET}`)
+  })
+
+  it('refuses a public key without sending anything at all', async () => {
+    const { result, received } = await withApi({ status: 201, body: RELEASE }, (base) =>
+      run(['releases', 'create', '1.4.2', '--key', PUBLIC, '--api', base]),
+    )
+
+    expect(result.code).toBe(1)
+    expect(received).toHaveLength(0)
+    expect(result.err).toContain('public key')
+  })
+
+  it('refuses to send the key in the clear to another machine', async () => {
+    const result = await run([
+      'releases',
+      'create',
+      '1.4.2',
+      '--key',
+      SECRET,
+      '--api',
+      'http://api.example.test',
+    ])
+
+    expect(result.code).toBe(1)
+    expect(result.err).toContain('travel in the clear')
+  })
+
+  it('repeats what the server refused, and exits non-zero', async () => {
+    const { result } = await withApi(
+      {
+        status: 403,
+        body: { error: { code: 'insufficient_scope', message: 'This key cannot write' } },
+      },
+      (base) => run(['releases', 'create', '1.4.2', '--key', SECRET, '--api', base]),
+    )
+
+    expect(result.code).toBe(1)
+    expect(result.err).toContain('insufficient_scope')
+    expect(result.err).not.toContain(SECRET)
+  })
+
+  it('prints the usage when the subcommand is not one it has', async () => {
+    const result = await run(['releases', 'nope'])
+
+    expect(result.code).toBe(1)
+    expect(result.out).toContain('nekolog releases create')
   })
 })

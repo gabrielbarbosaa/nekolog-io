@@ -4,12 +4,13 @@ import {
   kvKeyStore,
   memoryRateLimiter,
   sqlIssueReader,
+  sqlReleaseStore,
 } from '@nekolog-io/adapters'
 import { type ClickHouseConfig, queryRows } from '@nekolog-io/clickhouse/client'
 import { neon } from '@neondatabase/serverless'
 import type { Hono } from 'hono'
 import { type ApiDeps, createApiApp } from './app.ts'
-import { createReadAuthenticator } from './authenticate.ts'
+import { createReadAuthenticator, createWriteAuthenticator } from './authenticate.ts'
 import { openApiDocument } from './openapi.ts'
 import { httpSqlRunner } from './sql.ts'
 
@@ -107,11 +108,15 @@ export function coreApiDeps(
 
 export function buildApiApp(env: ApiEnv): Hono {
   const config = clickHouseConfigFrom(env)
+  const keyStore = cachedKeyStore(kvKeyStore(env.KEYS))
+  const sql = httpSqlRunner(neon(env.DATABASE_URL))
 
   return createApiApp(
     coreApiDeps(config, {
-      authenticate: createReadAuthenticator({ keyStore: cachedKeyStore(kvKeyStore(env.KEYS)) }),
-      issues: sqlIssueReader(httpSqlRunner(neon(env.DATABASE_URL))),
+      authenticate: createReadAuthenticator({ keyStore }),
+      authenticateWrite: createWriteAuthenticator({ keyStore }),
+      issues: sqlIssueReader(sql),
+      releases: sqlReleaseStore(sql),
       limits: {
         rateLimiter: memoryRateLimiter(),
         requestsPerWindow: requestsPerMinuteFrom(env.API_REQUESTS_PER_MINUTE),

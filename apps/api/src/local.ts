@@ -1,10 +1,15 @@
 import { serve } from '@hono/node-server'
 import { keyStoreFromDocument, type SeedDocument } from '@internal/seed'
-import { memoryRateLimiter, type SqlRunner, sqlIssueReader } from '@nekolog-io/adapters'
+import {
+  memoryRateLimiter,
+  type SqlRunner,
+  sqlIssueReader,
+  sqlReleaseStore,
+} from '@nekolog-io/adapters'
 import type { ClickHouseConfig } from '@nekolog-io/clickhouse/client'
 import type { Hono } from 'hono'
 import { createApiApp } from './app.ts'
-import { createReadAuthenticator } from './authenticate.ts'
+import { createReadAuthenticator, createWriteAuthenticator } from './authenticate.ts'
 import { openApiDocument } from './openapi.ts'
 import { coreApiDeps, requestsPerMinuteFrom } from './worker.ts'
 
@@ -86,11 +91,12 @@ export type LocalApiOptions = {
 }
 
 export async function localApiApp(options: LocalApiOptions): Promise<Hono> {
+  const keyStore = await keyStoreFromDocument(options.document)
   const deps = coreApiDeps(options.config.clickhouse, {
-    authenticate: createReadAuthenticator({
-      keyStore: await keyStoreFromDocument(options.document),
-    }),
+    authenticate: createReadAuthenticator({ keyStore }),
+    authenticateWrite: createWriteAuthenticator({ keyStore }),
     issues: sqlIssueReader(options.sql),
+    releases: sqlReleaseStore(options.sql),
     limits: {
       rateLimiter: memoryRateLimiter(),
       requestsPerWindow: options.config.requestsPerMinute,

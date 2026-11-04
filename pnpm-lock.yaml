@@ -764,6 +764,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: ^0.18.5
         version: 0.18.5
+      '@nekolog-io/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -855,7 +858,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(postgres@4.0.0)
+        version: 0.45.4(@neondatabase/serverless@1.2.0)(postgres@4.0.0)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: ^0.18.5
@@ -8072,8 +8075,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.4(postgres@4.0.0):
+  drizzle-orm@0.45.4(@neondatabase/serverless@1.2.0)(postgres@4.0.0):
     optionalDependencies:
+      '@neondatabase/serverless': 1.2.0
       postgres: 4.0.0
 
   dset@3.1.4: {}

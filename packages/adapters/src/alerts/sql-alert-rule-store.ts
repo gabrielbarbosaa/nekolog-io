@@ -5,6 +5,7 @@ import {
   type AlertTransition,
   parseAlertCondition,
 } from '../alert-rule.ts'
+import { crockfordId } from '../ids.ts'
 import type { SqlRunner } from '../issues/sql-issue-store.ts'
 
 const LIVE = `
@@ -71,21 +72,8 @@ where issue_environments.environment_id = $1
 
 export const ALERT_EVENT_ID_PREFIX = 'ale_'
 
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-
-type CryptoLike = { getRandomValues?: (array: Uint8Array) => Uint8Array }
-
 export function newAlertEventId(): string {
-  const source = (globalThis as { crypto?: CryptoLike }).crypto
-  if (!source?.getRandomValues) {
-    throw new Error('This runtime has no crypto.getRandomValues, so it cannot mint an event id')
-  }
-  const bytes = source.getRandomValues(new Uint8Array(26))
-  let suffix = ''
-  for (const byte of bytes) {
-    suffix += CROCKFORD[byte % 32]
-  }
-  return `${ALERT_EVENT_ID_PREFIX}${suffix}`
+  return crockfordId(ALERT_EVENT_ID_PREFIX, 'an event id')
 }
 
 function moment(value: number): string {
