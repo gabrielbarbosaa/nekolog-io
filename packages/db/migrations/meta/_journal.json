@@ -85,6 +85,13 @@
       "when": 1793795949230,
       "tag": "0011_environment_redaction",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793798393513,
+      "tag": "0012_channel_secret_rotation",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,7 @@ import {
   assertWebhookTarget,
   openSecret,
   SIGNATURE_HEADER,
-  signPayload,
+  signatureHeader,
 } from '@nekolog-io/adapters'
 import { type AlertMessage, alertMessage } from './message.ts'
 
@@ -128,9 +128,13 @@ export async function deliver(
     throw new Error('This run has no key to open the channel secret with')
   }
 
-  const secret = await openSecret(channel.sealedSecret, options.secretKey, channel.id)
+  const secrets = [await openSecret(channel.sealedSecret, options.secretKey, channel.id)]
+  if (channel.previousSealedSecret !== null) {
+    secrets.push(await openSecret(channel.previousSealedSecret, options.secretKey, channel.id))
+  }
+
   const body = webhookBody(alert, message)
-  const signature = await signPayload(body, secret)
+  const signature = await signatureHeader(body, secrets)
 
   await post(channel.target, body, { [SIGNATURE_HEADER.toLowerCase()]: signature }, options)
 }

@@ -282,7 +282,7 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 - [x] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor. *(Daqui: a aplicação das regras no `apps/ingest`, antes da gravação. A tela que escreve as regras é de lá.)*
 - [x] **5.8** `security/alerts` — alertas de eventos de segurança para o operador. *(Daqui: os eventos que esta base levanta — abuso de key, cota, capacidade — pelos canais da 5.2. Os eventos de sessão e de login são de lá.)*
 - [ ] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
-- [ ] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*
+- [x] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*
 
 ### O que acontece no nekolog-dashboard
 

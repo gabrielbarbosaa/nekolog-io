@@ -156,3 +156,26 @@ export async function signPayload(body: string, keyMaterial: string): Promise<st
   const signed = await subtle.sign('HMAC', key, encodeUtf8(body))
   return `sha256=${toHex(new Uint8Array(signed))}`
 }
+
+export const MAX_SIGNATURES = 2
+
+export async function signatureHeader(body: string, secrets: readonly string[]): Promise<string> {
+  const live = secrets.filter((secret) => secret !== '')
+  if (live.length === 0) {
+    throw new Error('Refusing to sign a webhook with no secret at all')
+  }
+  if (live.length > MAX_SIGNATURES) {
+    throw new Error(
+      `Refusing to send ${live.length} signatures; a rotation overlaps two, never more`,
+    )
+  }
+
+  const signatures: string[] = []
+  for (const secret of live) {
+    const signature = await signPayload(body, secret)
+    if (!signatures.includes(signature)) {
+      signatures.push(signature)
+    }
+  }
+  return signatures.join(',')
+}
