@@ -2,7 +2,10 @@ import { hashApiKey, type KeyRecord, type KeyStore, parseApiKey } from '@nekolog
 import type { ApiErrorCode } from './errors.ts'
 
 export const READ_SCOPE = 'logs:read'
+export const WRITE_SCOPE = 'logs:write'
 export const KEY_QUERY_PARAM = 'key'
+
+export type ApiScope = typeof READ_SCOPE | typeof WRITE_SCOPE
 
 export type ApiPrincipal = {
   projectId: string
@@ -21,6 +24,10 @@ export type KeyAuthenticatorOptions = {
   hash?: (value: string) => Promise<string>
 }
 
+export type ScopedAuthenticatorOptions = KeyAuthenticatorOptions & {
+  scope: ApiScope
+}
+
 function bearerToken(header: string | null): string | null {
   if (header === null) {
     return null
@@ -29,7 +36,7 @@ function bearerToken(header: string | null): string | null {
   return match?.[1] ?? null
 }
 
-export function createReadAuthenticator(options: KeyAuthenticatorOptions): Authenticator {
+export function createScopedAuthenticator(options: ScopedAuthenticatorOptions): Authenticator {
   const hash = options.hash ?? hashApiKey
 
   return async (request): Promise<AuthOutcome> => {
@@ -50,7 +57,7 @@ export function createReadAuthenticator(options: KeyAuthenticatorOptions): Authe
       return {
         ok: false,
         code: 'invalid_key',
-        message: 'A public key cannot read logs, because it is published to browsers',
+        message: 'This API refuses a public key: it is published to every browser',
       }
     }
 
@@ -59,11 +66,11 @@ export function createReadAuthenticator(options: KeyAuthenticatorOptions): Authe
       return { ok: false, code: 'invalid_key', message: 'Unknown or revoked API key' }
     }
 
-    if (!record.scopes.includes(READ_SCOPE)) {
+    if (!record.scopes.includes(options.scope)) {
       return {
         ok: false,
         code: 'insufficient_scope',
-        message: `This key does not carry the ${READ_SCOPE} scope`,
+        message: `This key does not carry the ${options.scope} scope`,
       }
     }
 
@@ -76,4 +83,12 @@ export function createReadAuthenticator(options: KeyAuthenticatorOptions): Authe
     }
     return { ok: true, principal }
   }
+}
+
+export function createReadAuthenticator(options: KeyAuthenticatorOptions): Authenticator {
+  return createScopedAuthenticator({ ...options, scope: READ_SCOPE })
+}
+
+export function createWriteAuthenticator(options: KeyAuthenticatorOptions): Authenticator {
+  return createScopedAuthenticator({ ...options, scope: WRITE_SCOPE })
 }

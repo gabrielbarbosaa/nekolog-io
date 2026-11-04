@@ -1,4 +1,9 @@
-import { ISSUE_STATUSES, MAX_ISSUE_ROWS } from '@nekolog-io/adapters'
+import {
+  COMMIT_PATTERN,
+  ISSUE_STATUSES,
+  MAX_ISSUE_ROWS,
+  MAX_VERSION_CHARS,
+} from '@nekolog-io/adapters'
 import {
   DEFAULT_HISTOGRAM_BUCKET,
   DEFAULT_SEARCH_ROWS,
@@ -65,6 +70,7 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
     tags: [
       { name: 'logs', description: 'Reading what was ingested.' },
       { name: 'issues', description: 'Errors grouped by fingerprint.' },
+      { name: 'releases', description: 'What is deployed, and when it went out.' },
       { name: 'service', description: 'Whether this deployment is up.' },
     ],
     paths: {
@@ -267,6 +273,64 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
           },
         },
       },
+      '/v1/releases': {
+        post: {
+          tags: ['releases'],
+          operationId: 'recordRelease',
+          summary: 'Record that a version went out to this key’s environment.',
+          description:
+            'The only route here that writes, and it needs a key carrying `logs:write`. It is **idempotent**: sending the same version again returns the row that already exists with `created: false`, keeps the earliest `releasedAt` and never drops a commit it already knows. That is what makes it safe to call from a CI job that reruns.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['version'],
+                  properties: {
+                    version: { type: 'string', minLength: 1, maxLength: MAX_VERSION_CHARS },
+                    commit: {
+                      type: ['string', 'null'],
+                      pattern: COMMIT_PATTERN.source,
+                      description: '7 to 40 lowercase hexadecimal characters, or nothing.',
+                    },
+                    releasedAt: {
+                      type: 'string',
+                      description:
+                        'When it went out, ISO 8601 or epoch milliseconds. Defaults to now.',
+                    },
+                  },
+                },
+                example: { version: '1.4.2', commit: '9f3a1c7' },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'The release, whether this call created it or found it.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['release', 'created'],
+                    properties: {
+                      release: { $ref: '#/components/schemas/Release' },
+                      created: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+            '400': errorResponse('The version, the commit or the moment was not usable.'),
+            '401': errorResponse('No key, an unknown key, or a key in the URL.'),
+            '403': errorResponse('The key does not carry `logs:write`.'),
+            '404': errorResponse('This deployment records no releases.'),
+            '413': errorResponse('The body is over 4 KB.'),
+            '415': errorResponse('The body was not declared as `application/json`.'),
+            '429': errorResponse('Too many requests for this key.'),
+          },
+        },
+      },
     },
     components: {
       securitySchemes: {
@@ -312,6 +376,29 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
                 : { type: 'string' },
             ]),
           ),
+        },
+        Release: {
+          type: 'object',
+          required: [
+            'id',
+            'projectId',
+            'environmentId',
+            'version',
+            'commit',
+            'sourcemapCount',
+            'releasedAt',
+            'createdAt',
+          ],
+          properties: {
+            id: { type: 'string' },
+            projectId: { type: 'string' },
+            environmentId: { type: 'string' },
+            version: { type: 'string' },
+            commit: { type: ['string', 'null'] },
+            sourcemapCount: { type: 'integer' },
+            releasedAt: { type: 'string', format: 'date-time' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
         },
         Issue: {
           type: 'object',

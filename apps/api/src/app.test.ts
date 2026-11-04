@@ -1,8 +1,20 @@
-import type { IssuePage, IssueQuery, IssueReader } from '@nekolog-io/adapters'
-import { encodeIssueCursor, memoryRateLimiter } from '@nekolog-io/adapters'
+import type {
+  IssuePage,
+  IssueQuery,
+  IssueReader,
+  ReleaseInput,
+  ReleaseStore,
+} from '@nekolog-io/adapters'
+import {
+  assertCommit,
+  assertVersion,
+  encodeIssueCursor,
+  memoryRateLimiter,
+} from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import { type ApiDeps, createApiApp } from './app.ts'
 import type { ApiPrincipal } from './authenticate.ts'
+import { MAX_BODY_BYTES } from './body.ts'
 import { openApiDocument } from './openapi.ts'
 
 const PRINCIPAL: ApiPrincipal = { projectId: 'prj_1', environmentId: 'env_1' }
@@ -32,6 +44,29 @@ function listing(issues: IssuePage['issues'], seen: IssueQuery[]): IssueReader {
     list: async (query) => {
       seen.push(query)
       return { issues, nextCursor: null }
+    },
+  }
+}
+
+function recording(seen: ReleaseInput[]): ReleaseStore {
+  return {
+    record: async (input) => {
+      assertVersion(input.version)
+      assertCommit(input.commit)
+      seen.push(input)
+      return {
+        created: true,
+        release: {
+          id: 'rel_0123456789ABCDEFGHJKMNPQRS',
+          projectId: input.projectId,
+          environmentId: input.environmentId,
+          version: input.version,
+          commit: input.commit ?? null,
+          sourcemapCount: 0,
+          releasedAt: '2026-11-04T12:00:00.000Z',
+          createdAt: '2026-11-04T12:00:00.000Z',
+        },
+      }
     },
   }
 }
@@ -239,7 +274,7 @@ describe('the public read API', () => {
     })
   })
 
-  it('reads and nothing else: no method but GET and HEAD reaches any route', async () => {
+  it('writes on one route only: every other path refuses every other method', async () => {
     const { app, asked } = build({ issues: listing([], []) })
 
     for (const path of ['/v1/logs', '/v1/histogram', '/v1/issues', '/health', '/openapi.json']) {
@@ -249,7 +284,100 @@ describe('the public read API', () => {
       }
     }
 
+    for (const method of ['GET', 'PUT', 'PATCH', 'DELETE']) {
+      const response = await app.request('http://api.test/v1/releases', { method })
+      expect(response.status, `${method} /v1/releases`).toBe(404)
+    }
+
     expect(asked).toHaveLength(0)
+  })
+
+  it('records a release on the key’s own project and environment', async () => {
+    const seen: ReleaseInput[] = []
+    const { app } = build({ releases: recording(seen) })
+
+    const response = await app.request('http://api.test/v1/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: '1.4.2', commit: '9f3a1c7', projectId: 'prj_2' }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(await body(response)).toMatchObject({ created: true, release: { version: '1.4.2' } })
+    expect(seen[0]).toMatchObject({
+      projectId: 'prj_1',
+      environmentId: 'env_1',
+      version: '1.4.2',
+      commit: '9f3a1c7',
+    })
+  })
+
+  it('demands a key that may write, not merely one that may read', async () => {
+    const seen: ReleaseInput[] = []
+    const { app } = build({
+      releases: recording(seen),
+      authenticateWrite: () => ({
+        ok: false,
+        code: 'insufficient_scope',
+        message: 'This key does not carry the logs:write scope',
+      }),
+    })
+
+    const response = await app.request('http://api.test/v1/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: '1.4.2' }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('turns a bad version or commit into a refusal, not a server error', async () => {
+    const seen: ReleaseInput[] = []
+    const { app } = build({ releases: recording(seen) })
+
+    for (const payload of [{}, { version: ' 1.4.2' }, { version: '1.4.2', commit: 'NOPE' }]) {
+      const response = await app.request('http://api.test/v1/releases', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      expect(response.status, JSON.stringify(payload)).toBe(400)
+    }
+  })
+
+  it('refuses a body that is not declared as JSON, or is too big', async () => {
+    const seen: ReleaseInput[] = []
+    const { app } = build({ releases: recording(seen) })
+
+    const wrongType = await app.request('http://api.test/v1/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: JSON.stringify({ version: '1.4.2' }),
+    })
+    expect(wrongType.status).toBe(415)
+
+    const huge = await app.request('http://api.test/v1/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: '1.4.2', padding: 'x'.repeat(MAX_BODY_BYTES) }),
+    })
+    expect(huge.status).toBe(413)
+
+    expect(seen).toHaveLength(0)
+  })
+
+  it('says plainly that it records no releases when nothing wired a store', async () => {
+    const { app } = build()
+    const response = await app.request('http://api.test/v1/releases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: '1.4.2' }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(await body(response)).toMatchObject({ error: { code: 'not_found' } })
   })
 
   it('answers 404 for an endpoint that does not exist', async () => {

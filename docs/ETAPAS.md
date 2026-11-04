@@ -221,7 +221,7 @@ para o passo a passo mostrar.
 - [x] **4.4** `feat/log-context` — logs antes e depois de um log escolhido. *(Daqui: a consulta de janela no query builder. O "ver contexto" é de lá.)*
 - [x] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5. *(Inteira daqui: é CPU pura sobre o evento, e o ClickHouse não preenche a coluna depois do insert sem mutation.)*
 - [x] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá. As tabelas `issues` e `issue_environments` vieram com esta etapa, não com a 4.15, porque o job que as escreve é quem define o formato delas.)*
-- [ ] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá. A escrita é uma rota nova no `apps/api`, que a 5.9 criou.)*
+- [x] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá. A escrita é uma rota nova no `apps/api`, que a 5.9 criou.)*
 - [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui, sobre o `apps/api` da 5.9.)*
 - [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui. Sobe pelo que a 4.8 decidir.)*
 - [x] **4.11** `feat/clock-skew` — a ingestão mede a diferença entre o `timestamp` do cliente e o `received_at` do servidor e marca o evento. *(O aviso na tela é de lá.)*

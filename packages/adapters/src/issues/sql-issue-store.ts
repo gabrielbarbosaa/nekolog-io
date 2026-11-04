@@ -1,3 +1,4 @@
+import { crockfordId } from '../ids.ts'
 import type { IssueOccurrence, IssueRollup, IssueStore } from '../issue-store.ts'
 
 export type SqlRunner = (
@@ -11,25 +12,8 @@ export type SqlIssueStoreOptions = {
 
 export const ISSUE_ID_PREFIX = 'iss_'
 
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-
-type CryptoLike = { getRandomValues?: (array: Uint8Array) => Uint8Array }
-
-function randomBytes(size: number): Uint8Array {
-  const source = (globalThis as { crypto?: CryptoLike }).crypto
-  if (!source?.getRandomValues) {
-    throw new Error('This runtime has no crypto.getRandomValues, so it cannot mint an issue id')
-  }
-  return source.getRandomValues(new Uint8Array(size))
-}
-
 export function newIssueId(): string {
-  const bytes = randomBytes(26)
-  let suffix = ''
-  for (const byte of bytes) {
-    suffix += CROCKFORD[byte % 32]
-  }
-  return `${ISSUE_ID_PREFIX}${suffix}`
+  return crockfordId(ISSUE_ID_PREFIX, 'an issue id')
 }
 
 const UPSERT_ISSUE = `

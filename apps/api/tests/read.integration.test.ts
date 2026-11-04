@@ -9,12 +9,17 @@ import {
   seedStatements,
   toDocument,
 } from '@internal/seed'
-import { type IssueOccurrence, sqlIssueReader, sqlIssueStore } from '@nekolog-io/adapters'
+import {
+  type IssueOccurrence,
+  sqlIssueReader,
+  sqlIssueStore,
+  sqlReleaseStore,
+} from '@nekolog-io/adapters'
 import { type ClickHouseConfig, execute, migrate, ping, queryRows } from '@nekolog-io/clickhouse'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApiApp } from '../src/app.ts'
-import { createReadAuthenticator } from '../src/authenticate.ts'
+import { createReadAuthenticator, createWriteAuthenticator } from '../src/authenticate.ts'
 import { openApiDocument } from '../src/openapi.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
@@ -104,6 +109,16 @@ async function read(path: string, key: string): Promise<Response> {
   )
 }
 
+async function write(path: string, key: string, payload: unknown): Promise<Response> {
+  return app.request(
+    new Request(`https://api.nekolog.io${path}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+  )
+}
+
 async function readJson(path: string, key: string): Promise<Record<string, never>> {
   const response = await read(path, key)
   expect(response.status, `${path} answered ${response.status}`).toBe(200)
@@ -152,8 +167,12 @@ beforeAll(async () => {
     params: readonly unknown[],
   ): Promise<ReadonlyArray<Record<string, unknown>>> => sql.unsafe(text, params as never[])
 
+  const keyStore = await keyStoreFromDocument(document)
+
   app = createApiApp({
-    authenticate: createReadAuthenticator({ keyStore: await keyStoreFromDocument(document) }),
+    authenticate: createReadAuthenticator({ keyStore }),
+    authenticateWrite: createWriteAuthenticator({ keyStore }),
+    releases: sqlReleaseStore(run),
     database,
     query: (statement, params) =>
       queryRows<Record<string, unknown>>(config, statement, { params }) as Promise<
@@ -402,6 +421,67 @@ describe.skipIf(!reachable)('the public API over a real ClickHouse and a real Po
       '/v1/histogram',
       '/v1/issues',
       '/v1/logs',
+      '/v1/releases',
     ])
+  })
+
+  it('records a release into real Postgres, and records it again harmlessly', async () => {
+    const { key } = environmentNamed('production')
+
+    const first = await write('/v1/releases', key, {
+      version: '1.4.2',
+      commit: '9f3a1c7',
+      releasedAt: '2026-11-04T10:00:00.000Z',
+    })
+    expect(first.status).toBe(201)
+    const created = (await first.json()) as { created: boolean; release: Record<string, unknown> }
+
+    expect(created.created).toBe(true)
+    expect(created.release).toMatchObject({
+      projectId: seed.project.id,
+      environmentId: environmentNamed('production').id,
+      version: '1.4.2',
+      commit: '9f3a1c7',
+      sourcemapCount: 0,
+      releasedAt: '2026-11-04T10:00:00.000Z',
+    })
+    expect(String(created.release.id)).toMatch(/^rel_[0-9A-HJKMNP-TV-Z]{26}$/)
+
+    const again = await write('/v1/releases', key, {
+      version: '1.4.2',
+      releasedAt: '2026-11-04T18:00:00.000Z',
+    })
+    const found = (await again.json()) as { created: boolean; release: Record<string, unknown> }
+
+    expect(again.status).toBe(201)
+    expect(found.created).toBe(false)
+    expect(found.release.id).toBe(created.release.id)
+    expect(found.release.commit).toBe('9f3a1c7')
+    expect(found.release.releasedAt).toBe('2026-11-04T10:00:00.000Z')
+
+    const rows = await sql`select count(*)::int as total from releases where version = '1.4.2'`
+    expect(rows[0]?.total).toBe(1)
+  })
+
+  it('keeps one environment’s release out of another’s', async () => {
+    await write('/v1/releases', environmentNamed('staging').key, { version: 'only-in-staging' })
+
+    const rows = await sql`
+      select environment_id from releases where version = 'only-in-staging'
+    `
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.environment_id).toBe(environmentNamed('staging').id)
+  })
+
+  it('refuses a public key on the one route that writes', async () => {
+    const found = seed.environments.find((entry) => entry.name === 'production')
+    const publicKey = found?.keys.find((one) => one.kind === 'public')?.value as string
+
+    const response = await write('/v1/releases', publicKey, { version: 'never-lands' })
+    const rows =
+      await sql`select count(*)::int as total from releases where version = 'never-lands'`
+
+    expect(response.status).toBe(401)
+    expect(rows[0]?.total).toBe(0)
   })
 })

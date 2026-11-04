@@ -65,6 +65,38 @@ También rechaza una carpeta sin `package.json` en vez de inventarse un proyecto
 Si la instalación falla, el `.env` **queda escrito** y el mensaje dice qué falta
 por ejecutar.
 
+## Registrar una versión publicada
+
+```bash
+npx @nekolog-io/cli releases create 1.4.2 --commit "$(git rev-parse HEAD)"
+```
+
+Lee la clave de `--key` o de `NEKOLOG_KEY`, y la clave ya dice a qué proyecto y
+a qué entorno pertenece la release — nunca pasas ninguno de los dos.
+
+| | |
+|---|---|
+| `--key <clave>` | la clave **secreta** del entorno (por defecto: `$NEKOLOG_KEY`) |
+| `--commit <sha>` | 7 a 40 caracteres hexadecimales en minúscula |
+| `--at <momento>` | cuándo salió, ISO 8601 (por defecto: ahora) |
+| `--api <url>` | dónde responde la API pública (por defecto: `https://api.nekolog.io`) |
+
+Ponlo al final del job de despliegue. Es **idempotente**: volver a ejecutarlo
+para la misma versión no cambia nada, conserva el momento en que esa versión
+salió por primera vez y nunca descarta un commit que ya conoce, así que repetir
+un pipeline es inofensivo y el código de salida sigue significando lo que dice.
+
+Tres cosas rechaza **antes de abrir un socket**, para que un error nunca ponga
+tu clave en la red:
+
+- **una clave pública**, porque viaja en cada bundle del navegador;
+- **un commit que no es lo que imprime `git rev-parse`** — en mayúsculas,
+  demasiado corto o no hexadecimal;
+- **HTTP plano hacia cualquier sitio que no sea esta máquina.** Una clave
+  secreta en claro es una clave secreta regalada. Apunta `--api` a `https://…`,
+  o pon un proxy inverso con certificado delante de tu self-host.
+  `http://localhost` se permite, porque nada sale de la máquina.
+
 ## Después de ejecutarlo
 
 Abre la guía de lo que haya instalado: [Browser](/docs/es/guides/browser/),

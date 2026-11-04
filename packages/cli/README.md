@@ -14,6 +14,28 @@ as variáveis no `.env`.
 | `--cwd <path>` | onde está o projeto |
 | `--env <file>` | qual arquivo escrever (padrão `.env`) |
 
+```bash
+npx @nekolog-io/cli releases create 1.4.2 --commit "$(git rev-parse HEAD)"
+```
+
+Registra que uma versão saiu, na API pública. A key diz a que projeto e ambiente
+ela pertence, então nenhum dos dois é argumento.
+
+| | |
+|---|---|
+| `--key <key>` | a key **secreta** do ambiente (padrão `$NEKOLOG_KEY`) |
+| `--commit <sha>` | 7 a 40 hexadecimais minúsculos |
+| `--at <momento>` | quando saiu, ISO 8601 (padrão: agora) |
+| `--api <url>` | onde a API responde (padrão `https://api.nekolog.io`) |
+
+É **idempotente**: a mesma versão de novo não muda nada, mantém o momento da
+primeira vez e não descarta um commit já conhecido. Repetir o pipeline é de
+graça.
+
+E recusa três coisas **antes de abrir o socket**, para a key nunca ir para a
+rede por engano: key pública, commit que não é o que o `git rev-parse` imprime,
+e HTTP puro para fora desta máquina.
+
 ## O que ele escolhe, e por quê
 
 A ordem importa, porque projeto de verdade tem mais de uma dessas:

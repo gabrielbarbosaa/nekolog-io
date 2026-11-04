@@ -64,6 +64,38 @@ Ele também recusa uma pasta sem `package.json` em vez de inventar um projeto. S
 a instalação falhar, o `.env` **continua escrito** e a mensagem diz o que falta
 rodar.
 
+## Registrando uma release
+
+```bash
+npx @nekolog-io/cli releases create 1.4.2 --commit "$(git rev-parse HEAD)"
+```
+
+Ele lê a key de `--key` ou de `NEKOLOG_KEY`, e a key já diz a que projeto e a
+que ambiente a release pertence — você nunca passa nenhum dos dois.
+
+| | |
+|---|---|
+| `--key <key>` | a key **secreta** do ambiente (padrão: `$NEKOLOG_KEY`) |
+| `--commit <sha>` | 7 a 40 caracteres hexadecimais minúsculos |
+| `--at <momento>` | quando saiu, ISO 8601 (padrão: agora) |
+| `--api <url>` | onde a API pública responde (padrão: `https://api.nekolog.io`) |
+
+Coloque no fim do job de deploy. Ele é **idempotente**: rodar de novo para a
+mesma versão não muda nada, mantém o momento em que a versão saiu pela primeira
+vez e nunca descarta um commit que já conhece — então repetir um pipeline é
+inofensivo e o código de saída continua significando o que diz.
+
+Três coisas ele recusa **antes de abrir um socket**, para que um engano nunca
+coloque a sua key na rede:
+
+- **uma key pública**, porque ela vai em todo bundle de browser;
+- **um commit que não é o que o `git rev-parse` imprime** — maiúsculo, curto
+  demais ou não hexadecimal;
+- **HTTP puro para qualquer lugar que não seja esta máquina.** Key secreta em
+  claro é key secreta entregue. Aponte o `--api` para `https://…`, ou ponha um
+  proxy reverso com certificado na frente do seu self-host. `http://localhost`
+  é permitido, porque nada sai da máquina.
+
 ## Depois de rodar
 
 Abra o guia do que ele instalou: [Browser](/docs/pt-br/guides/browser/),

@@ -111,6 +111,7 @@ export { memoryExportStore } from './exports/memory-export-store.ts'
 export { sqlExportScheduleStore } from './exports/sql-export-schedule-store.ts'
 export type { SqlExportStoreOptions } from './exports/sql-export-store.ts'
 export { DEFAULT_STALE_AFTER_MS, sqlExportStore } from './exports/sql-export-store.ts'
+export { CROCKFORD_ALPHABET, crockfordId, ID_SUFFIX_CHARS } from './ids.ts'
 export type {
   IssuePage,
   IssueQuery,
@@ -227,4 +228,24 @@ export type {
 } from './redis/upstash-redis.ts'
 export { assertUpstashUrl, UpstashRedisError, upstashRedis } from './redis/upstash-redis.ts'
 export type { RedisClient } from './redis-client.ts'
+export type {
+  RecordedRelease,
+  Release,
+  ReleaseInput,
+  ReleaseStore,
+} from './release-store.ts'
+export {
+  assertCommit,
+  assertReleasedAt,
+  assertVersion,
+  COMMIT_PATTERN,
+  InvalidRelease,
+  MAX_VERSION_CHARS,
+} from './release-store.ts'
+export type { SqlReleaseStoreOptions } from './releases/sql-release-store.ts'
+export {
+  newReleaseId,
+  RELEASE_ID_PREFIX,
+  sqlReleaseStore,
+} from './releases/sql-release-store.ts'
 export type { EnvironmentUsage, UsageStore } from './usage-store.ts'

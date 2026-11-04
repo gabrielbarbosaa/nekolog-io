@@ -17,6 +17,7 @@ request arrived on.
 | `GET /v1/logs` | Search, with `q`, `from`, `to`, `limit`, `order`. |
 | `GET /v1/histogram` | Counts per bucket and level, with `q`, `from`, `to`, `bucket`. |
 | `GET /v1/issues` | Errors grouped by fingerprint, with `status`, `since`, `until`, `limit`, `cursor`. |
+| `POST /v1/releases` | Record that a version went out. The only route that writes. |
 
 ```
 curl -H "Authorization: Bearer nekolog_sk_…" \
@@ -41,10 +42,17 @@ ends up in access logs, proxies and browser history.
 key that may read a tenant's logs cannot be one. The seed mints `logs:write` only for a
 public key, and this API demands `logs:read`.
 
-**It reads and does nothing else.** Only `GET` is routed — a `POST` to `/v1/logs` is a
-404, not a method error — and the ClickHouse credential it runs as is `nekolog_reader`,
-which holds `SELECT` on one database and no grant on S3 or on `system`. There is no R2
-binding in `wrangler.json` at all.
+**It writes on exactly one route, and that one asks for a different scope.**
+`POST /v1/releases` needs `logs:write`; every other route needs `logs:read` and is a
+`GET`. A `POST` to `/v1/logs` is a 404, not a method error, and a `GET` on
+`/v1/releases` is a 404 too. The ClickHouse credential is `nekolog_reader`, which holds
+`SELECT` on one database and no grant on S3 or on `system`, and there is no R2 binding
+in `wrangler.json` at all — the one write this app does goes to Postgres.
+
+**Recording a release is idempotent.** Sending the same version again returns the row
+that already exists with `created: false`, keeps the earliest `releasedAt` (`least`, the
+same rule as an issue's `first_seen_at`) and never drops a commit it already knows. A CI
+job that reruns must not look like a new deploy, and must not fail either.
 
 **What the log store said is never what the caller is told.** A failed query answers
 `503 upstream_unavailable` with a fixed sentence; the real exception, which can quote a
