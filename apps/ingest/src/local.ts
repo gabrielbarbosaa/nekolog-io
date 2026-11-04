@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { keyStoreFromDocument, type SeedDocument } from '@internal/seed'
+import type { BlobStore, BlockedEnvironments } from '@nekolog-io/adapters'
 import { memoryRateLimiter } from '@nekolog-io/adapters'
 import type { ClickHouseConfig } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
@@ -7,13 +8,15 @@ import type { Hono } from 'hono'
 import { createIngestApp } from './app.ts'
 import { createAttributeBudget } from './attributes.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
-import { createLogStoreSink } from './sink.ts'
+import { createLogStoreSink, type SpooledBatch } from './sink.ts'
 import { eventsPerMinuteFrom } from './worker.ts'
 
 export const DEFAULT_LOCAL_PORT = 8787
+export const DEFAULT_LOCAL_HOST = '127.0.0.1'
 
 export type LocalIngestConfig = {
   port: number
+  host: string
   seedFile: string
   clickhouse: ClickHouseConfig
   eventsPerMinute: number
@@ -21,6 +24,7 @@ export type LocalIngestConfig = {
 
 export type LocalIngestEnv = {
   PORT?: string
+  INGEST_HOST?: string
   INGEST_SEED_FILE?: string
   CLICKHOUSE_URL?: string
   CLICKHOUSE_DB?: string
@@ -53,6 +57,10 @@ export function portFrom(value: string | undefined): number {
 export function localIngestConfigFrom(env: LocalIngestEnv): LocalIngestConfig {
   return {
     port: portFrom(env.PORT),
+    host:
+      env.INGEST_HOST === undefined || env.INGEST_HOST === ''
+        ? DEFAULT_LOCAL_HOST
+        : env.INGEST_HOST,
     seedFile: env.INGEST_SEED_FILE ?? '.nekolog-seed.json',
     clickhouse: {
       url: required(env, 'CLICKHOUSE_URL'),
@@ -68,16 +76,22 @@ export type LocalIngestOptions = {
   config: LocalIngestConfig
   document: SeedDocument
   onError?: (error: unknown) => void
+  spool?: BlobStore
+  blocks?: BlockedEnvironments
+  onSpooled?: (spooled: SpooledBatch) => void
 }
 
 export async function localIngestApp(options: LocalIngestOptions): Promise<Hono> {
   return createIngestApp({
     authenticate: createKeyAuthenticator({
       keyStore: await keyStoreFromDocument(options.document),
+      ...(options.blocks === undefined ? {} : { blocks: options.blocks }),
     }),
     sink: createLogStoreSink({
       logStore: clickHouseLogStore(options.config.clickhouse),
       attributeBudget: createAttributeBudget(),
+      ...(options.spool === undefined ? {} : { spool: options.spool }),
+      ...(options.onSpooled === undefined ? {} : { onSpooled: options.onSpooled }),
     }),
     limits: {
       rateLimiter: memoryRateLimiter(),
@@ -94,7 +108,11 @@ export type LocalIngestServer = {
 
 export async function startLocalIngest(options: LocalIngestOptions): Promise<LocalIngestServer> {
   const app = await localIngestApp(options)
-  const server = serve({ fetch: app.fetch, port: options.config.port, hostname: '127.0.0.1' })
+  const server = serve({
+    fetch: app.fetch,
+    port: options.config.port,
+    hostname: options.config.host,
+  })
 
   const port = await new Promise<number>((resolve, reject) => {
     server.once('error', reject)
@@ -104,8 +122,13 @@ export async function startLocalIngest(options: LocalIngestOptions): Promise<Loc
     })
   })
 
+  const host =
+    options.config.host === '0.0.0.0' || options.config.host === '::'
+      ? DEFAULT_LOCAL_HOST
+      : options.config.host
+
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://${host}:${port}`,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   }
 }

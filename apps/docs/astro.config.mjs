@@ -42,6 +42,11 @@ export default defineConfig({
             { slug: 'guides/tracing' },
           ],
         },
+        {
+          label: 'Run it yourself',
+          translations: { 'pt-BR': 'Rodar por conta própria', es: 'Ejecutarlo por tu cuenta' },
+          items: [{ slug: 'self-host/install' }],
+        },
       ],
     }),
   ],

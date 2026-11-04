@@ -37,6 +37,7 @@
       <quota>default</quota>
       <grants>
         <query>GRANT SELECT, INSERT ON nekolog_${environment}.*</query>
+        <query>GRANT SELECT ON system.disks</query>
         <query>GRANT WRITE ON S3</query>
         <query>GRANT CREATE TEMPORARY TABLE ON *.*</query>
       </grants>

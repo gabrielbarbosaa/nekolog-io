@@ -48,6 +48,7 @@ export type {
   LocalIngestServer,
 } from './local.ts'
 export {
+  DEFAULT_LOCAL_HOST,
   DEFAULT_LOCAL_PORT,
   localIngestApp,
   localIngestConfigFrom,
@@ -63,6 +64,16 @@ export {
   rowsFor,
   UNRESOLVED_FINGERPRINT,
 } from './rows.ts'
+export type {
+  SelfHostIngestConfig,
+  SelfHostIngestEnv,
+  SelfHostIngestOptions,
+} from './self-host.ts'
+export {
+  DEFAULT_SELF_HOST_HOST,
+  selfHostIngestConfigFrom,
+  selfHostIngestWiring,
+} from './self-host.ts'
 export type { LogStoreSinkOptions, SpooledBatch } from './sink.ts'
 export { createLogStoreSink } from './sink.ts'
 export type { ExecutionContextLike, IngestEnv } from './worker.ts'
