@@ -264,3 +264,39 @@ saia, que o esqueleto do SQL continue limpo e que o escopo não saia do lugar
 propriedade não passar por vacuidade); e `search.integration.test.ts` roda o SQL
 gerado contra um **ClickHouse de verdade**, que é o único lugar onde se descobre
 que `attributes[{p:String}]` funciona e que o `hasToken` não aceita um ponto.
+
+### Ver contexto
+
+```ts
+import { logContextQuery } from '@nekolog-io/clickhouse/search'
+
+const { sql, params } = logContextQuery(
+  chosen.timestamp,
+  { projectId, environmentId },
+  { database: 'nekolog_prod' },
+  { before: 25, after: 25 },
+)
+```
+
+Devolve o que veio antes, o que divide o mesmo instante e o que veio depois,
+numa consulta só (três `SELECT` com `UNION ALL`), com uma coluna
+`context_side` em `-1`, `0` e `1`.
+
+**A âncora é um instante, não uma linha, e isso é uma limitação da tabela, não
+uma escolha.** A `logs` não tem identidade de linha: a chave de ordenação é
+`(project_id, environment_id, timestamp)` e nada distingue duas linhas gravadas
+no mesmo milissegundo. Então tudo que empata com a âncora volta junto, no grupo
+do meio, limitado pelo `atMost`. Fingir uma ordem que o dado não tem seria pior
+do que mostrar as três linhas.
+
+**A janela existe para a partição ser podada.** A tabela é particionada por
+`toYYYYMMDD(timestamp)`; sem um intervalo, "as 25 linhas anteriores" varre o
+histórico inteiro até achar 25. O padrão é uma hora para cada lado, com teto de
+sete dias, e tem teste de integração conferindo que os dois lados da janela
+cortam.
+
+**As colunas vêm de uma lista fechada.** O chamador escolhe quais quer, e
+qualquer nome fora da `LOG_COLUMNS` é recusado — é a única parte da consulta que
+não dá para parametrizar. O `retention_days` não está na lista: é campo interno,
+não é log de ninguém. O nome do banco e da tabela passam pelo mesmo
+`assertIdentifier` do `LogStore`.
