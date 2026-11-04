@@ -78,6 +78,13 @@
       "when": 1793795053343,
       "tag": "0010_environment_intake",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793795949230,
+      "tag": "0011_environment_redaction",
+      "breakpoints": true
     }
   ]
 }

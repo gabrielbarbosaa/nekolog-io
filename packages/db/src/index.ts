@@ -199,6 +199,7 @@ export const environments = pgTable(
     retentionDays: integer('retention_days').notNull().default(7),
     minLevel: text('min_level').notNull().default('trace'),
     sampleRate: doublePrecision('sample_rate').notNull().default(1),
+    redactionRules: jsonb('redaction_rules').notNull().default({}),
     dailyEventQuota: integer('daily_event_quota'),
     originAllowlist: text('origin_allowlist').array(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -214,6 +215,14 @@ export const environments = pgTable(
       sql`min_level in ('trace', 'debug', 'info', 'warn', 'error', 'fatal')`,
     ),
     check('environments_sample_rate_is_a_share', sql`sample_rate > 0 and sample_rate <= 1`),
+    check(
+      'environments_redaction_rules_is_an_object',
+      sql`jsonb_typeof(redaction_rules) = 'object'`,
+    ),
+    check(
+      'environments_redaction_never_carries_a_regex',
+      sql`not (redaction_rules ? 'regex' or redaction_rules ? 'pattern' or redaction_rules ? 'patternSource')`,
+    ),
     check(
       'environments_quota_is_positive_when_set',
       sql`daily_event_quota is null or daily_event_quota > 0`,

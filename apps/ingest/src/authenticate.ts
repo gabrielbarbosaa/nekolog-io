@@ -82,6 +82,9 @@ export function createKeyAuthenticator(options: KeyAuthenticatorOptions): Authen
     if (record.sampleRate !== undefined) {
       principal.sampleRate = record.sampleRate
     }
+    if (record.redaction !== undefined) {
+      principal.redaction = record.redaction
+    }
 
     return { ok: true, principal }
   }
