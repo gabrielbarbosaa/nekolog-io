@@ -45,7 +45,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:browser": "vitest run --config vitest.browser.config.ts",
-    "lint": "pnpm run build && publint && attw --pack . && size-limit"
+    "lint": "publint && attw --pack . && size-limit"
   },
   "dependencies": {
     "@nekolog-io/core": "workspace:*"

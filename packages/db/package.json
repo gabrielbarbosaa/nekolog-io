@@ -45,7 +45,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "lint": "pnpm run build && pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+    "lint": "pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4"

@@ -41,7 +41,7 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "lint": "pnpm run build && pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+    "lint": "pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
