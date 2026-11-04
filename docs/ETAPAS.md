@@ -217,7 +217,7 @@ para o passo a passo mostrar.
 > fecha nada. As três que perderam a caixa continuam abertas aqui, órfãs, e isso
 > é o custo aceito — como as 3.10 e 3.14.
 
-- [ ] **4.1** `feat/search-language` — parser da busca (AST → SQL parametrizado) conforme a especificação 4, com fuzzing. *(Daqui: o parser e o gerador de SQL em `packages/clickhouse`. A barra de busca é de lá.)*
+- [x] **4.1** `feat/search-language` — parser da busca (AST → SQL parametrizado) conforme a especificação 4, com fuzzing. *(Daqui: o parser e o gerador de SQL em `packages/clickhouse`. A barra de busca é de lá.)*
 - [ ] **4.4** `feat/log-context` — logs antes e depois de um log escolhido. *(Daqui: a consulta de janela no query builder. O "ver contexto" é de lá.)*
 - [ ] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5. *(Inteira daqui: é CPU pura sobre o evento, e o ClickHouse não preenche a coluna depois do insert sem mutation.)*
 - [ ] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá.)*
