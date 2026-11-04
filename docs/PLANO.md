@@ -813,7 +813,35 @@ docs/specs/     # especificações técnicas (payload, busca, fingerprint, alert
 - **Deploy:** cada branch publica no seu ambiente (seção 17): integração Git da Vercel para web e docs, com preview por PR, e `wrangler deploy --env` pelo Actions para ingest e jobs.
 - **Segurança no CI:** seção 14.2.
 - **Compatibilidade:** testes em Node 22, 24 e 26, Bun e Deno, e no Chromium, Firefox e WebKit.
-- **Antes da 1.0:** teste de carga com k6.
+- **Antes da 1.0:** teste de carga com k6 — feito na etapa 6.4, em `internal/load`. O que ele mediu está no `internal/load/README.md`; o que mudou por causa dele está abaixo.
+
+### 19.1 O orçamento de CPU da ingestão (medido na 6.4)
+
+Os 10 ms de CPU por request do Worker no plano gratuito (seção 4) são o limite
+mais apertado deste projeto, e **o lote máximo que a especificação 1 permite não
+cabia neles**. Medido em 2026-11-04: um lote de 500 eventos com 20% de erros,
+comprimido e com todas as regras de redação ligadas, custava **10,8 ms**.
+
+Duas mudanças saíram daí.
+
+- **O fingerprint é memoizado por lote.** Os 100 `crypto.subtle.digest` de um
+  lote custavam 1,2 ms, e num *burst* — que é a forma que um incidente tem — são
+  todos o mesmo erro. A memoização é por lote, nunca global: um isolate que vive
+  muito guardaria um mapa que só cresce. O pior caso (todo erro distinto) não
+  piora.
+- **O padrão do SDK passou a ser 200 eventos por lote**
+  (`DEFAULT_MAX_BATCH_EVENTS` em `@nekolog-io/core`), não 500. O limite do
+  protocolo continua 500: o servidor aceita de quem pedir, mas o cliente padrão
+  não manda mais o pior caso sem ninguém ter escolhido isso. 200 eventos custam
+  ~2,1 ms, o que deixa folga de verdade.
+
+Mesmo depois das duas, o lote de 500 custa 9,1 ms. **Não sobra folga no lote
+máximo**, e isso é deliberado: quem pede 500 está pedindo o limite.
+
+A redação **não** foi otimizada, embora seja o segundo maior custo (1,7 ms sobre
+3.000 valores de atributo). Toda otimização plausível ali é uma heurística que
+pula valores, e um controle de privacidade que silenciosamente deixa de redigir
+é pior que um que redige demais — a mesma regra da seção 14.
 
 ## 20. Open source
 

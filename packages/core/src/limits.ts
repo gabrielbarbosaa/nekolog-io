@@ -8,6 +8,8 @@ export const MIN_EVENTS_PER_BATCH = 1
 export const MAX_EVENTS_PER_BATCH = 500
 export const MAX_BATCH_BYTES: number = 512 * 1024
 
+export const DEFAULT_MAX_BATCH_EVENTS = 200
+
 export const DEFAULT_SERVICE = 'default'
 export const MAX_SERVICE_CHARS = 128
 export const MAX_RELEASE_CHARS = 64

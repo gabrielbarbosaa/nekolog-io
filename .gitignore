@@ -53,3 +53,4 @@ Thumbs.db
 backend.hcl
 *.tfvars
 *.auto.tfvars
+internal/load/k6/fixtures/

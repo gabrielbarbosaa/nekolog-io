@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   appFrames,
+  createFingerprinter,
   FINGERPRINT_VERSION,
   type FingerprintInput,
   fingerprintFor,
@@ -307,5 +308,100 @@ describe('text that arrives from outside', () => {
 
   it('reads a stack of nothing but noise without falling over', () => {
     expect(() => appFrames('\u0000\n(((\n@@@\nat at at\n'.repeat(50))).not.toThrow()
+  })
+})
+
+describe('the per-batch fingerprinter', () => {
+  const ERROR: FingerprintInput = {
+    level: 'error',
+    message: 'order resolution failed',
+    service: 'checkout-api',
+    error: { type: 'TypeError', message: 'cannot read id', stack: NODE_STACK },
+  }
+
+  it('answers exactly what the one-shot function answers', async () => {
+    const fingerprint = createFingerprinter()
+
+    expect(await fingerprint(ERROR)).toBe(await fingerprintFor(ERROR))
+    expect(await fingerprint({ level: 'info', message: 'hello', service: 'api' })).toBe(
+      NO_FINGERPRINT,
+    )
+  })
+
+  it('hashes one repeated error once, which is the shape a burst has', async () => {
+    const digest = vi.spyOn(crypto.subtle, 'digest')
+    try {
+      const fingerprint = createFingerprinter()
+      const answers = await Promise.all(Array.from({ length: 50 }, () => fingerprint(ERROR)))
+
+      expect(new Set(answers).size).toBe(1)
+      expect(digest).toHaveBeenCalledTimes(1)
+    } finally {
+      digest.mockRestore()
+    }
+  })
+
+  it('still hashes once per distinct error', async () => {
+    const digest = vi.spyOn(crypto.subtle, 'digest')
+    try {
+      const fingerprint = createFingerprinter()
+      const answers = await Promise.all(
+        Array.from({ length: 10 }, (_, at) =>
+          fingerprint({
+            ...ERROR,
+            error: { ...ERROR.error, stack: NODE_STACK.replace('payment.js', `pay${at}.js`) },
+          }),
+        ),
+      )
+
+      expect(new Set(answers).size).toBe(10)
+      expect(digest).toHaveBeenCalledTimes(10)
+    } finally {
+      digest.mockRestore()
+    }
+  })
+
+  it('never spends a digest on an event that has no fingerprint', async () => {
+    const digest = vi.spyOn(crypto.subtle, 'digest')
+    try {
+      const fingerprint = createFingerprinter()
+      for (let at = 0; at < 100; at += 1) {
+        expect(await fingerprint({ level: 'info', message: `n ${at}`, service: 'api' })).toBe(
+          NO_FINGERPRINT,
+        )
+      }
+
+      expect(digest).not.toHaveBeenCalled()
+    } finally {
+      digest.mockRestore()
+    }
+  })
+
+  it('remembers inside one batch and nothing beyond it', async () => {
+    const digest = vi.spyOn(crypto.subtle, 'digest')
+    try {
+      await createFingerprinter()(ERROR)
+      await createFingerprinter()(ERROR)
+
+      expect(digest).toHaveBeenCalledTimes(2)
+    } finally {
+      digest.mockRestore()
+    }
+  })
+
+  it('keeps two rules apart even when their parts would read the same', async () => {
+    const manual = await createFingerprinter()({
+      level: 'error',
+      message: 'x',
+      service: 'api',
+      fingerprint: ['checkout-api', 'x'],
+    })
+    const log = await createFingerprinter()({
+      level: 'error',
+      message: 'x',
+      service: 'checkout-api',
+    })
+
+    expect(manual).not.toBe(log)
   })
 })

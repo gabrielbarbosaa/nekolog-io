@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@internal/deploy": "workspace:*",
+    "@internal/load": "workspace:*",
     "@nekolog-io/node": "workspace:*",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",

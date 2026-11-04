@@ -22,6 +22,7 @@ export {
 } from './event.ts'
 export { isLogLevel, levelRank, passesThreshold } from './levels.ts'
 export {
+  DEFAULT_MAX_BATCH_EVENTS,
   DEFAULT_SERVICE,
   LOG_LEVELS,
   MAX_ATTRIBUTE_KEY_CHARS,

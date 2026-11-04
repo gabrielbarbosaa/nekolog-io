@@ -10,7 +10,12 @@ import {
   decisionForStatus,
   isBatchErrorCode,
 } from './codes.ts'
-import { MAX_BATCH_BYTES, MAX_EVENTS_PER_BATCH, SCHEMA_VERSION } from './limits.ts'
+import {
+  DEFAULT_MAX_BATCH_EVENTS,
+  MAX_BATCH_BYTES,
+  MAX_EVENTS_PER_BATCH,
+  SCHEMA_VERSION,
+} from './limits.ts'
 import { type BoundedQueue, boundedQueue, DEFAULT_MAX_QUEUE_EVENTS } from './queue.ts'
 import { cancel, schedule, sleepFor, type TimerId } from './timers.ts'
 import type { LogEvent, Resource, Sdk, Sink } from './types.ts'
@@ -189,7 +194,7 @@ export function createTransport(options: TransportOptions): Transport {
   const url = requestUrlFor(endpoint)
   const headers = headersFor(options.apiKey)
   const maxBatchEvents = Math.min(
-    options.maxBatchEvents ?? MAX_EVENTS_PER_BATCH,
+    options.maxBatchEvents ?? DEFAULT_MAX_BATCH_EVENTS,
     MAX_EVENTS_PER_BATCH,
   )
   const maxBatchBytes = Math.min(options.maxBatchBytes ?? MAX_BATCH_BYTES, MAX_BATCH_BYTES)

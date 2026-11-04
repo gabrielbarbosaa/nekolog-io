@@ -2,7 +2,7 @@ import type { ParsedBatch } from '@internal/schema'
 import { hasRules } from '@nekolog-io/adapters'
 import type { IngestPrincipal } from './app.ts'
 import { boundedTimestampMs, clockSkewMs } from './clock-skew.ts'
-import { fingerprintFor, NO_FINGERPRINT } from './fingerprint.ts'
+import { createFingerprinter, NO_FINGERPRINT } from './fingerprint.ts'
 import { decideIntake, settingsFrom } from './intake.ts'
 import { redactAttributes, redactText, rulesFor } from './redact.ts'
 
@@ -62,6 +62,7 @@ export async function rowsFor(
   const redacting = hasRules(redaction)
 
   const admitAttribute = context.admitAttribute
+  const fingerprintOf = createFingerprinter()
 
   const admitted = batch.accepted.filter(({ event, index }) => {
     const decision = decideIntake(event, settings, `${batch.batchId}:${index}`)
@@ -106,7 +107,7 @@ export async function rowsFor(
       span_id: event.trace?.spanId ?? '',
       session_id: event.session?.id ?? '',
       user_id: event.session?.userId ?? '',
-      fingerprint: await fingerprintFor({
+      fingerprint: await fingerprintOf({
         level: event.level,
         message: event.message,
         service: batch.resource.service,
