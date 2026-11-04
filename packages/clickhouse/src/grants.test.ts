@@ -117,6 +117,53 @@ describe('the reading credential', () => {
   })
 })
 
+describe('the credential the public read API runs as', () => {
+  it.each([
+    ['dev', DEV, 'nekolog_reader', 'nekolog_dev'],
+    ['vm', VM, vmUser('reader'), vmDatabase()],
+    ['self-host', SELF_HOST, 'nekolog_reader', 'nekolog'],
+  ])('can read every column of its own database in %s', (_name, xml, user, database) => {
+    expect(grantsOf(xml, user)).toContain(`GRANT SELECT ON ${database}.*`)
+  })
+
+  it.each([
+    ['dev', DEV, 'nekolog_reader'],
+    ['vm', VM, vmUser('reader')],
+    ['self-host', SELF_HOST, 'nekolog_reader'],
+  ])('reaches no object store and no system table in %s', (_name, xml, user) => {
+    for (const grant of grantsOf(xml, user)) {
+      for (const global of GLOBAL_GRANTS) {
+        expect(grant).not.toBe(global)
+      }
+      expect(grant).not.toContain(' ON S3')
+      expect(grant).not.toContain('system.')
+      expect(grant).not.toContain(' ON *.*')
+    }
+  })
+
+  it.each([
+    ['dev', DEV, 'nekolog_reader', 'nekolog_dev'],
+    ['self-host', SELF_HOST, 'nekolog_reader', 'nekolog'],
+  ])('is scoped to one database in %s, never to the server', (_name, xml, user, database) => {
+    for (const grant of grantsOf(xml, user)) {
+      expect(grant).toContain(`${database}.`)
+    }
+  })
+
+  it.each(['dev', 'qa', 'prod'])(
+    'cannot reach another environment on the shared machine, from %s',
+    (environment) => {
+      const rendered = VM.replaceAll(ENVIRONMENT, environment)
+      const grants = grantsOf(rendered, `nekolog_reader_${environment}`)
+
+      expect(grants).toContain(`GRANT SELECT ON nekolog_${environment}.*`)
+      for (const other of ['dev', 'qa', 'prod'].filter((one) => one !== environment)) {
+        expect(grants.join(' ')).not.toContain(`nekolog_${other}`)
+      }
+    },
+  )
+})
+
 describe('the migrations credential', () => {
   it('is the only one in any file allowed to change a schema', () => {
     const files: Array<[string, string[]]> = [

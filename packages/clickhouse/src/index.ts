@@ -1,5 +1,11 @@
 export type { ClickHouseConfig } from './client.ts'
-export { ClickHouseError, execute, ping, queryRows } from './client.ts'
+export {
+  ClickHouseError,
+  execute,
+  ping,
+  QUOTE_64_BIT_INTEGERS,
+  queryRows,
+} from './client.ts'
 export { configFromEnv } from './config.ts'
 export type { Migration } from './migrations.ts'
 export {

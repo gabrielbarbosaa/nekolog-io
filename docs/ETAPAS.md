@@ -221,9 +221,9 @@ para o passo a passo mostrar.
 - [x] **4.4** `feat/log-context` — logs antes e depois de um log escolhido. *(Daqui: a consulta de janela no query builder. O "ver contexto" é de lá.)*
 - [x] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5. *(Inteira daqui: é CPU pura sobre o evento, e o ClickHouse não preenche a coluna depois do insert sem mutation.)*
 - [x] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá. As tabelas `issues` e `issue_environments` vieram com esta etapa, não com a 4.15, porque o job que as escreve é quem define o formato delas.)*
-- [ ] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá.)*
-- [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui.)*
-- [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui.)*
+- [ ] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá. A escrita é uma rota nova no `apps/api`, que a 5.9 criou.)*
+- [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui, sobre o `apps/api` da 5.9.)*
+- [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui. Sobe pelo que a 4.8 decidir.)*
 - [x] **4.11** `feat/clock-skew` — a ingestão mede a diferença entre o `timestamp` do cliente e o `received_at` do servidor e marca o evento. *(O aviso na tela é de lá.)*
 - [x] **4.12** `feat/export-manual` — exportação em JSON, XML e CSV gerada pelo ClickHouse direto no R2, com proteção contra injeção de fórmulas no CSV e regra de ciclo de vida de 7 dias. *(O download autenticado é de lá: ele depende de sessão e de permissão no ambiente.)*
 - [x] **4.13** `feat/export-scheduled` — exportação agendada (diária ou semanal) por projeto e ambiente, executada pelos jobs, com o e-mail de aviso. *(A tela que agenda é de lá; o e-mail leva ao dashboard, não traz anexo.)*
@@ -265,7 +265,9 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 > - **A 5.9 é a API pública de leitura, e é inteira daqui.** É também onde cabe
 >   decidir onde mora uma escrita de servidor, que é o que trava a 4.7 e a 4.8:
 >   se a resposta for "um app novo", ele nasce aqui, e a 4.7, a 4.8 e a 4.9 vêm
->   depois dela em vez de antes.
+>   depois dela em vez de antes. **Decidido em 2026-11-04: é um app novo.**
+>   `apps/api` nasceu na 5.9 só de leitura, em Worker e em Node, e a 4.7, a 4.8
+>   e a 4.9 acrescentam rotas de escrita a ele.
 > - **A rotação da 5.10 são duas chaves com donos diferentes.** O JWT é da
 >   sessão, que é de lá; o HMAC assina os webhooks da 5.2, que são daqui. A
 >   etapa mantém a caixa pela metade do HMAC.
@@ -281,7 +283,7 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 - [x] **5.4** `feat/env-settings` — retenção, amostragem e nível mínimo por ambiente. *(Daqui: as colunas em `environments` e o cumprimento na ingestão — amostrar e cortar por nível é no servidor, não na tela. A tela de configuração é de lá.)*
 - [x] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor. *(Daqui: a aplicação das regras no `apps/ingest`, antes da gravação. A tela que escreve as regras é de lá.)*
 - [x] **5.8** `security/alerts` — alertas de eventos de segurança para o operador. *(Daqui: os eventos que esta base levanta — abuso de key, cota, capacidade — pelos canais da 5.2. Os eventos de sessão e de login são de lá.)*
-- [ ] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
+- [x] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
 - [x] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*
 
 ### O que acontece no nekolog-dashboard
@@ -321,6 +323,9 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 > e a 5.9.** O endpoint OTLP é ingestão pura, o self-host sobe o que já existe e
 > o teste de carga mede a ingestão. A 6.3 e a 6.7 esperam a 5.9, porque
 > documentar e versionar uma API que ainda não existe é retrabalho garantido.
+> **A 5.9 saiu em 2026-11-04 e destravou as três**: `apps/api` existe, serve o
+> próprio OpenAPI e sobe tanto em Worker quanto no self-host, então a 6.3 tem o
+> que documentar, a 6.4 tem o que medir e a 4.7, a 4.8 e a 4.9 têm onde escrever.
 >
 > Os números e os nomes de branch **não mudaram**, pelo mesmo motivo dos marcos
 > anteriores. A que perdeu a caixa continua aberta aqui, órfã, como as outras

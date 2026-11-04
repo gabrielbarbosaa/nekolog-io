@@ -46,6 +46,8 @@ export {
   mintKey,
   SCOPES_FOR,
 } from './model.ts'
+export type { SeedStatement } from './postgres.ts'
+export { seedStatements } from './postgres.ts'
 export type { SeedKeyRecord } from './records.ts'
 export {
   environmentNamed,

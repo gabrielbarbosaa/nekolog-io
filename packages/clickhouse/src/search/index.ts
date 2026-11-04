@@ -17,6 +17,18 @@ export {
   MAX_CONTEXT_WINDOW_MS,
   SIDE_COLUMN,
 } from './context.ts'
+export type { HistogramOptions, HistogramTarget } from './histogram.ts'
+export {
+  BUCKET_COLUMN,
+  bucketSecondsFor,
+  chooseBucket,
+  DEFAULT_HISTOGRAM_BUCKET,
+  EVENTS_COLUMN,
+  HISTOGRAM_BUCKET_SECONDS,
+  HISTOGRAM_BUCKETS,
+  logHistogramQuery,
+  MAX_HISTOGRAM_BUCKETS,
+} from './histogram.ts'
 export type { CompareOperator, SearchNode, SearchValue } from './parse.ts'
 export {
   MAX_CONDITIONS,
@@ -26,5 +38,12 @@ export {
   SearchError,
   tokenise,
 } from './parse.ts'
+export type { LogQueryOptions, LogQueryTarget } from './query.ts'
+export {
+  DEFAULT_SEARCH_ROWS,
+  logSearchQuery,
+  MAX_SEARCH_ROWS,
+  searchColumnsOf,
+} from './query.ts'
 export type { SearchScope } from './scope.ts'
 export { clickHouseDateTime, SCOPE_PREFIX, searchWhere } from './scope.ts'

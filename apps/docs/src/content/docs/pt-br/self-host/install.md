@@ -61,11 +61,44 @@ estiver no caminho. Ponha Caddy, nginx ou qualquer proxy reverso com
 certificado na frente antes de apontar um serviço de produção para lá.
 :::
 
+## Leia os logs de volta
+
+Não há dashboard aqui, então ler é uma API HTTP na porta 8789. Ela aceita a
+mesma key secreta, que já carrega `logs:write` e `logs:read`:
+
+```bash
+curl -H "Authorization: Bearer $NEKOLOG_KEY" \
+  "http://localhost:8789/v1/logs?q=level:error&from=2026-11-04T00:00:00Z"
+```
+
+| Rota | O que responde |
+|---|---|
+| `GET /v1/logs` | as linhas que casam: `q`, `from`, `to`, `limit`, `order` |
+| `GET /v1/histogram` | contagem por balde e por nível: `q`, `from`, `to`, `bucket` |
+| `GET /v1/issues` | erros agrupados por fingerprint: `status`, `since`, `until`, `cursor` |
+| `GET /openapi.json` | o contrato inteiro, para gerar um cliente ou só para ler |
+
+O `q` é a mesma linguagem de busca do Explorer hospedado:
+`level:error service:api @status>=500 "timeout"`. A única coisa que ela não
+aceita é `env:` — sua key já nomeia exatamente um ambiente, e o servidor coloca
+esse filtro em toda query por conta própria.
+
+Três regras valem saber antes de escrever um script. A key vai no cabeçalho
+`Authorization` e uma requisição com `?key=` é **recusada**, porque URL acaba em
+log de acesso e no histórico do navegador. Uma key **pública** também é
+recusada: ela está publicada em todo navegador que abre sua página. E a API só
+lê — um `POST` em qualquer dessas rotas é 404.
+
+:::danger[Ponha TLS na frente desta também]
+A porta 8789 carrega uma key capaz de ler todo log do ambiente.
+:::
+
 ## O que está rodando
 
 | Container | O que faz |
 |---|---|
 | `ingest` | valida, remove dado sensível, calcula o fingerprint e grava cada lote |
+| `api` | a API pública de leitura: busca, histograma e issues |
 | `jobs` | acorda a cada minuto: alertas, agrupamento, cotas, spool, capacidade |
 | `clickhouse` | os logs |
 | `postgres` | projetos, ambientes, keys, issues, regras e canais de alerta |
@@ -73,13 +106,15 @@ certificado na frente antes de apontar um serviço de produção para lá.
 
 Nenhum dos dois bancos publica porta. Eles só são alcançáveis de dentro da rede
 do compose, que é o que impede uma senha padrão numa máquina na nuvem de virar
-um vazamento.
+um vazamento. O endpoint de saúde dos jobs fica no loopback pelo mesmo motivo;
+só `ingest` e `api` existem para ser alcançados.
 
 ## O que você não ganha
 
 Três coisas faltam, e nenhuma delas é um defeito para contornar:
 
-- **O dashboard.** Ele é fechado e só existe no serviço hospedado.
+- **O dashboard** — as telas, não os dados. Ele é fechado e só existe no serviço
+  hospedado. Tudo que ele lê, a API acima também serve.
 - **Exportações.** A etapa 4.12 gera o CSV pelo próprio ClickHouse dentro de um
   bucket S3. Isso precisa de armazenamento de objetos e de credenciais que este
   stack não pede, então as tarefas de exportação simplesmente não estão ligadas
@@ -161,6 +196,8 @@ então a falha diz o que está faltando.
 | `is missing SPOOL_DIR, KV_DIR` | o container perdeu os volumes |
 | `Nothing answered on ClickHouse` | o ClickHouse ainda está subindo; ele espera o healthcheck |
 | `Not enough privileges` | o `clickhouse-users.xml` foi editado; reinicie o container do clickhouse |
+| `upstream_unavailable` vindo da API | o ClickHouse recusou a query; `docker compose logs api` tem o motivo |
+| `insufficient_scope` vindo da API | essa key só tem `logs:write` — key pública não lê |
 
 O `docker compose logs jobs` imprime uma linha JSON por minuto nomeando cada
 tarefa que rodou e quanto demorou. Essa linha é o jeito mais rápido de ver se a

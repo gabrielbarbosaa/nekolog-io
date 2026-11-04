@@ -18,6 +18,11 @@ output "ingest_hostname" {
   value       = module.environment.ingest_hostname
 }
 
+output "api_hostname" {
+  description = "Where the public read API answers in this environment."
+  value       = module.environment.api_hostname
+}
+
 output "clickhouse_url" {
   description = "CLICKHOUSE_URL for the Workers."
   value       = module.environment.clickhouse_url

@@ -104,6 +104,29 @@ services:
     command: ["node", "apps/ingest/src/serve-self-host.ts"]
     logging: *logging
 
+  api:
+    <<: *image
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      API_PORT: "8789"
+      API_HOST: 0.0.0.0
+      API_SEED_FILE: /var/lib/nekolog/state/.nekolog-seed.json
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: nekolog
+      CLICKHOUSE_READ_USER: nekolog_reader
+      CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?set CLICKHOUSE_READ_PASSWORD in .env}
+      DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
+      API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-120}
+    volumes:
+      - nekolog_state:/var/lib/nekolog/state:ro
+    ports:
+      - "${API_PUBLISH:-8789}:8789"
+    command: ["node", "apps/api/src/serve-self-host.ts"]
+    logging: *logging
+
   jobs:
     <<: *image
     restart: unless-stopped

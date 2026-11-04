@@ -71,9 +71,22 @@ describe('the self-host compose', () => {
     expect(serviceBlock('postgres')).not.toContain('ports:')
   })
 
-  it('publishes the ingestion and keeps the jobs health on the loopback', () => {
+  it('publishes the ingestion and the read API, and keeps the jobs health on the loopback', () => {
     expect(serviceBlock('ingest')).toMatch(/- "\$\{INGEST_PUBLISH:-8787\}:8787"/)
+    expect(serviceBlock('api')).toMatch(/- "\$\{API_PUBLISH:-8789\}:8789"/)
     expect(serviceBlock('jobs')).toMatch(/- "127\.0\.0\.1:\$\{JOBS_PUBLISH:-8788\}:8788"/)
+  })
+
+  it('gives the read API a credential that cannot write, and no spool or block list', () => {
+    const api = serviceBlock('api')
+
+    expect(api).toContain('CLICKHOUSE_READ_USER: nekolog_reader')
+    expect(api).not.toContain('CLICKHOUSE_INSERT')
+    expect(api).not.toContain('CLICKHOUSE_JOBS')
+    expect(api).not.toContain('CLICKHOUSE_MIGRATOR')
+    expect(api).not.toContain('nekolog_spool')
+    expect(api).not.toContain('nekolog_kv')
+    expect(api).toContain('nekolog_state:/var/lib/nekolog/state:ro')
   })
 
   it('lets only the jobs container write the block list, and only bootstrap the seed', () => {
@@ -94,16 +107,17 @@ describe('the self-host compose', () => {
   })
 
   it('starts nothing before the migrations have finished', () => {
-    for (const service of ['ingest', 'jobs']) {
+    for (const service of ['ingest', 'jobs', 'api']) {
       expect(serviceBlock(service)).toContain('condition: service_completed_successfully')
     }
   })
 
-  it('runs the two long-lived services without a package manager', () => {
+  it('runs every long-lived service without a package manager', () => {
     expect(serviceBlock('ingest')).toContain(
       'command: ["node", "apps/ingest/src/serve-self-host.ts"]',
     )
     expect(serviceBlock('jobs')).toContain('command: ["node", "apps/jobs/src/serve.ts"]')
+    expect(serviceBlock('api')).toContain('command: ["node", "apps/api/src/serve-self-host.ts"]')
   })
 })
 

@@ -23,6 +23,11 @@ output "ingest_hostname" {
   value       = module.ingest_domain.hostname
 }
 
+output "api_hostname" {
+  description = "Where the public read API answers in this environment."
+  value       = module.api_domain.hostname
+}
+
 output "clickhouse_url" {
   description = "CLICKHOUSE_URL for the Workers, reached through the tunnel."
   value       = "https://${module.tunnel.fqdn}"

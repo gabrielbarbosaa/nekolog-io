@@ -61,11 +61,44 @@ to anyone on the path. Put Caddy, nginx or any reverse proxy with a certificate
 in front of it before you point a production service at it.
 :::
 
+## Read your logs back
+
+There is no dashboard here, so reading is an HTTP API on port 8789. It takes the
+same secret key, which carries both `logs:write` and `logs:read`:
+
+```bash
+curl -H "Authorization: Bearer $NEKOLOG_KEY" \
+  "http://localhost:8789/v1/logs?q=level:error&from=2026-11-04T00:00:00Z"
+```
+
+| Route | What it answers |
+|---|---|
+| `GET /v1/logs` | the matching rows: `q`, `from`, `to`, `limit`, `order` |
+| `GET /v1/histogram` | counts per bucket and level: `q`, `from`, `to`, `bucket` |
+| `GET /v1/issues` | errors grouped by fingerprint: `status`, `since`, `until`, `cursor` |
+| `GET /openapi.json` | the full contract, for a client generator or for reading |
+
+`q` is the same search language the hosted Explorer uses:
+`level:error service:api @status>=500 "timeout"`. The one thing it will not take
+is `env:` — your key already names exactly one environment, and the server puts
+that filter into every query itself.
+
+Three rules are worth knowing before you script against it. The key goes in the
+`Authorization` header and a request carrying `?key=` is **refused**, because a
+URL ends up in access logs and browser history. A **public** key is refused too:
+it is published to every browser that loads your page. And the API only reads —
+a `POST` to any of those routes is a 404.
+
+:::danger[Put TLS in front of this one as well]
+Port 8789 carries a key that can read every log in the environment.
+:::
+
 ## What is running
 
 | Container | What it does |
 |---|---|
 | `ingest` | validates, redacts, fingerprints and writes every batch |
+| `api` | the public read API: search, histogram and issues |
 | `jobs` | wakes every minute: alerts, issue grouping, quotas, the spool, capacity |
 | `clickhouse` | the logs |
 | `postgres` | projects, environments, keys, issues, alert rules and channels |
@@ -73,13 +106,15 @@ in front of it before you point a production service at it.
 
 Neither database publishes a port. They are reachable only from inside the
 compose network, which is what keeps a default password on a cloud machine from
-being a disclosure.
+being a disclosure. The jobs health endpoint is bound to the loopback for the
+same reason; only `ingest` and `api` are meant to be reachable.
 
 ## What you do not get
 
 Three things are missing, and none of them is a bug you should work around:
 
-- **The dashboard.** It is closed-source and cloud-only.
+- **The dashboard** — the screens, not the data. It is closed-source and
+  cloud-only. Everything it reads, the API above also serves.
 - **Exports.** Step 4.12 generates a CSV through ClickHouse into an S3 bucket.
   That needs object storage and credentials this stack does not ask you for, so
   the export tasks are not wired into the self-host jobs container at all —
@@ -160,6 +195,8 @@ guessable, so a failure names what is missing.
 | `is missing SPOOL_DIR, KV_DIR` | the container lost its volume mounts |
 | `Nothing answered on ClickHouse` | ClickHouse is still starting; it waits for a healthcheck |
 | `Not enough privileges` | `clickhouse-users.xml` was edited; restart the clickhouse container |
+| `upstream_unavailable` from the API | ClickHouse refused the query; `docker compose logs api` has the reason |
+| `insufficient_scope` from the API | that key has `logs:write` only — a public key cannot read |
 
 `docker compose logs jobs` prints one JSON line per minute naming every task
 that ran and how long it took. That line is the fastest way to see whether the
