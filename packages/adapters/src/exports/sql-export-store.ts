@@ -1,4 +1,11 @@
-import type { ExportFormat, ExportOutcome, ExportStore, PendingExport } from '../export-store.ts'
+import type {
+  ExportCadence,
+  ExportFormat,
+  ExportNotice,
+  ExportOutcome,
+  ExportStore,
+  PendingExport,
+} from '../export-store.ts'
 import type { SqlRunner } from '../issues/sql-issue-store.ts'
 
 export type SqlExportStoreOptions = {
@@ -33,6 +40,34 @@ const MARK_FAILED = `
 update exports
 set status = 'failed', failure = $2, finished_at = $3::timestamptz
 where id = $1 and status = 'running'
+`
+
+const AWAITING_NOTICE = `
+select
+  exports.id as id,
+  exports.format as format,
+  export_schedules.cadence as cadence,
+  exports.row_count as row_count,
+  exports.byte_size as byte_size,
+  users.locale as locale,
+  users.email as email,
+  extract(epoch from exports.range_from) * 1000 as range_from_ms,
+  extract(epoch from exports.range_to) * 1000 as range_to_ms,
+  extract(epoch from exports.expires_at) * 1000 as expires_at_ms
+from exports
+join export_schedules on export_schedules.id = exports.schedule_id
+join users on users.id = exports.requested_by
+where exports.status = 'ready'
+  and exports.notified_at is null
+  and users.suspended_at is null
+  and users.email_verified_at is not null
+order by exports.created_at
+limit $1
+`
+
+const MARK_NOTIFIED = `
+update exports set notified_at = $2::timestamptz
+where id = $1 and status = 'ready' and notified_at is null
 `
 
 const EXPIRE = `
@@ -97,6 +132,31 @@ export function sqlExportStore(run: SqlRunner, options: SqlExportStoreOptions = 
 
     async markFailed(id: string, reason: string, at: number): Promise<void> {
       await run(MARK_FAILED, [id, reason, moment(at)])
+    },
+
+    async awaitingNotice(limit: number): Promise<ReadonlyArray<ExportNotice>> {
+      if (limit <= 0) {
+        return []
+      }
+
+      const rows = await run(AWAITING_NOTICE, [limit])
+
+      return rows.map((row) => ({
+        id: textFrom(row.id, 'id'),
+        format: textFrom(row.format, 'format') as ExportFormat,
+        cadence: row.cadence === null ? null : (textFrom(row.cadence, 'cadence') as ExportCadence),
+        rangeFrom: numberFrom(row.range_from_ms),
+        rangeTo: numberFrom(row.range_to_ms),
+        rowCount: numberFrom(row.row_count ?? 0),
+        byteSize: numberFrom(row.byte_size ?? 0),
+        expiresAt: numberFrom(row.expires_at_ms),
+        locale: textFrom(row.locale, 'locale'),
+        email: textFrom(row.email, 'email'),
+      }))
+    },
+
+    async markNotified(id: string, at: number): Promise<void> {
+      await run(MARK_NOTIFIED, [id, moment(at)])
     },
 
     async expire(now: number, limit: number): Promise<ReadonlyArray<string>> {

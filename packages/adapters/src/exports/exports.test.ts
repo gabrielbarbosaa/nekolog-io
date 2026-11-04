@@ -3,9 +3,11 @@ import {
   EXPORT_FORMATS,
   EXPORT_LIFETIME_DAYS,
   EXPORT_STATUSES,
+  type ExportScheduleStore,
   type ExportStore,
 } from '../export-store.ts'
 import { type MemoryExport, memoryExportStore } from './memory-export-store.ts'
+import { sqlExportScheduleStore } from './sql-export-schedule-store.ts'
 import { DEFAULT_STALE_AFTER_MS, sqlExportStore } from './sql-export-store.ts'
 
 const NOW = Date.UTC(2026, 10, 4, 12, 0, 0, 0)
@@ -133,6 +135,36 @@ describe('memoryExportStore', () => {
     expect(await store.expire(NOW, 10)).toEqual(['exports/old.csv.gz'])
     expect(store.rows.get('exp_old')?.status).toBe('expired')
     expect(store.rows.get('exp_new')?.status).toBe('ready')
+  })
+
+  it('offers a ready export for notice once, and only when somebody asked for it', async () => {
+    const store = memoryExportStore()
+    store.add(
+      pending('exp_a', {
+        status: 'ready',
+        objectKey: 'exports/a.csv.gz',
+        rowCount: 5,
+        byteSize: 99,
+        recipient: { email: 'reader@example.com', locale: 'pt-BR' },
+      }),
+    )
+    store.add(pending('exp_b', { status: 'ready', objectKey: 'exports/b.csv.gz' }))
+
+    const waiting = await store.awaitingNotice(10)
+
+    expect(waiting.map((one) => one.id)).toEqual(['exp_a'])
+    expect(waiting[0]).toMatchObject({ email: 'reader@example.com', locale: 'pt-BR', rowCount: 5 })
+
+    await store.markNotified('exp_a', NOW)
+
+    expect(await store.awaitingNotice(10)).toEqual([])
+  })
+
+  it('never offers an export that is not ready', async () => {
+    const store = memoryExportStore()
+    store.add(pending('exp_a', { recipient: { email: 'a@b.test', locale: 'en' } }))
+
+    expect(await store.awaitingNotice(10)).toEqual([])
   })
 
   it('expires nothing that never became ready', async () => {
@@ -265,5 +297,109 @@ describe('sqlExportStore', () => {
     rows.push([{ object_key: 'exports/a.csv.gz' }, { object_key: null }, { object_key: '' }])
 
     expect(await store.expire(NOW, 10)).toEqual(['exports/a.csv.gz'])
+  })
+
+  it('offers a notice only to a reader who is still allowed to receive one', async () => {
+    const { calls, store } = recorder()
+
+    await store.awaitingNotice(5)
+
+    expect(calls[0]?.text).toContain('exports.notified_at is null')
+    expect(calls[0]?.text).toContain('users.suspended_at is null')
+    expect(calls[0]?.text).toContain('users.email_verified_at is not null')
+  })
+
+  it('marks a notice sent only once', async () => {
+    const { calls, store } = recorder()
+
+    await store.markNotified('exp_a', NOW)
+
+    expect(calls[0]?.text).toContain('notified_at is null')
+    expect(calls[0]?.params).toEqual(['exp_a', new Date(NOW).toISOString()])
+  })
+})
+
+describe('sqlExportScheduleStore', () => {
+  function recorder() {
+    const calls: Array<{ text: string; params: readonly unknown[] }> = []
+    const rows: Array<ReadonlyArray<Record<string, unknown>>> = []
+    const store: ExportScheduleStore = sqlExportScheduleStore(async (text, params) => {
+      calls.push({ text, params })
+      return rows.shift() ?? []
+    })
+    return { calls, rows, store }
+  }
+
+  it('asks only for schedules that are live, of the right cadence, and behind the boundary', async () => {
+    const { calls, store } = recorder()
+
+    await store.due('weekly', NOW, 5)
+
+    expect(calls[0]?.text).toContain('disabled_at is null')
+    expect(calls[0]?.text).toContain('cadence = $1')
+    expect(calls[0]?.text).toContain('coalesce(last_run_at, created_at) < $2')
+    expect(calls[0]?.params).toEqual(['weekly', new Date(NOW).toISOString(), 5])
+  })
+
+  it('stamps the schedule and inserts the export in one statement', async () => {
+    const { calls, store } = recorder()
+
+    await store.enqueue({
+      scheduleId: 'exs_a',
+      exportId: 'exp_a',
+      rangeFrom: NOW - 1000,
+      rangeTo: NOW,
+      expiresAt: NOW + 1000,
+      stampedAt: NOW,
+    })
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.text).toContain('update export_schedules set last_run_at')
+    expect(calls[0]?.text).toContain('insert into exports')
+    expect(calls[0]?.text).toContain('for update skip locked')
+  })
+
+  it('checks the schedule is still due inside the statement that queues it', async () => {
+    const { calls, store } = recorder()
+
+    await store.enqueue({
+      scheduleId: 'exs_a',
+      exportId: 'exp_a',
+      rangeFrom: NOW - 1000,
+      rangeTo: NOW,
+      expiresAt: NOW + 1000,
+      stampedAt: NOW,
+    })
+
+    expect(calls[0]?.text).toContain('disabled_at is null')
+    expect(calls[0]?.text).toContain('coalesce(last_run_at, created_at) < $2')
+  })
+
+  it('says it queued nothing when the statement inserted nothing', async () => {
+    const { store } = recorder()
+
+    expect(
+      await store.enqueue({
+        scheduleId: 'exs_a',
+        exportId: 'exp_a',
+        rangeFrom: NOW - 1000,
+        rangeTo: NOW,
+        expiresAt: NOW + 1000,
+        stampedAt: NOW,
+      }),
+    ).toBe(false)
+  })
+
+  it('asks the database for nothing at all when there is no room', async () => {
+    const { calls, store } = recorder()
+
+    expect(await store.due('daily', NOW, 0)).toEqual([])
+    expect(calls).toEqual([])
+  })
+
+  it('refuses a boundary that is not a moment', async () => {
+    const { store } = recorder()
+
+    await expect(store.due('daily', Number.NaN, 5)).rejects.toThrow(/Refusing/)
   })
 })

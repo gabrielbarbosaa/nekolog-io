@@ -1,8 +1,10 @@
 import type {
   BlobStore,
+  ExportScheduleStore,
   ExportStore,
   IssueStore,
   LogStore,
+  Mailer,
   QuotaStore,
   UsageStore,
 } from '@nekolog-io/adapters'
@@ -10,7 +12,9 @@ import type { ExportDestination } from '@nekolog-io/clickhouse/export'
 import { registerTasks } from './schedule.ts'
 import type { Task } from './task.ts'
 import { type CapacityAlert, capacityWatchTask, type DiskReader } from './tasks/capacity-watch.ts'
+import { type ExportNotifyEvent, exportNotifyTask } from './tasks/export-notify.ts'
 import { type ExportRunEvent, type ExportWriter, exportRunTask } from './tasks/export-run.ts'
+import { type ExportScheduleEvent, exportScheduleTask } from './tasks/export-schedule.ts'
 import { type IssueSourceLike, issueRollupTask } from './tasks/issue-rollup.ts'
 import { type QuotaBlockEvent, quotaBlockTask } from './tasks/quota-block.ts'
 import { type SpoolResendEvent, spoolResendTask } from './tasks/spool-resend.ts'
@@ -33,6 +37,12 @@ export type TaskDeps = {
   exportObjects?: BlobStore
   clickHouseDatabase?: string
   onExportEvent?: (event: ExportRunEvent) => void
+  exportSchedules?: ExportScheduleStore
+  newExportId?: () => string
+  onExportScheduleEvent?: (event: ExportScheduleEvent) => void
+  mailer?: Mailer
+  dashboardUrl?: string
+  onExportNotifyEvent?: (event: ExportNotifyEvent) => void
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
@@ -59,9 +69,38 @@ export function buildTasks(deps: TaskDeps): readonly Task[] {
           }),
         ]
 
+  const scheduling =
+    deps.exportSchedules === undefined || deps.newExportId === undefined
+      ? []
+      : [
+          exportScheduleTask({
+            schedules: deps.exportSchedules,
+            newExportId: deps.newExportId,
+            ...(deps.onExportScheduleEvent === undefined
+              ? {}
+              : { onEvent: deps.onExportScheduleEvent }),
+          }),
+        ]
+
+  const notifying =
+    deps.exports === undefined || deps.mailer === undefined || deps.dashboardUrl === undefined
+      ? []
+      : [
+          exportNotifyTask({
+            exports: deps.exports,
+            mailer: deps.mailer,
+            dashboardUrl: deps.dashboardUrl,
+            ...(deps.onExportNotifyEvent === undefined
+              ? {}
+              : { onEvent: deps.onExportNotifyEvent }),
+          }),
+        ]
+
   return registerTasks([
     ...grouping,
     ...exporting,
+    ...scheduling,
+    ...notifying,
     spoolResendTask({
       spool: deps.spool,
       logStore: deps.logStore,

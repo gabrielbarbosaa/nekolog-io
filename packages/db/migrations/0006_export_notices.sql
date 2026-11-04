@@ -1,0 +1,3 @@
+ALTER TABLE "exports" ADD COLUMN "notified_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "exports_waiting_for_a_notice" ON "exports" USING btree ("created_at") WHERE status = 'ready' and schedule_id is not null and notified_at is null;--> statement-breakpoint
+ALTER TABLE "exports" ADD CONSTRAINT "exports_notice_follows_the_file" CHECK (notified_at is null or object_key is not null);

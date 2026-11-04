@@ -43,6 +43,13 @@
       "when": 1793787694581,
       "tag": "0005_export_run_bookkeeping",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793789222768,
+      "tag": "0006_export_notices",
+      "breakpoints": true
     }
   ]
 }

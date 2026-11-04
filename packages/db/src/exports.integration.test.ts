@@ -5,6 +5,7 @@ import {
   DEFAULT_STALE_AFTER_MS,
   EXPORT_LIFETIME_DAYS,
   type SqlRunner,
+  sqlExportScheduleStore,
   sqlExportStore,
 } from '@nekolog-io/adapters'
 import postgres from 'postgres'
@@ -71,6 +72,7 @@ let run: SqlRunner
 let projectId: string
 let production: string
 let staging: string
+let userId: string
 
 const DAY = 24 * 60 * 60 * 1000
 const NOW = Date.UTC(2026, 10, 4, 12, 0, 0)
@@ -119,7 +121,16 @@ beforeAll(async () => {
   projectId = id('prj_')
   production = id('env_')
   staging = id('env_')
+  userId = id('usr_')
 
+  await sql`insert into users ${sql({
+    id: userId,
+    name: 'Reader',
+    email: 'reader@example.com',
+    password_hash: 'x'.repeat(60),
+    email_verified_at: new Date(NOW - 90 * DAY),
+    locale: 'pt-BR',
+  })}`
   await sql`insert into organizations ${sql({ id: organizationId, name: 'Acme' })}`
   await sql`insert into projects ${sql({ id: projectId, organization_id: organizationId, name: 'web' })}`
   await sql`insert into environments ${sql({ id: production, project_id: projectId, name: 'production' })}`
@@ -275,6 +286,76 @@ describe.skipIf(!reachable)('the SQL export store against a real Postgres', () =
     ).rejects.toThrow(/exports_object_key/)
   })
 
+  it('offers a scheduled export for notice once it is ready, with the reader locale', async () => {
+    await clear()
+    await sql`delete from export_schedules where project_id = ${projectId}`
+    const store = sqlExportStore(run)
+    const scheduleId = id('exs_')
+    await sql`insert into export_schedules ${sql({
+      id: scheduleId,
+      project_id: projectId,
+      environment_id: production,
+      cadence: 'daily',
+      format: 'csv',
+    })}`
+    const exportId = await add({
+      schedule_id: scheduleId,
+      requested_by: userId,
+      status: 'ready',
+      object_key: 'exports/a.csv.gz',
+      row_count: 7,
+      byte_size: 1024,
+    })
+
+    const [waiting] = await store.awaitingNotice(10)
+
+    expect(waiting).toMatchObject({
+      id: exportId,
+      cadence: 'daily',
+      locale: 'pt-BR',
+      email: 'reader@example.com',
+      rowCount: 7,
+      byteSize: 1024,
+    })
+    expect(waiting?.rangeFrom).toBe(NOW - DAY)
+  })
+
+  it('offers it only once, and never for an export nobody asked for', async () => {
+    await clear()
+    await sql`delete from export_schedules where project_id = ${projectId}`
+    const store = sqlExportStore(run)
+    const scheduleId = id('exs_')
+    await sql`insert into export_schedules ${sql({
+      id: scheduleId,
+      project_id: projectId,
+      environment_id: production,
+      cadence: 'daily',
+      format: 'csv',
+    })}`
+    const exportId = await add({
+      schedule_id: scheduleId,
+      requested_by: userId,
+      status: 'ready',
+      object_key: 'exports/a.csv.gz',
+    })
+    await add({ status: 'ready', object_key: 'exports/b.csv.gz' })
+
+    expect((await store.awaitingNotice(10)).map((one) => one.id)).toEqual([exportId])
+
+    await store.markNotified(exportId, NOW)
+
+    expect(await store.awaitingNotice(10)).toEqual([])
+  })
+
+  it('cannot record a notice for an export with no file, because the schema says so', async () => {
+    await clear()
+    const exportId = await add()
+
+    await expect(
+      sql`update exports set notified_at = now() where id = ${exportId}`,
+    ).rejects.toThrow(/exports_notice_follows_the_file/)
+  })
+
   it('refuses a row whose environment belongs to another project', async () => {
     await clear()
     const other = id('prj_')
@@ -288,6 +369,37 @@ describe.skipIf(!reachable)('the SQL export store against a real Postgres', () =
     )
   })
 
+  it('never offers a notice to a reader who was suspended or never verified', async () => {
+    await clear()
+    await sql`delete from export_schedules where project_id = ${projectId}`
+    const store = sqlExportStore(run)
+    const scheduleId = id('exs_')
+    await sql`insert into export_schedules ${sql({
+      id: scheduleId,
+      project_id: projectId,
+      environment_id: production,
+      cadence: 'daily',
+      format: 'csv',
+    })}`
+    await add({
+      schedule_id: scheduleId,
+      requested_by: userId,
+      status: 'ready',
+      object_key: 'exports/a.csv.gz',
+    })
+
+    expect(await store.awaitingNotice(10)).toHaveLength(1)
+
+    await sql`update users set suspended_at = now() where id = ${userId}`
+    expect(await store.awaitingNotice(10)).toEqual([])
+
+    await sql`update users set suspended_at = null, email_verified_at = null where id = ${userId}`
+    expect(await store.awaitingNotice(10)).toEqual([])
+
+    await sql`update users set email_verified_at = now() where id = ${userId}`
+    expect(await store.awaitingNotice(10)).toHaveLength(1)
+  })
+
   it('takes the oldest first when there is not room for every one of them', async () => {
     await clear()
     const store = sqlExportStore(run)
@@ -295,6 +407,35 @@ describe.skipIf(!reachable)('the SQL export store against a real Postgres', () =
     await add({ created_at: new Date(NOW - 1000) })
 
     expect((await store.claim(1, NOW)).map((one) => one.id)).toEqual([older])
+  })
+
+  it('claims an export the schedule store queued, like any other', async () => {
+    await clear()
+    await sql`delete from export_schedules where project_id = ${projectId}`
+    const schedules = sqlExportScheduleStore(run)
+    const store = sqlExportStore(run)
+    const scheduleId = id('exs_')
+    const exportId = id('exp_')
+    await sql`insert into export_schedules ${sql({
+      id: scheduleId,
+      project_id: projectId,
+      environment_id: production,
+      cadence: 'daily',
+      format: 'csv',
+      created_by: userId,
+      created_at: new Date(NOW - 30 * DAY),
+    })}`
+
+    await schedules.enqueue({
+      scheduleId,
+      exportId,
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    expect((await store.claim(10, NOW)).map((one) => one.id)).toEqual([exportId])
   })
 
   it('claims across environments, because it claims by age and not by project', async () => {
@@ -307,5 +448,189 @@ describe.skipIf(!reachable)('the SQL export store against a real Postgres', () =
 
     expect([...claimed.map((one) => one.id)].sort()).toEqual([inProduction, inStaging].sort())
     expect(claimed.map((one) => one.environmentId).sort()).toEqual([production, staging].sort())
+  })
+})
+
+describe.skipIf(!reachable)('the SQL export schedule store against a real Postgres', () => {
+  async function addSchedule(overrides: Record<string, unknown> = {}): Promise<string> {
+    const scheduleId = id('exs_')
+    await sql`insert into export_schedules ${sql({
+      id: scheduleId,
+      project_id: projectId,
+      environment_id: production,
+      cadence: 'daily',
+      format: 'csv',
+      created_by: userId,
+      created_at: new Date(NOW - 30 * DAY),
+      ...overrides,
+    })}`
+    return scheduleId
+  }
+
+  async function clearSchedules(): Promise<void> {
+    await sql`delete from exports where project_id = ${projectId}`
+    await sql`delete from export_schedules where project_id = ${projectId}`
+  }
+
+  it('finds a schedule whose period has closed since it last ran', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule({ last_run_at: new Date(NOW - 2 * DAY) })
+    const schedules = sqlExportScheduleStore(run)
+
+    expect((await schedules.due('daily', NOW, 10)).map((one) => one.id)).toEqual([scheduleId])
+  })
+
+  it('leaves a schedule alone when it already ran for this period', async () => {
+    await clearSchedules()
+    await addSchedule({ last_run_at: new Date(NOW + 1000) })
+    const schedules = sqlExportScheduleStore(run)
+
+    expect(await schedules.due('daily', NOW, 10)).toEqual([])
+  })
+
+  it('leaves a schedule alone when it is younger than the period it would export', async () => {
+    await clearSchedules()
+    await addSchedule({ created_at: new Date(NOW + 1000) })
+    const schedules = sqlExportScheduleStore(run)
+
+    expect(await schedules.due('daily', NOW, 10)).toEqual([])
+  })
+
+  it('never offers a disabled schedule, or one of another cadence', async () => {
+    await clearSchedules()
+    await addSchedule({ disabled_at: new Date(NOW - DAY) })
+    await addSchedule({ cadence: 'weekly', environment_id: staging })
+    const schedules = sqlExportScheduleStore(run)
+
+    expect(await schedules.due('daily', NOW, 10)).toEqual([])
+    expect(await schedules.due('weekly', NOW, 10)).toHaveLength(1)
+  })
+
+  it('queues the export and stamps the schedule in one statement', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule()
+    const schedules = sqlExportScheduleStore(run)
+    const exportId = id('exp_')
+
+    const queued = await schedules.enqueue({
+      scheduleId,
+      exportId,
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    const row = await statusOf(exportId)
+    const [stamped] = await sql`select last_run_at from export_schedules where id = ${scheduleId}`
+
+    expect(queued).toBe(true)
+    expect(row).toMatchObject({
+      status: 'pending',
+      schedule_id: scheduleId,
+      requested_by: userId,
+      format: 'csv',
+    })
+    expect(new Date(stamped?.last_run_at as string).getTime()).toBe(NOW)
+  })
+
+  it('queues nothing the second time, so a period cannot be exported twice', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule()
+    const schedules = sqlExportScheduleStore(run)
+
+    const first = await schedules.enqueue({
+      scheduleId,
+      exportId: id('exp_'),
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+    const second = await schedules.enqueue({
+      scheduleId,
+      exportId: id('exp_'),
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    const rows =
+      await sql`select count(*)::int as total from exports where schedule_id = ${scheduleId}`
+
+    expect(first).toBe(true)
+    expect(second).toBe(false)
+    expect(rows[0]?.total).toBe(1)
+  })
+
+  it('queues nothing for a schedule created after the period it would export closed', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule({ created_at: new Date(NOW + 1000) })
+    const schedules = sqlExportScheduleStore(run)
+
+    const queued = await schedules.enqueue({
+      scheduleId,
+      exportId: id('exp_'),
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    expect(queued).toBe(false)
+  })
+
+  it('queues nothing for a schedule that already ran for this period', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule({ last_run_at: new Date(NOW + 1000) })
+    const schedules = sqlExportScheduleStore(run)
+
+    const queued = await schedules.enqueue({
+      scheduleId,
+      exportId: id('exp_'),
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    expect(queued).toBe(false)
+  })
+
+  it('queues nothing for a schedule that was disabled between finding it and running it', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule()
+    await sql`update export_schedules set disabled_at = now() where id = ${scheduleId}`
+    const schedules = sqlExportScheduleStore(run)
+
+    const queued = await schedules.enqueue({
+      scheduleId,
+      exportId: id('exp_'),
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    expect(queued).toBe(false)
+  })
+
+  it('carries the schedule filter onto the export it queues', async () => {
+    await clearSchedules()
+    const scheduleId = await addSchedule({ query: 'level:error' })
+    const schedules = sqlExportScheduleStore(run)
+    const exportId = id('exp_')
+
+    await schedules.enqueue({
+      scheduleId,
+      exportId,
+      rangeFrom: NOW - DAY,
+      rangeTo: NOW,
+      expiresAt: NOW + EXPORT_LIFETIME_DAYS * DAY,
+      stampedAt: NOW,
+    })
+
+    expect(await statusOf(exportId)).toMatchObject({ query: 'level:error' })
   })
 })
