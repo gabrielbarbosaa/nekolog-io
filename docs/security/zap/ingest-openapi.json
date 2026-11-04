@@ -1,0 +1,197 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NekoLog ingestion, described for the scanner",
+    "version": "1.0.0",
+    "summary": "Not a published contract. This file exists so OWASP ZAP can attack every route the ingestion answers; apps/ingest/src/scan-surface.test.ts fails if it stops matching the real app.",
+    "license": { "name": "MIT", "identifier": "MIT" }
+  },
+  "servers": [{ "url": "http://host.docker.internal:8787" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Whether this deployment is up.",
+        "responses": { "200": { "description": "Up." } }
+      }
+    },
+    "/v1/logs": {
+      "post": {
+        "summary": "Send a batch of log events.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "description": "Only a public key, and only from navigator.sendBeacon, which cannot send a header.",
+            "schema": { "type": "string" },
+            "example": "nekolog_pk_0000000000000000000000000000"
+          },
+          {
+            "name": "Content-Encoding",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "example": "gzip"
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "example": "https://shop.example.com"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Batch" }
+            },
+            "text/plain": {
+              "schema": { "$ref": "#/components/schemas/Batch" }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Accepted." },
+          "400": { "description": "Refused." },
+          "401": { "description": "No usable key." },
+          "413": { "description": "Too big." },
+          "429": { "description": "Rate limited or over quota." }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight.",
+        "responses": { "204": { "description": "Allowed." } }
+      }
+    },
+    "/v1/otlp/logs": {
+      "post": {
+        "summary": "Send OTLP/HTTP log records.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Otlp" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Taken, possibly in part." },
+          "400": { "description": "Refused." },
+          "401": { "description": "No usable key." }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Batch": {
+        "type": "object",
+        "required": ["schemaVersion", "batchId", "sdk", "resource", "events"],
+        "properties": {
+          "schemaVersion": { "type": "integer", "example": 1 },
+          "batchId": { "type": "string", "example": "01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b10" },
+          "sdk": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "example": "@nekolog-io/node" },
+              "version": { "type": "string", "example": "1.0.0" }
+            }
+          },
+          "resource": {
+            "type": "object",
+            "properties": {
+              "service": { "type": "string", "example": "checkout-api" },
+              "runtime": { "type": "string", "example": "node" },
+              "release": { "type": "string", "example": "1.4.2" }
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["timestamp", "level", "message"],
+              "properties": {
+                "timestamp": { "type": "string", "example": "2026-11-04T12:00:00.000Z" },
+                "level": { "type": "string", "example": "error" },
+                "message": { "type": "string", "example": "order resolution failed" },
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "type": { "type": "string", "example": "TypeError" },
+                    "message": { "type": "string", "example": "cannot read id" },
+                    "stack": { "type": "string", "example": "at resolveOrder (/srv/app/a.js:1:1)" }
+                  }
+                },
+                "attributes": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "example": { "orderId": "ord_1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Otlp": {
+        "type": "object",
+        "properties": {
+          "resourceLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "object",
+                  "properties": {
+                    "attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": { "type": "string", "example": "service.name" },
+                          "value": {
+                            "type": "object",
+                            "properties": {
+                              "stringValue": { "type": "string", "example": "checkout-api" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "scopeLogs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "logRecords": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "timeUnixNano": { "type": "string", "example": "1793793600000000000" },
+                            "severityNumber": { "type": "integer", "example": 17 },
+                            "severityText": { "type": "string", "example": "ERROR" },
+                            "body": {
+                              "type": "object",
+                              "properties": {
+                                "stringValue": { "type": "string", "example": "order failed" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

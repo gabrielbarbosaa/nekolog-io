@@ -241,6 +241,9 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)
+      '@internal/security-headers':
+        specifier: workspace:*
+        version: link:../../internal/security-headers
       '@internal/seed':
         specifier: workspace:*
         version: link:../../internal/seed
@@ -303,6 +306,9 @@ importers:
       '@internal/schema':
         specifier: workspace:*
         version: link:../../internal/schema
+      '@internal/security-headers':
+        specifier: workspace:*
+        version: link:../../internal/security-headers
       '@internal/seed':
         specifier: workspace:*
         version: link:../../internal/seed

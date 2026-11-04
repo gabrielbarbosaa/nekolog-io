@@ -8,9 +8,9 @@ const KEY = __ENV.NEKOLOG_KEY
 const admitted = new Rate('requests_admitted')
 
 const ROUTES = [
-  { name: 'GET /v1/logs', path: '/v1/logs?period=1h&limit=100' },
-  { name: 'GET /v1/logs?q', path: '/v1/logs?period=1h&limit=100&q=level%3Aerror' },
-  { name: 'GET /v1/histogram', path: '/v1/histogram?period=6h&bucket=15m' },
+  { name: 'GET /v1/logs', path: '/v1/logs?limit=100' },
+  { name: 'GET /v1/logs?q', path: '/v1/logs?limit=100&q=level%3Aerror' },
+  { name: 'GET /v1/histogram', path: '/v1/histogram?bucket=15m' },
   { name: 'GET /v1/issues', path: '/v1/issues?limit=50' },
 ]
 

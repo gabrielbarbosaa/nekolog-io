@@ -98,18 +98,49 @@ describe('the public read API', () => {
     expect(await body(response)).toEqual({ status: 'ok' })
   })
 
-  it('scopes every search to the key, whatever the caller puts in the query string', async () => {
+  it('scopes every search to the key, never to anything in the query string', async () => {
     const { app, asked } = build()
-    const response = await app.request(
-      'http://api.test/v1/logs?q=level:error&project=prj_2&environment=env_2&projectId=prj_3',
-    )
+    const response = await app.request('http://api.test/v1/logs?q=level:error')
 
     expect(response.status).toBe(200)
     expect(asked).toHaveLength(1)
     expect(asked[0]?.params.s_project).toBe('prj_1')
     expect(asked[0]?.params.s_env0).toBe('env_1')
-    expect(Object.values(asked[0]?.params ?? {})).not.toContain('prj_2')
-    expect(Object.values(asked[0]?.params ?? {})).not.toContain('env_2')
+  })
+
+  it('builds the scope from the key and from nothing the request carries', async () => {
+    for (const path of [
+      '/v1/logs?q=prj_2&order=prj_2&limit=10',
+      '/v1/histogram?q=prj_2&bucket=15m',
+    ]) {
+      const { app, asked } = build()
+      await app.request(`http://api.test${path}`)
+
+      const scope = Object.entries(asked[0]?.params ?? {}).filter(([name]) => name.startsWith('s_'))
+
+      expect(asked[0]?.params.s_project, path).toBe('prj_1')
+      expect(asked[0]?.params.s_env0, path).toBe('env_1')
+      expect(
+        scope.map(([, value]) => value),
+        path,
+      ).not.toContain('prj_2')
+      expect(
+        scope.map(([, value]) => value),
+        path,
+      ).not.toContain('15m')
+    }
+  })
+
+  it('refuses a caller who tries to name a project or an environment at all', async () => {
+    for (const smuggled of ['project=prj_2', 'environment=env_2', 'projectId=prj_3']) {
+      const { app, asked } = build()
+      const response = await app.request(`http://api.test/v1/logs?q=level:error&${smuggled}`)
+      const body = (await response.json()) as { error: { code: string } }
+
+      expect(response.status, smuggled).toBe(400)
+      expect(body.error.code, smuggled).toBe('invalid_query')
+      expect(asked, smuggled).toHaveLength(0)
+    }
   })
 
   it('puts exactly one environment in the query, never a second one', async () => {
