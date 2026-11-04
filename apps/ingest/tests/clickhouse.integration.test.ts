@@ -153,6 +153,38 @@ describe.skipIf(!reachable)('a log from the sdk reaching ClickHouse', () => {
       user_id: 'u_42',
     })
     expect(String(row?.stacktrace)).toContain('TypeError')
+    expect(String(row?.fingerprint)).toMatch(/^\d+$/)
+    expect(String(row?.fingerprint)).not.toBe('0')
+  })
+
+  it('gives one fingerprint to the same error thrown twice, and none to an info log', async () => {
+    const log = createLogger({
+      apiKey: KEY,
+      service: 'checkout-api',
+      transport: { endpoint, flushIntervalMs: 0 },
+    })
+
+    const blowUp = (): never => {
+      throw new RangeError('out of stock')
+    }
+
+    for (const order of ['ord_1', 'ord_2']) {
+      try {
+        blowUp()
+      } catch (error) {
+        log.child({ attributes: { order } }).error(error)
+      }
+    }
+    log.info('nothing is wrong here')
+    await log.flush()
+
+    const errors = await storedWhere("error_type = 'RangeError'")
+    expect(errors).toHaveLength(2)
+    expect(new Set(errors.map((row) => String(row.fingerprint))).size).toBe(1)
+    expect(String(errors[0]?.fingerprint)).not.toBe('0')
+
+    const [calm] = await storedWhere("message = 'nothing is wrong here'")
+    expect(String(calm?.fingerprint)).toBe('0')
   })
 
   it('never writes a password the sdk stripped on the way out', async () => {

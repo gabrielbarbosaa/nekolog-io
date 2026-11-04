@@ -1,8 +1,9 @@
 import type { ParsedBatch } from '@internal/schema'
 import type { IngestPrincipal } from './app.ts'
+import { fingerprintFor, NO_FINGERPRINT } from './fingerprint.ts'
 
 export const DEFAULT_RETENTION_DAYS = 30
-export const UNRESOLVED_FINGERPRINT = 0
+export const UNRESOLVED_FINGERPRINT = NO_FINGERPRINT
 export const ERROR_MESSAGE_ATTRIBUTE = 'error.message'
 
 const COUNTRY_PATTERN = /^[A-Z0-9]{2}$/
@@ -44,17 +45,17 @@ export type RowContext = {
   admitAttribute?: (key: string) => boolean
 }
 
-export function rowsFor(
+export async function rowsFor(
   batch: ParsedBatch,
   principal: IngestPrincipal,
   context: RowContext,
-): Array<Record<string, unknown>> {
+): Promise<Array<Record<string, unknown>>> {
   const receivedAt = clickHouseTimestamp(context.receivedAt)
   const retentionDays = principal.retentionDays ?? DEFAULT_RETENTION_DAYS
 
   const admitAttribute = context.admitAttribute
 
-  return batch.accepted.map(({ event }) => {
+  const built = batch.accepted.map(async ({ event }) => {
     const attributes: Record<string, string> = {}
     for (const [key, value] of Object.entries(event.attributes ?? {})) {
       if (admitAttribute !== undefined && !admitAttribute(key)) {
@@ -82,7 +83,13 @@ export function rowsFor(
       span_id: event.trace?.spanId ?? '',
       session_id: event.session?.id ?? '',
       user_id: event.session?.userId ?? '',
-      fingerprint: UNRESOLVED_FINGERPRINT,
+      fingerprint: await fingerprintFor({
+        level: event.level,
+        message: event.message,
+        service: batch.resource.service,
+        error: event.error,
+        fingerprint: event.fingerprint,
+      }),
       error_type: event.error?.type ?? '',
       stacktrace: event.error?.stack ?? '',
       attributes,
@@ -90,4 +97,6 @@ export function rowsFor(
       retention_days: retentionDays,
     }
   })
+
+  return Promise.all(built)
 }

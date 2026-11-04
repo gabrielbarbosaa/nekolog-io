@@ -113,15 +113,15 @@ describe('rowsFor with a budget', () => {
     ...(admit === undefined ? {} : { admitAttribute: admit }),
   })
 
-  it('writes every attribute when nothing is budgeting them', () => {
-    const [row] = rowsFor(batchWith({ a: '1', b: '2' }), PRINCIPAL, context())
+  it('writes every attribute when nothing is budgeting them', async () => {
+    const [row] = await rowsFor(batchWith({ a: '1', b: '2' }), PRINCIPAL, context())
 
     expect(row?.attributes).toEqual({ a: '1', b: '2' })
   })
 
-  it('leaves out the keys the budget refused', () => {
+  it('leaves out the keys the budget refused', async () => {
     const budget = createAttributeBudget({ maxKeysPerProject: 1 })
-    const [row] = rowsFor(
+    const [row] = await rowsFor(
       batchWith({ a: '1', b: '2' }),
       PRINCIPAL,
       context((key) => budget.admit('p_1', key)),
@@ -130,9 +130,9 @@ describe('rowsFor with a budget', () => {
     expect(row?.attributes).toEqual({ a: '1' })
   })
 
-  it('keeps the event itself, it only drops the extra keys', () => {
+  it('keeps the event itself, it only drops the extra keys', async () => {
     const budget = createAttributeBudget({ maxKeysPerProject: 0 })
-    const rows = rowsFor(
+    const rows = await rowsFor(
       batchWith({ a: '1' }),
       PRINCIPAL,
       context((key) => budget.admit('p_1', key)),
@@ -143,7 +143,7 @@ describe('rowsFor with a budget', () => {
     expect(rows[0]?.attributes).toEqual({})
   })
 
-  it('never spends the budget on the error message it adds itself', () => {
+  it('never spends the budget on the error message it adds itself', async () => {
     const budget = createAttributeBudget({ maxKeysPerProject: 0 })
     const batch = batchWith({})
     const accepted = batch.accepted[0]
@@ -151,7 +151,7 @@ describe('rowsFor with a budget', () => {
       ;(accepted.event as { error?: unknown }).error = { type: 'Error', message: 'boom' }
     }
 
-    const [row] = rowsFor(
+    const [row] = await rowsFor(
       batch,
       PRINCIPAL,
       context((key) => budget.admit('p_1', key)),

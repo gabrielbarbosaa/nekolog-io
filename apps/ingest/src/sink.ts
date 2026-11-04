@@ -37,7 +37,7 @@ export function createLogStoreSink(options: LogStoreSinkOptions): BatchSink {
     }
 
     const budget = options.attributeBudget
-    const rows = rowsFor(batch, principal, {
+    const rows = await rowsFor(batch, principal, {
       receivedAt: context.receivedAt,
       country: countryOf(context.request),
       ...(budget === undefined
