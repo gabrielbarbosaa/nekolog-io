@@ -256,10 +256,12 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 >   roda, não pela metade que se configura.
 > - **Não há uma etapa nova de tabelas, e isso é deliberado.** O M4 precisou da
 >   4.15 porque as tabelas de lá não tinham, aqui, nenhuma etapa que as
->   escrevesse. Aqui as três tabelas do marco (`alert_rules`, `alert_channels`,
->   `alert_events`) têm: elas vêm com a 5.1 e a 5.2, junto do job que as lê e
->   escreve, que foi a lição da 4.6 — tabela cujo escritor ainda não existe é
->   tabela desenhada no escuro.
+>   escrevesse. Aqui as três tabelas do marco têm: a `alert_rules` vem com a
+>   5.1, a `alert_channels` com a 5.2 e a `alert_events` com a 5.3, cada uma
+>   junto do código que a escreve — que foi a lição da 4.6: tabela cujo escritor
+>   ainda não existe é tabela desenhada no escuro. Por isso a 5.1 guarda o
+>   estado (`ok`/`firing`) em colunas da própria regra, e só a 5.3 abre o
+>   histórico.
 > - **A 5.9 é a API pública de leitura, e é inteira daqui.** É também onde cabe
 >   decidir onde mora uma escrita de servidor, que é o que trava a 4.7 e a 4.8:
 >   se a resposta for "um app novo", ele nasce aqui, e a 4.7, a 4.8 e a 4.9 vêm
@@ -273,7 +275,7 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 > renomeia nem fecha nada. As duas que perderam a caixa continuam abertas aqui,
 > órfãs, e isso é o custo aceito — como as 3.10, 3.14, 4.2, 4.3, 4.10 e 4.14.
 
-- [ ] **5.1** `feat/alert-rules` — regras de limiar, taxa de erro, nova issue, regressão e ausência (especificação 6), avaliadas pelos jobs em lotes. *(Daqui: as tabelas `alert_rules` e `alert_events` e o avaliador no `apps/jobs`. A tela que cria a regra é de lá.)*
+- [x] **5.1** `feat/alert-rules` — regras de limiar, taxa de erro, nova issue, regressão e ausência (especificação 6), avaliadas pelos jobs em lotes. *(Daqui: a tabela `alert_rules`, a leitura da condição e o avaliador no `apps/jobs`. A tela que cria a regra é de lá; a `alert_events` fica com a 5.3.)*
 - [ ] **5.2** `feat/alert-channels` — e-mail, Slack, Discord e webhook, com proteção contra SSRF, segredos criptografados e webhooks assinados com HMAC. *(Daqui: a tabela `alert_channels`, o envio pelos jobs, a proteção contra SSRF e a assinatura HMAC. A tela que configura o canal é de lá.)*
 - [ ] **5.3** `feat/alert-history` — histórico e cooldown. *(Daqui: o cooldown, que é o job decidindo não disparar de novo. A tela do histórico é de lá.)*
 - [ ] **5.4** `feat/env-settings` — retenção, amostragem e nível mínimo por ambiente. *(Daqui: as colunas em `environments` e o cumprimento na ingestão — amostrar e cortar por nível é no servidor, não na tela. A tela de configuração é de lá.)*

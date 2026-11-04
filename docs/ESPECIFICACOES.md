@@ -261,7 +261,6 @@ Cada regra é guardada em `alert_rules.condition` (JSON) e avaliada pelos jobs a
 {
   "type": "threshold",
   "query": "level:error service:api",
-  "environment": "production",
   "window": "5m",
   "operator": ">",
   "value": 50,
@@ -269,6 +268,15 @@ Cada regra é guardada em `alert_rules.condition` (JSON) e avaliada pelos jobs a
   "channels": ["ch_01J9X…"]
 }
 ```
+
+> **Correção (04/11/2026, etapa 5.1):** o exemplo acima trazia um campo
+> `"environment": "production"`. Ele saiu. O ambiente é a coluna
+> `alert_rules.environment_id`, que participa da chave estrangeira composta para
+> `environments (id, project_id)` — é ela que impede uma regra de um projeto
+> apontar para o ambiente de outro. Repetir o ambiente dentro do JSON criaria uma
+> segunda verdade que nenhuma *constraint* alcança, então a *check constraint*
+> `alert_rules_condition_carries_no_environment` **recusa** um `condition` que
+> traga a chave `environment`.
 
 | Tipo | Dispara quando |
 |---|---|

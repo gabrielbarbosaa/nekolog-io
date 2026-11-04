@@ -8,6 +8,7 @@ export default defineConfig({
     'src/usage-store.ts',
     'src/issues.ts',
     'src/export.ts',
+    'src/alerts.ts',
     'src/search/index.ts',
     'src/cli.ts',
   ],

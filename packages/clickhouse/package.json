@@ -29,6 +29,7 @@
     "./usage-store": "./src/usage-store.ts",
     "./issues": "./src/issues.ts",
     "./export": "./src/export.ts",
+    "./alerts": "./src/alerts.ts",
     "./search": "./src/search/index.ts"
   },
   "publishConfig": {
@@ -59,6 +60,10 @@
       "./export": {
         "types": "./dist/export.d.mts",
         "default": "./dist/export.mjs"
+      },
+      "./alerts": {
+        "types": "./dist/alerts.d.mts",
+        "default": "./dist/alerts.mjs"
       },
       "./search": {
         "types": "./dist/search/index.d.mts",

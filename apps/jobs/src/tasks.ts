@@ -1,4 +1,5 @@
 import type {
+  AlertRuleStore,
   BlobStore,
   ExportScheduleStore,
   ExportStore,
@@ -8,9 +9,16 @@ import type {
   QuotaStore,
   UsageStore,
 } from '@nekolog-io/adapters'
+import type { AlertTarget } from '@nekolog-io/clickhouse/alerts'
 import type { ExportDestination } from '@nekolog-io/clickhouse/export'
 import { registerTasks } from './schedule.ts'
 import type { Task } from './task.ts'
+import {
+  type AlertEvaluateEvent,
+  type AlertMeasurer,
+  alertEvaluateTask,
+  type IssueActivitySource,
+} from './tasks/alert-evaluate.ts'
 import { type CapacityAlert, capacityWatchTask, type DiskReader } from './tasks/capacity-watch.ts'
 import { type ExportNotifyEvent, exportNotifyTask } from './tasks/export-notify.ts'
 import { type ExportRunEvent, type ExportWriter, exportRunTask } from './tasks/export-run.ts'
@@ -43,6 +51,11 @@ export type TaskDeps = {
   mailer?: Mailer
   dashboardUrl?: string
   onExportNotifyEvent?: (event: ExportNotifyEvent) => void
+  alertRules?: AlertRuleStore
+  measureAlerts?: AlertMeasurer
+  alertTarget?: AlertTarget
+  issueActivity?: IssueActivitySource
+  onAlertEvent?: (event: AlertEvaluateEvent) => void
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
@@ -96,7 +109,23 @@ export function buildTasks(deps: TaskDeps): readonly Task[] {
           }),
         ]
 
+  const alerting =
+    deps.alertRules === undefined ||
+    deps.measureAlerts === undefined ||
+    deps.alertTarget === undefined
+      ? []
+      : [
+          alertEvaluateTask({
+            rules: deps.alertRules,
+            measure: deps.measureAlerts,
+            target: deps.alertTarget,
+            ...(deps.issueActivity === undefined ? {} : { issueActivity: deps.issueActivity }),
+            ...(deps.onAlertEvent === undefined ? {} : { onEvent: deps.onAlertEvent }),
+          }),
+        ]
+
   return registerTasks([
+    ...alerting,
     ...grouping,
     ...exporting,
     ...scheduling,
