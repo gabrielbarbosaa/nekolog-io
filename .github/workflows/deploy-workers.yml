@@ -78,6 +78,7 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
           KV_NAMESPACE_ID: 00000000000000000000000000000000
           SPOOL_BUCKET: nekolog-spool-dry-run
+          SOURCEMAPS_BUCKET: nekolog-sourcemaps-dry-run
           CLICKHOUSE_URL: https://clickhouse.invalid
           JOBS_VERSION: ${{ github.sha }}
 
@@ -138,6 +139,7 @@ jobs:
           ENVIRONMENT: ${{ steps.target.outputs.environment }}
           KV_NAMESPACE_ID: ${{ vars.CF_KV_NAMESPACE_ID }}
           SPOOL_BUCKET: ${{ vars.R2_SPOOL_BUCKET }}
+          SOURCEMAPS_BUCKET: ${{ vars.R2_SOURCEMAPS_BUCKET }}
           CLICKHOUSE_URL: ${{ vars.CLICKHOUSE_URL }}
           JOBS_VERSION: ${{ github.sha }}
 
