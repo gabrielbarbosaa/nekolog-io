@@ -185,6 +185,19 @@ export {
 export type { MemoryQuotaStore } from './quotas/memory-quota-store.ts'
 export { memoryQuotaStore } from './quotas/memory-quota-store.ts'
 export type { RateLimiter, RateLimitResult } from './rate-limiter.ts'
+export type { RedactionPattern, RedactionRules } from './redaction.ts'
+export {
+  attributeMatches,
+  DEFAULT_REPLACEMENT,
+  hasRules,
+  MAX_ATTRIBUTE_RULE_CHARS,
+  MAX_ATTRIBUTE_RULES,
+  MAX_REPLACEMENT_CHARS,
+  NO_REDACTION,
+  parseRedactionRules,
+  REDACTION_PATTERNS,
+  RedactionRuleError,
+} from './redaction.ts'
 export type { NodeRedisLike } from './redis/node-redis.ts'
 export { isNoScript, nodeRedis } from './redis/node-redis.ts'
 export { assertPrefix, prefixedRedis } from './redis/prefixed-redis.ts'

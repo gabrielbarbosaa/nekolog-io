@@ -353,6 +353,64 @@ describe('what the environment settings keep out', () => {
   })
 })
 
+describe('what the environment asked to be removed', () => {
+  const REDACTED = { ...PRINCIPAL, redaction: { patterns: ['email'], attributes: ['secret.*'] } }
+
+  it('takes it out of the message', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'write to a@b.test' },
+    ])
+
+    expect((await rowsFor(batch, REDACTED, CONTEXT))[0]?.message).toBe('write to [redacted]')
+  })
+
+  it('takes it out of the stack trace, where a token is just as readable', async () => {
+    const batch = batchOf([
+      {
+        timestamp: '2026-10-31T15:30:00.000Z',
+        level: 'error',
+        message: 'boom',
+        error: {
+          type: 'Error',
+          message: 'boom',
+          stack: 'Error: boom\n    at notify (mailer.ts:1) for ana@example.com',
+        },
+      },
+    ])
+
+    const stack = String((await rowsFor(batch, REDACTED, CONTEXT))[0]?.stacktrace)
+
+    expect(stack).not.toContain('ana@example.com')
+    expect(stack).toContain('[redacted]')
+    expect(stack).toContain('at notify')
+  })
+
+  it('takes it out of the attributes, by name and by pattern', async () => {
+    const batch = batchOf([
+      {
+        timestamp: '2026-10-31T15:30:00.000Z',
+        level: 'info',
+        message: 'ok',
+        attributes: { 'secret.token': 'abc', contact: 'a@b.test', orderId: 'ord_1' },
+      },
+    ])
+
+    expect((await rowsFor(batch, REDACTED, CONTEXT))[0]?.attributes).toEqual({
+      'secret.token': '[redacted]',
+      contact: '[redacted]',
+      orderId: 'ord_1',
+    })
+  })
+
+  it('leaves everything alone when the environment asked for nothing', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'write to a@b.test' },
+    ])
+
+    expect((await rows(batch))[0]?.message).toBe('write to a@b.test')
+  })
+})
+
 describe('the clock of whoever sent the batch', () => {
   it('records how far behind the sender is, in milliseconds', async () => {
     const batch = batchOf([

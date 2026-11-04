@@ -1,0 +1,3 @@
+ALTER TABLE "environments" ADD COLUMN "redaction_rules" jsonb DEFAULT '{}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "environments" ADD CONSTRAINT "environments_redaction_rules_is_an_object" CHECK (jsonb_typeof(redaction_rules) = 'object');--> statement-breakpoint
+ALTER TABLE "environments" ADD CONSTRAINT "environments_redaction_never_carries_a_regex" CHECK (not (redaction_rules ? 'regex' or redaction_rules ? 'pattern' or redaction_rules ? 'patternSource'));

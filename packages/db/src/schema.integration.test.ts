@@ -126,6 +126,58 @@ async function environment(
 
 const HASH = 'a'.repeat(64)
 
+describe.skipIf(!reachable)('the redaction rules an environment carries', () => {
+  async function withEnvironment(
+    work: (tx: postgres.TransactionSql, environmentId: string) => Promise<void>,
+  ): Promise<void> {
+    await inRollback(async (tx) => {
+      const organizationId = await organization(tx)
+      const projectId = await project(tx, organizationId)
+      const environmentId = await environment(tx, projectId)
+      await work(tx, environmentId)
+    })
+  }
+
+  it('starts empty, which means nothing is removed', async () => {
+    await withEnvironment(async (tx, environmentId) => {
+      const [row] = await tx`select redaction_rules from environments where id = ${environmentId}`
+
+      expect(row?.redaction_rules).toEqual({})
+    })
+  })
+
+  it('accepts the shape the contract defines', async () => {
+    await withEnvironment(async (tx, environmentId) => {
+      await tx`update environments set redaction_rules = ${tx.json({
+        patterns: ['email'],
+        attributes: ['headers.*'],
+      })} where id = ${environmentId}`
+
+      const [row] = await tx`select redaction_rules from environments where id = ${environmentId}`
+      expect(row?.redaction_rules).toMatchObject({ patterns: ['email'] })
+    })
+  })
+
+  it('refuses rules that are not an object', async () => {
+    await expect(
+      withEnvironment(async (tx, environmentId) => {
+        await tx`update environments set redaction_rules = ${tx.json(['email'])} where id = ${environmentId}`
+      }),
+    ).rejects.toThrow(/environments_redaction_rules_is_an_object/)
+  })
+
+  it.each(['regex', 'pattern', 'patternSource'])(
+    'refuses a rule that smuggles a regex in as %s',
+    async (field) => {
+      await expect(
+        withEnvironment(async (tx, environmentId) => {
+          await tx`update environments set redaction_rules = ${tx.json({ [field]: '.*' })} where id = ${environmentId}`
+        }),
+      ).rejects.toThrow(/environments_redaction_never_carries_a_regex/)
+    },
+  )
+})
+
 describe.skipIf(!reachable)('the migration this package ships', () => {
   it('creates every table the plan names', async () => {
     const rows = await sql<Array<{ table_name: string }>>`

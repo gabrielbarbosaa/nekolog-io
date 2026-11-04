@@ -11,6 +11,7 @@ export type IngestPrincipal = {
   retentionDays?: number
   minLevel?: string
   sampleRate?: number
+  redaction?: unknown
   keyKind?: 'public' | 'secret'
   keyLocation?: 'header' | 'query'
   allowedOrigin?: string | null

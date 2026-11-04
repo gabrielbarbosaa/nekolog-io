@@ -7,6 +7,7 @@ export interface KeyRecord {
   retentionDays?: number
   minLevel?: string
   sampleRate?: number
+  redaction?: unknown
 }
 
 export interface KeyStore {

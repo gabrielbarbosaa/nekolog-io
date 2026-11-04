@@ -279,7 +279,7 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 - [x] **5.2** `feat/alert-channels` — e-mail, Slack, Discord e webhook, com proteção contra SSRF, segredos criptografados e webhooks assinados com HMAC. *(Daqui: a tabela `alert_channels`, o envio pelos jobs, a proteção contra SSRF e a assinatura HMAC. A tela que configura o canal é de lá.)*
 - [x] **5.3** `feat/alert-history` — histórico e cooldown. *(Daqui: a tabela `alert_events`, gravada junto da transição, e o cooldown, que é o job decidindo não avisar de novo. A tela do histórico é de lá.)*
 - [x] **5.4** `feat/env-settings` — retenção, amostragem e nível mínimo por ambiente. *(Daqui: as colunas em `environments` e o cumprimento na ingestão — amostrar e cortar por nível é no servidor, não na tela. A tela de configuração é de lá.)*
-- [ ] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor. *(Daqui: a aplicação das regras no `apps/ingest`, antes da gravação. A tela que escreve as regras é de lá.)*
+- [x] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor. *(Daqui: a aplicação das regras no `apps/ingest`, antes da gravação. A tela que escreve as regras é de lá.)*
 - [ ] **5.8** `security/alerts` — alertas de eventos de segurança para o operador. *(Daqui: os eventos que esta base levanta — abuso de key, cota, capacidade — pelos canais da 5.2. Os eventos de sessão e de login são de lá.)*
 - [ ] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
 - [ ] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*

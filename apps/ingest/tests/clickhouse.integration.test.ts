@@ -360,6 +360,78 @@ describe.skipIf(!reachable)('a log from the sdk reaching ClickHouse', () => {
     expect(levels.filter((level) => level === 'info').length).toBeLessThan(10)
   })
 
+  it('never writes what the environment asked to be removed', async () => {
+    const privateKey = generateApiKey('secret')
+    await keyStore.set(await hashApiKey(privateKey), {
+      ...RECORD,
+      redaction: { patterns: ['email', 'cpf'], attributes: ['headers.*'] },
+    })
+
+    await fetch(`${endpoint}/v1/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${privateKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b41',
+        sdk: { name: '@nekolog-io/node', version: '0.0.0' },
+        resource: { service: 'private', runtime: 'node' },
+        events: [
+          {
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            message: 'ana@example.com could not pay, cpf 123.456.789-09',
+            attributes: {
+              'headers.authorization': 'Bearer abcdefghijklmnop',
+              'user.contact': 'ana@example.com',
+              orderId: 'ord_7',
+            },
+          },
+        ],
+      }),
+    })
+
+    const [row] = await storedWhere("service = 'private'")
+
+    expect(row?.message).toBe('[redacted] could not pay, cpf [redacted]')
+    expect(row?.attributes).toEqual({
+      'headers.authorization': '[redacted]',
+      'user.contact': '[redacted]',
+      orderId: 'ord_7',
+    })
+    expect(JSON.stringify(row)).not.toContain('ana@example.com')
+    expect(JSON.stringify(row)).not.toContain('123.456.789-09')
+  })
+
+  it('removes everything it knows when the stored rule cannot be read', async () => {
+    const brokenKey = generateApiKey('secret')
+    await keyStore.set(await hashApiKey(brokenKey), {
+      ...RECORD,
+      redaction: { patterns: ['regex:.*'] },
+    })
+
+    await fetch(`${endpoint}/v1/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${brokenKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b42',
+        sdk: { name: '@nekolog-io/node', version: '0.0.0' },
+        resource: { service: 'broken-rule', runtime: 'node' },
+        events: [
+          {
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            message: 'ana@example.com could not pay',
+          },
+        ],
+      }),
+    })
+
+    const [row] = await storedWhere("service = 'broken-rule'")
+
+    expect(row?.message).not.toContain('ana@example.com')
+  })
+
   it('writes nothing at all for a key the store does not know', async () => {
     const before = await queryRows<{ total: string }>(
       config,

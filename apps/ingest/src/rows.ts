@@ -1,8 +1,10 @@
 import type { ParsedBatch } from '@internal/schema'
+import { hasRules } from '@nekolog-io/adapters'
 import type { IngestPrincipal } from './app.ts'
 import { boundedTimestampMs, clockSkewMs } from './clock-skew.ts'
 import { fingerprintFor, NO_FINGERPRINT } from './fingerprint.ts'
 import { decideIntake, settingsFrom } from './intake.ts'
+import { redactAttributes, redactText, rulesFor } from './redact.ts'
 
 export const DEFAULT_RETENTION_DAYS = 30
 export const UNRESOLVED_FINGERPRINT = NO_FINGERPRINT
@@ -56,6 +58,8 @@ export async function rowsFor(
   const receivedAt = clickHouseTimestamp(context.receivedAt)
   const retentionDays = principal.retentionDays ?? DEFAULT_RETENTION_DAYS
   const settings = settingsFrom(principal)
+  const redaction = rulesFor(principal.redaction)
+  const redacting = hasRules(redaction)
 
   const admitAttribute = context.admitAttribute
 
@@ -82,6 +86,8 @@ export async function rowsFor(
     }
 
     const clientAt = Date.parse(event.timestamp)
+    const message = redacting ? redactText(event.message, redaction) : event.message
+    const stacktrace = event.error?.stack ?? ''
 
     return {
       project_id: principal.projectId,
@@ -92,7 +98,7 @@ export async function rowsFor(
       received_at: receivedAt,
       clock_skew_ms: clockSkewMs(clientAt, context.receivedAt),
       level: event.level,
-      message: event.message,
+      message,
       service: batch.resource.service,
       release: batch.resource.release ?? '',
       source: batch.resource.runtime,
@@ -108,8 +114,8 @@ export async function rowsFor(
         fingerprint: event.fingerprint,
       }),
       error_type: event.error?.type ?? '',
-      stacktrace: event.error?.stack ?? '',
-      attributes,
+      stacktrace: redacting ? redactText(stacktrace, redaction) : stacktrace,
+      attributes: redacting ? redactAttributes(attributes, redaction) : attributes,
       country: context.country,
       retention_days: retentionDays,
     }
