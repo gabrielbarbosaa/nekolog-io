@@ -17,6 +17,7 @@ import {
 import { type ParseResult, parseBatch } from './parse.ts'
 
 const RUNS = Number(process.env.FUZZ_RUNS ?? 400)
+const FUZZ_TIMEOUT_MS = Math.max(5_000, RUNS * 30)
 
 const encoder = new TextEncoder()
 
@@ -207,7 +208,7 @@ describe('the fuzzer itself', () => {
   })
 })
 
-describe('parseBatch, fuzzed', () => {
+describe('parseBatch, fuzzed', { timeout: FUZZ_TIMEOUT_MS }, () => {
   it('never throws, whatever JSON arrives', () => {
     fc.assert(
       fc.property(fc.jsonValue(), (input) => {

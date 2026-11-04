@@ -5,6 +5,7 @@ import { parseSearch, SearchError } from './parse.ts'
 import { SCOPE_PREFIX, searchWhere } from './scope.ts'
 
 const RUNS = Number(process.env.FUZZ_RUNS ?? 300)
+const FUZZ_TIMEOUT_MS = Math.max(5_000, RUNS * 30)
 
 const ENVIRONMENTS = { production: 'env_prod', staging: 'env_stag' }
 
@@ -95,7 +96,7 @@ function balanced(sql: string): boolean {
   return depth === 0
 }
 
-describe('whatever anyone types', () => {
+describe('whatever anyone types', { timeout: FUZZ_TIMEOUT_MS }, () => {
   it('is either understood or refused with a position, and never anything else', () => {
     fc.assert(
       fc.property(anything, (search) => {

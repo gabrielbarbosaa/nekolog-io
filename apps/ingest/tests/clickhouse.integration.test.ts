@@ -31,13 +31,14 @@ if (!reachable) {
 }
 
 const KEY = generateApiKey('secret')
+const RETENTION_DAYS = 7
 const RECORD: KeyRecord = {
   projectId: 'p_demo',
   environmentId: 'e_dev',
   scopes: ['logs:write'],
   originAllowlist: null,
   blocked: false,
-  retentionDays: 7,
+  retentionDays: RETENTION_DAYS,
 }
 
 const keyStore = memoryKeyStore()
@@ -235,6 +236,76 @@ describe.skipIf(!reachable)('a log from the sdk reaching ClickHouse', () => {
     )
 
     expect(rows[0]?.total).toBe(stored[0]?.total)
+  })
+
+  async function post(events: Array<Record<string, unknown>>, batchId: string): Promise<number> {
+    const response = await fetch(`${endpoint}/v1/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId,
+        sdk: { name: '@nekolog-io/node', version: '0.0.0' },
+        resource: { service: 'clock', runtime: 'node' },
+        events,
+      }),
+    })
+    return response.status
+  }
+
+  it('keeps a log from a clock years behind, which ClickHouse would drop at the insert', async () => {
+    const status = await post(
+      [{ timestamp: '2020-01-01T00:00:00.000Z', level: 'error', message: 'from a dead clock' }],
+      '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b21',
+    )
+
+    const [row] = await storedWhere("message = 'from a dead clock'")
+
+    expect(status).toBe(202)
+    expect(row).toBeDefined()
+    expect(String(row?.timestamp)).not.toContain('2020')
+
+    const skew = Number(row?.clock_skew_ms)
+    const stored = Date.parse(`${String(row?.timestamp).replace(' ', 'T')}Z`)
+    const received = Date.parse(`${String(row?.received_at).replace(' ', 'T')}Z`)
+
+    expect(received - skew).toBe(Date.UTC(2020, 0, 1))
+    expect(stored).toBe(received - (RETENTION_DAYS * 86_400_000 - 3_600_000))
+  })
+
+  it('writes that same event unchanged when the floor is removed, and ClickHouse eats it', async () => {
+    await execute(
+      config,
+      `INSERT INTO ${database}.logs (project_id, environment_id, timestamp, received_at, level, message, service, retention_days)
+       VALUES ('p_demo', 'e_dev', '2020-01-01 00:00:00.000', now64(3), 'error', 'unfloored', 'clock', 7)`,
+    )
+
+    const rows = await queryRows<{ total: string }>(
+      config,
+      `SELECT toString(count()) AS total FROM ${database}.logs WHERE message = 'unfloored'`,
+    )
+
+    expect(rows[0]?.total).toBe('0')
+  })
+
+  it('caps a log from a clock set to 2099, so a period query can still reach it', async () => {
+    const status = await post(
+      [{ timestamp: '2099-01-01T00:00:00.000Z', level: 'warn', message: 'from the future' }],
+      '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b22',
+    )
+
+    const [row] = await storedWhere("message = 'from the future'")
+
+    expect(status).toBe(202)
+    expect(String(row?.timestamp)).not.toContain('2099')
+    expect(Number(row?.clock_skew_ms)).toBeLessThan(-2_147_483_647)
+
+    const reachable = await queryRows<{ total: string }>(
+      config,
+      `SELECT toString(count()) AS total FROM ${database}.logs
+       WHERE message = 'from the future' AND timestamp BETWEEN now64(3) - INTERVAL 1 HOUR AND now64(3) + INTERVAL 1 HOUR`,
+    )
+    expect(reachable[0]?.total).toBe('1')
   })
 
   it('writes nothing at all for a key the store does not know', async () => {

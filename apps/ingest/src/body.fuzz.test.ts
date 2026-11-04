@@ -11,6 +11,7 @@ import {
 } from './body.ts'
 
 const RUNS = Number(process.env.FUZZ_RUNS ?? 200)
+const FUZZ_TIMEOUT_MS = Math.max(5_000, RUNS * 30)
 
 const FAILURE_CODES = ['payload_too_large', 'invalid_payload']
 
@@ -55,7 +56,7 @@ function expectWellFormed(result: BodyResult): void {
   expect(result.message.length).toBeGreaterThan(0)
 }
 
-describe('the header readers, fuzzed', () => {
+describe('the header readers, fuzzed', { timeout: FUZZ_TIMEOUT_MS }, () => {
   it('never throw on any header value', () => {
     fc.assert(
       fc.property(fc.option(headerText, { nil: null }), (header) => {
@@ -105,7 +106,7 @@ describe('the header readers, fuzzed', () => {
   })
 })
 
-describe('readBatchBody, fuzzed', () => {
+describe('readBatchBody, fuzzed', { timeout: FUZZ_TIMEOUT_MS }, () => {
   it('never throws, whatever bytes and headers arrive', async () => {
     await fc.assert(
       fc.asyncProperty(bodyBytes, headerText, encodingHeader, async (body, type, encoding) => {

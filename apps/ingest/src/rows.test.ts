@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { type ParsedBatch, parseBatch } from '@internal/schema'
 import { MIGRATIONS_DIR } from '@nekolog-io/clickhouse'
@@ -19,7 +19,10 @@ const PRINCIPAL: IngestPrincipal = { projectId: 'p_1', environmentId: 'e_1' }
 
 const MIGRATION = resolve(MIGRATIONS_DIR, '0001_create_logs.sql')
 
-function logsTableColumns(): string[] {
+const ALTERS_LOGS = /^\s*alter\s+table\s+\{\{database\}\}\.logs\b/i
+const ADDS_COLUMN = /\badd\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_]+)\s+\S/i
+
+function createdColumns(): string[] {
   const sql = readFileSync(MIGRATION, 'utf8')
   const body = sql.slice(sql.indexOf('(') + 1, sql.indexOf(') ENGINE'))
   const columns = body
@@ -31,6 +34,33 @@ function logsTableColumns(): string[] {
     throw new Error(`Found no columns in ${MIGRATION}; the parser needs updating`)
   }
   return columns
+}
+
+function alteredColumns(): string[] {
+  const added: string[] = []
+
+  for (const fileName of readdirSync(MIGRATIONS_DIR).sort()) {
+    if (!fileName.endsWith('.sql')) {
+      continue
+    }
+    const sql = readFileSync(resolve(MIGRATIONS_DIR, fileName), 'utf8')
+    if (!ALTERS_LOGS.test(sql)) {
+      continue
+    }
+    const name = ADDS_COLUMN.exec(sql)?.[1]
+    if (name === undefined) {
+      throw new Error(
+        `${fileName} alters logs in a way this parser does not read; teach it before the column list can be trusted`,
+      )
+    }
+    added.push(name)
+  }
+
+  return added
+}
+
+function logsTableColumns(): string[] {
+  return [...createdColumns(), ...alteredColumns()]
 }
 
 function batchOf(events: Array<Record<string, unknown>>, resource?: Record<string, unknown>) {
@@ -46,6 +76,8 @@ function batchOf(events: Array<Record<string, unknown>>, resource?: Record<strin
   }
   return result.batch
 }
+
+const CONTEXT = { receivedAt: RECEIVED_AT, country: 'BR' }
 
 function rows(batch: ParsedBatch, principal = PRINCIPAL, country = 'BR') {
   return rowsFor(batch, principal, { receivedAt: RECEIVED_AT, country })
@@ -128,6 +160,7 @@ describe('rowsFor', () => {
       environment_id: 'e_1',
       timestamp: '2026-10-31 15:30:00.000',
       received_at: '2026-10-31 15:30:45.125',
+      clock_skew_ms: 45_125,
       level: 'info',
       message: 'Pedido criado',
       service: 'checkout-api',
@@ -248,9 +281,85 @@ describe('rowsFor', () => {
     expect(received.size).toBe(1)
   })
 
-  it('writes exactly the columns the migration creates', async () => {
+  it('writes exactly the columns the migrations create', async () => {
     const batch = batchOf([{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }])
 
     expect(Object.keys((await rows(batch))[0] ?? {}).sort()).toEqual([...logsTableColumns()].sort())
+  })
+
+  it('reads the columns a later migration added, not only the ones the first one created', () => {
+    expect(alteredColumns()).toContain('clock_skew_ms')
+    expect(createdColumns()).not.toContain('clock_skew_ms')
+  })
+})
+
+describe('the clock of whoever sent the batch', () => {
+  it('records how far behind the sender is, in milliseconds', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:29:45.125Z', level: 'info', message: 'a minute late' },
+    ])
+
+    expect((await rows(batch))[0]?.clock_skew_ms).toBe(60_000)
+  })
+
+  it('records a sender running ahead as a negative number', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:31:45.125Z', level: 'info', message: 'a minute early' },
+    ])
+
+    expect((await rows(batch))[0]?.clock_skew_ms).toBe(-60_000)
+  })
+
+  it('leaves the timestamp untouched when the two clocks agree', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'in step' },
+    ])
+
+    const [row] = await rows(batch)
+    expect(row?.timestamp).toBe('2026-10-31 15:30:00.000')
+    expect(row?.clock_skew_ms).toBe(45_125)
+  })
+
+  it('pulls a timestamp older than the retention forward, because ClickHouse drops that row', async () => {
+    const batch = batchOf([
+      { timestamp: '2020-01-01T00:00:00.000Z', level: 'info', message: 'from a dead clock' },
+    ])
+
+    const [row] = await rows(batch)
+
+    expect(row?.timestamp).not.toBe('2020-01-01 00:00:00.000')
+    expect(row?.timestamp).toBe(clickHouseTimestamp(RECEIVED_AT - (30 * 86_400_000 - 3_600_000)))
+  })
+
+  it('caps a timestamp from the far future, which no period query would ever reach', async () => {
+    const batch = batchOf([
+      { timestamp: '2099-01-01T00:00:00.000Z', level: 'info', message: 'from the future' },
+    ])
+
+    const [row] = await rows(batch)
+
+    expect(row?.timestamp).toBe(clickHouseTimestamp(RECEIVED_AT + 300_000))
+  })
+
+  it('still records the real distance after moving the timestamp, so the original is recoverable', async () => {
+    const batch = batchOf([
+      { timestamp: '2020-01-01T00:00:00.000Z', level: 'info', message: 'from a dead clock' },
+    ])
+
+    const skew = (await rows(batch))[0]?.clock_skew_ms
+    expect(typeof skew).toBe('number')
+    expect(clickHouseTimestamp(RECEIVED_AT - (skew as number))).toBe('2020-01-01 00:00:00.000')
+  })
+
+  it('measures the floor against the retention the key carries', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-29T15:30:45.125Z', level: 'info', message: 'two days old' },
+    ])
+
+    const short = await rowsFor(batch, { ...PRINCIPAL, retentionDays: 1 }, CONTEXT)
+    const long = await rowsFor(batch, { ...PRINCIPAL, retentionDays: 30 }, CONTEXT)
+
+    expect(long[0]?.timestamp).toBe('2026-10-29 15:30:45.125')
+    expect(short[0]?.timestamp).toBe(clickHouseTimestamp(RECEIVED_AT - (86_400_000 - 3_600_000)))
   })
 })

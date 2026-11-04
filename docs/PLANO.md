@@ -173,6 +173,7 @@ CREATE TABLE logs (
   environment_id  LowCardinality(String),
   timestamp       DateTime64(3),
   received_at     DateTime64(3),
+  clock_skew_ms   Int64,                    -- received_at - timestamp do cliente
   level           LowCardinality(String),
   message         String,
   service         LowCardinality(String),
@@ -201,6 +202,7 @@ SETTINGS non_replicated_deduplication_window = 1000;
 - O `non_replicated_deduplication_window` permite usar o `batchId` como token de deduplicação no reenvio da contingência.
 
 - O `retention_days` vem da configuração do ambiente e é gravado em cada linha, então o `TTL` respeita a retenção de cada ambiente sem job de limpeza. Uma mudança na retenção vale só para logs novos.
+- **O `TTL` e o `PARTITION BY` são sobre o `timestamp`, que é do cliente, então a ingestão limita esse valor antes de gravar** (etapa 4.11). Um relógio atrasado além da retenção faz o ClickHouse descartar a linha no próprio insert — a partição é criada com zero linhas e nada avisa. Um relógio adiantado grava numa partição fora de qualquer consulta por período, e cujo `TTL` só vence depois dela: é a ameaça T10. A diferença real fica em `clock_skew_ms`.
 - A *materialized view* `logs_per_minute` (contagem por projeto, ambiente, nível, serviço e minuto do `timestamp`) alimenta os gráficos. A `usage_per_minute` (por projeto, ambiente e minuto do `received_at`) alimenta uso e cota: o `timestamp` é escolhido pelo cliente, então cobrar cota por ele permitiria fugir da cota datando os eventos no passado.
 - **O usuário de ingestão não pode ser só de `INSERT`.** O ClickHouse pede `SELECT` nas colunas que a *materialized view* lê, e sem isso o `INSERT` grava em `logs`, falha ao alimentar a view e devolve erro — gravação pela metade. Então ele tem `INSERT` em `logs` e `SELECT` **restrito às seis colunas** que as views leem (`project_id`, `environment_id`, `timestamp`, `received_at`, `level`, `service`). `message`, `stacktrace`, `attributes` e `user_id` continuam fora do alcance dessa credencial (ameaça E11).
 
@@ -291,7 +293,7 @@ await log.flush() // essencial em serverless
 - **Demo pública:** um botão "Entrar na demo" abre uma sessão somente leitura numa organização com logs falsos, sem senha nem e-mail. O papel somente leitura é garantido no servidor.
 - **Primeiro log:** depois de criar o projeto, um passo a passo mostra a key e o comando `npx @nekolog-io/cli init` e fica esperando o primeiro log chegar, em tempo real.
 - **Fuso horário:** tudo é gravado em UTC e exibido no fuso de cada usuário (preferência salva no perfil).
-- **Relógio do cliente:** o dashboard avisa quando o `timestamp` enviado pelo cliente diverge mais de 5 min do `received_at`.
+- **Relógio do cliente:** a ingestão grava a diferença em `clock_skew_ms` e o dashboard avisa quando ela passa de 5 min. A coluna guarda a diferença real, mesmo quando o `timestamp` gravado foi limitado (ver especificação 1), então o horário que o cliente mandou é sempre `received_at - clock_skew_ms`.
 - **Exportação de logs:**
   - **Formatos:** JSON (NDJSON, um log por linha), XML e CSV (protegido contra injeção de fórmulas).
   - **Manual:** o usuário escolhe filtros e período no Explorer e pede a exportação.

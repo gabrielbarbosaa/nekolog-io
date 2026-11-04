@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { MIGRATIONS_DIR } from '../migrations.ts'
 import {
   LOG_COLUMNS,
   type LogContextOptions,
@@ -108,7 +111,40 @@ describe('the limits this module pins', () => {
   it('are the numbers it documents', () => {
     expect(MAX_CONTEXT_ROWS).toBe(200)
     expect(MAX_CONTEXT_WINDOW_MS).toBe(7 * 24 * 60 * 60 * 1000)
-    expect(LOG_COLUMNS).toHaveLength(18)
+    expect(LOG_COLUMNS).toHaveLength(19)
     expect(LOG_COLUMNS).not.toContain('retention_days')
+    expect(LOG_COLUMNS).toContain('clock_skew_ms')
+  })
+
+  it('names every column the migrations give the table, and only those', () => {
+    const inTheTable: string[] = []
+
+    for (const fileName of readdirSync(MIGRATIONS_DIR).sort()) {
+      const sql = readFileSync(join(MIGRATIONS_DIR, fileName), 'utf8')
+
+      if (/create\s+table[^(]*\.logs\s*\(/i.test(sql)) {
+        const body = sql.slice(sql.indexOf('(') + 1, sql.indexOf(') ENGINE'))
+        for (const line of body.split('\n')) {
+          const name = /^\s{2}([a-z_]+)\s+\S/.exec(line)?.[1]
+          if (name !== undefined) {
+            inTheTable.push(name)
+          }
+        }
+        continue
+      }
+
+      if (/^\s*alter\s+table\s+\{\{database\}\}\.logs\b/i.test(sql)) {
+        const name = /\badd\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_]+)\s+\S/i.exec(sql)?.[1]
+        if (name === undefined) {
+          throw new Error(`${fileName} alters logs in a way this test cannot read`)
+        }
+        inTheTable.push(name)
+      }
+    }
+
+    expect(inTheTable.length).toBeGreaterThan(LOG_COLUMNS.length)
+    expect([...LOG_COLUMNS].sort()).toEqual(
+      inTheTable.filter((name) => name !== 'retention_days').sort(),
+    )
   })
 })
