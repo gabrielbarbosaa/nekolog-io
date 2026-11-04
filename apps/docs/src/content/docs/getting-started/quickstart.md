@@ -43,5 +43,15 @@ await log.flush() // important in serverless, where the process can exit early
 
 ## Next steps
 
+- [`nekolog init`](/docs/guides/cli/) — one command that detects the framework,
+  installs the right SDK and writes the `.env`.
+- The guide for your stack: [Browser](/docs/guides/browser/),
+  [React](/docs/guides/react/), [Next.js](/docs/guides/next/),
+  [Node.js](/docs/guides/node/), [Express](/docs/guides/express/),
+  [Fastify](/docs/guides/fastify/), [Hono](/docs/guides/hono/),
+  [NestJS](/docs/guides/nestjs/), [pino](/docs/guides/pino/) or
+  [winston](/docs/guides/winston/).
+- [Distributed tracing](/docs/guides/tracing/) — one timeline across the
+  front-end and the back-end, and the CORS header it needs.
 - [Introduction](/docs/getting-started/introduction/) — how the pieces fit
   together and what is open source.

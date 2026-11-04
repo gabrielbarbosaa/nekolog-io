@@ -1,0 +1,73 @@
+---
+title: nekolog init
+description: Um comando que detecta o framework, instala o SDK certo e escreve o .env.
+---
+
+:::caution[Ainda não está no npm]
+Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
+comportamento que o código já tem, para a forma da API ficar clara.
+:::
+
+```bash
+npx @nekolog-io/cli init
+npx @nekolog-io/cli init --key nekolog_pk_… --no-install
+```
+
+Ele lê o `package.json` do projeto, escolhe o SDK, instala com o gerenciador que
+o lockfile indicar e escreve as variáveis de ambiente.
+
+| | |
+|---|---|
+| `--key <key>` | a key a escrever, `nekolog_pk_…` ou `nekolog_sk_…` |
+| `--no-install` | escreve o `.env` e **imprime** o comando de instalação, em vez de rodar |
+| `--cwd <path>` | onde está o projeto |
+| `--env <file>` | qual arquivo escrever (padrão `.env`) |
+
+## O que ele escolhe, e por quê
+
+A ordem importa, porque projeto de verdade tem mais de uma dessas:
+
+| Achou | Instala |
+|---|---|
+| `next` | `@nekolog-io/next` |
+| `@nestjs/core` | `@nekolog-io/nestjs` |
+| `fastify` / `hono` / `express` | o pacote do framework mais o `@nekolog-io/node` |
+| `react` | `@nekolog-io/react` |
+| `vite` sem react | `@nekolog-io/browser` |
+| nada disso | `@nekolog-io/node` |
+
+`next` ganha de `react` e `@nestjs/core` ganha de `express` porque nos dois
+casos o de fora é quem manda. Ele sempre diz **por que** escolheu.
+
+O gerenciador vem do lockfile: `pnpm-lock.yaml`, `bun.lock`, `yarn.lock`,
+`package-lock.json`. Sem lockfile, `npm`.
+
+## Quatro coisas que ele recusa
+
+**Não sobrescreve variável que já existe.** Se o `.env` já tem `NEKOLOG_KEY`,
+ele passa reto e diz que passou. A sua key de verdade não é trocada por um
+marcador — nem pela key que você acabou de passar no `--key`.
+
+**Não escreve key secreta em variável pública.** Num projeto Next ele pede as
+duas: `NEKOLOG_KEY` para o servidor e `NEXT_PUBLIC_NEKOLOG_KEY` para o
+navegador. Um `--key nekolog_sk_…` preenche só a primeira; a pública fica com o
+marcador, porque uma key secreta numa variável `NEXT_PUBLIC_` vai direto para o
+bundle.
+
+**Não escreve nada se a key não parece uma key.** A validação acontece *antes*
+da primeira escrita, então um `--key` errado não deixa meio arquivo para trás.
+
+**Não roda nada por shell.** O gerenciador é chamado com a lista de argumentos e
+`shell: false`.
+
+Ele também recusa uma pasta sem `package.json` em vez de inventar um projeto. Se
+a instalação falhar, o `.env` **continua escrito** e a mensagem diz o que falta
+rodar.
+
+## Depois de rodar
+
+Abra o guia do que ele instalou: [Browser](/docs/pt-br/guides/browser/),
+[React](/docs/pt-br/guides/react/), [Next.js](/docs/pt-br/guides/next/),
+[Node.js](/docs/pt-br/guides/node/), [Express](/docs/pt-br/guides/express/),
+[Fastify](/docs/pt-br/guides/fastify/), [Hono](/docs/pt-br/guides/hono/) ou
+[NestJS](/docs/pt-br/guides/nestjs/).
