@@ -8,6 +8,7 @@ import type { LogEvent } from './types.ts'
 import { uuidv7 } from './uuid.ts'
 
 const RUNS = Number(process.env.FUZZ_RUNS ?? 300)
+const FUZZ_TIMEOUT_MS = Math.max(5_000, RUNS * 30)
 const BATCH_PROPERTY_TIMEOUT_MS = 60_000
 
 const hostileText = fc.oneof(
@@ -76,7 +77,9 @@ function expectAccepted(events: LogEvent[], logger: ReturnType<typeof createLogg
   }
 }
 
-describe('whatever the sdk is asked to log, the ingest parser accepts it', () => {
+describe('whatever the sdk is asked to log, the ingest parser accepts it', {
+  timeout: FUZZ_TIMEOUT_MS,
+}, () => {
   it('for a message and attributes of any shape', () => {
     fc.assert(
       fc.property(level, hostileText, attributes, (chosen, message, extra) => {
