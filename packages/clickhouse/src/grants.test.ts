@@ -26,6 +26,10 @@ const HIDDEN_COLUMNS = ['message', 'stacktrace', 'attributes', 'user_id', 'trace
 
 const ROLES = ['reader', 'ingest', 'jobs'] as const
 
+const WRITE_S3 = 'GRANT WRITE ON S3'
+const TEMPORARY_TABLE = 'GRANT CREATE TEMPORARY TABLE ON *.*'
+const GLOBAL_GRANTS = [WRITE_S3, TEMPORARY_TABLE]
+
 function vmUser(role: string): string {
   return `nekolog_${role}_${ENVIRONMENT}`
 }
@@ -117,8 +121,51 @@ describe('the migrations credential', () => {
     for (const [xml, users] of files) {
       for (const user of users) {
         for (const grant of grantsOf(xml, user)) {
+          if (grant === TEMPORARY_TABLE) {
+            continue
+          }
           expect(grant).not.toMatch(/\b(CREATE|DROP|ALTER|TRUNCATE)\b/)
         }
+      }
+    }
+  })
+
+  it('is the only exception, and it is the one a table function needs to exist at all', () => {
+    const files: Array<[string, string[]]> = [
+      [DEV, ['nekolog_reader', 'nekolog_ingest', 'nekolog_jobs']],
+      [VM, ROLES.map(vmUser)],
+    ]
+
+    for (const [xml, users] of files) {
+      for (const user of users) {
+        const creating = grantsOf(xml, user).filter((grant) => grant.includes('CREATE'))
+        expect(creating).toEqual(user.includes('jobs') ? [TEMPORARY_TABLE] : [])
+      }
+    }
+  })
+})
+
+describe('the export credential, which is the jobs one', () => {
+  it.each([
+    ['dev', DEV, 'nekolog_jobs'],
+    ['vm', VM, vmUser('jobs')],
+  ])('may write an export to S3 and may never read one back, in %s', (_name, xml, user) => {
+    const grants = grantsOf(xml, user)
+
+    expect(grants).toContain(WRITE_S3)
+    expect(grants).not.toContain('GRANT READ ON S3')
+    for (const grant of grants) {
+      expect(grant).not.toMatch(/\bREAD ON\b/)
+    }
+  })
+
+  it.each([
+    ['dev', DEV, ['nekolog_reader', 'nekolog_ingest']],
+    ['vm', VM, [vmUser('reader'), vmUser('ingest')]],
+  ])('is the only credential in %s that can reach an object store at all', (_name, xml, users) => {
+    for (const user of users) {
+      for (const grant of grantsOf(xml, user)) {
+        expect(grant).not.toContain('ON S3')
       }
     }
   })
@@ -154,8 +201,18 @@ describe('the vm file, where the three environments share one server', () => {
 
     expect(grants.length).toBeGreaterThan(0)
     for (const grant of grants) {
+      if (GLOBAL_GRANTS.includes(grant)) {
+        continue
+      }
       expect(grant).toContain(`ON ${vmDatabase()}.`)
       expect(grant).not.toMatch(/nekolog_(dev|qa|prod)/)
+    }
+  })
+
+  it('keeps the two grants that cannot name a database down to the jobs role', () => {
+    for (const role of ROLES) {
+      const global = grantsOf(VM, vmUser(role)).filter((grant) => GLOBAL_GRANTS.includes(grant))
+      expect(global.sort()).toEqual(role === 'jobs' ? [...GLOBAL_GRANTS].sort() : [])
     }
   })
 

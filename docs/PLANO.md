@@ -298,7 +298,9 @@ await log.flush() // essencial em serverless
   - **Formatos:** JSON (NDJSON, um log por linha), XML e CSV (protegido contra injeção de fórmulas).
   - **Manual:** o usuário escolhe filtros e período no Explorer e pede a exportação.
   - **Agendada:** por projeto e ambiente, diária ou semanal, por exemplo para guardar os logs antes de a retenção apagá-los.
-  - **Geração:** o próprio ClickHouse gera o arquivo no formato escolhido e grava comprimido no R2 (`INSERT INTO FUNCTION s3(...)`), sem gastar CPU do Worker.
+  - **Geração:** o próprio ClickHouse gera o arquivo no formato escolhido e grava comprimido no R2 (`INSERT INTO FUNCTION s3(...)`), sem gastar CPU do Worker. A credencial do R2 vai dentro do `INSERT` — o ClickHouse troca o segredo por `[HIDDEN]` no `query_log`, mas a mensagem de erro não é mascarada, então a tarefa dos jobs tira a chave e o segredo de qualquer texto antes de gravá-lo na coluna `failure`.
+  - **Credencial do ClickHouse:** a exportação roda com o usuário `nekolog_jobs`, que ganha `WRITE ON S3` e `CREATE TEMPORARY TABLE` (a *table function* não existe sem ela) e **continua sem `READ ON S3`** — ele escreve uma exportação e não consegue ler nenhum objeto de volta para dentro do banco.
+  - **Exportação vazia:** quando o filtro não casa com nada, o ClickHouse **não cria objeto nenhum**. A tarefa grava ela mesma um gzip vazio na chave, porque `ready` tem de significar que há o que baixar — é o que a *check constraint* `exports_ready_means_there_is_an_object` promete.
   - **Entrega por e-mail com link, não com anexo:** o e-mail avisa que a exportação está pronta e leva ao dashboard, que exige login e permissão no ambiente antes de liberar o download. Logs podem ter dados sensíveis, anexos ficam para sempre na caixa de e-mail e e-mails têm limite de tamanho.
   - **Validade:** os arquivos ficam 7 dias no R2 e depois são apagados por uma regra de ciclo de vida.
   - Na instância hospedada, até uma exportação agendada por dia por projeto, por causa da cota de e-mails.

@@ -13,6 +13,11 @@ output "sourcemaps_bucket" {
   value       = module.r2.sourcemaps_bucket
 }
 
+output "exports_bucket" {
+  description = "Binding value for EXPORTS in wrangler, emptied by R2 after the export lifetime."
+  value       = module.r2.exports_bucket
+}
+
 output "ingest_hostname" {
   description = "Where the SDKs send their batches in this environment."
   value       = module.ingest_domain.hostname

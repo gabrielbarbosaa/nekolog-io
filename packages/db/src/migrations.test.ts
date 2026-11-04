@@ -2,7 +2,12 @@ import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  EXPORT_FORMATS as ADAPTER_EXPORT_FORMATS,
+  EXPORT_STATUSES as ADAPTER_EXPORT_STATUSES,
+} from '@nekolog-io/adapters'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { EXPORT_FORMATS, EXPORT_STATUSES } from './index.ts'
 
 const PACKAGE = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = join(PACKAGE, 'migrations')
@@ -103,6 +108,11 @@ describe('the migrations this package ships', () => {
     ).toBe(false)
 
     expect(() => JSON.parse(journal.toString('utf8'))).not.toThrow()
+  })
+
+  it('spell the export enums exactly as the adapters that read them do', () => {
+    expect([...EXPORT_FORMATS]).toEqual([...ADAPTER_EXPORT_FORMATS])
+    expect([...EXPORT_STATUSES]).toEqual([...ADAPTER_EXPORT_STATUSES])
   })
 
   it('are numbered without a gap, so none was deleted by hand', () => {

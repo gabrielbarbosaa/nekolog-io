@@ -4,6 +4,18 @@ export { memoryBlobStore } from './blobs/memory-blob-store.ts'
 export type { R2BucketLike, R2ListedLike, R2ObjectBodyLike } from './blobs/r2-blob-store.ts'
 export { R2_LIST_PAGE, r2BlobStore } from './blobs/r2-blob-store.ts'
 export type {
+  ExportFormat,
+  ExportOutcome,
+  ExportStatus,
+  ExportStore,
+  PendingExport,
+} from './export-store.ts'
+export { EXPORT_FORMATS, EXPORT_LIFETIME_DAYS, EXPORT_STATUSES } from './export-store.ts'
+export type { MemoryExport, MemoryExportStore } from './exports/memory-export-store.ts'
+export { memoryExportStore } from './exports/memory-export-store.ts'
+export type { SqlExportStoreOptions } from './exports/sql-export-store.ts'
+export { DEFAULT_STALE_AFTER_MS, sqlExportStore } from './exports/sql-export-store.ts'
+export type {
   IssueOccurrence,
   IssueRollup,
   IssueStatus,

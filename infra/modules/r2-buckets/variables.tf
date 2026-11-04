@@ -13,6 +13,17 @@ variable "environment" {
   }
 }
 
+variable "export_lifetime_days" {
+  description = "How long a generated export stays in the bucket before R2 deletes it."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.export_lifetime_days >= 1 && var.export_lifetime_days <= 30
+    error_message = "An export lives between one and thirty days; the plan says seven."
+  }
+}
+
 variable "location" {
   description = "Location hint, honoured only when the bucket is first created."
   type        = string

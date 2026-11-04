@@ -225,7 +225,7 @@ para o passo a passo mostrar.
 - [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui.)*
 - [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui.)*
 - [x] **4.11** `feat/clock-skew` — a ingestão mede a diferença entre o `timestamp` do cliente e o `received_at` do servidor e marca o evento. *(O aviso na tela é de lá.)*
-- [ ] **4.12** `feat/export-manual` — exportação em JSON, XML e CSV gerada pelo ClickHouse direto no R2, com proteção contra injeção de fórmulas no CSV e regra de ciclo de vida de 7 dias. *(O download autenticado é de lá: ele depende de sessão e de permissão no ambiente.)*
+- [x] **4.12** `feat/export-manual` — exportação em JSON, XML e CSV gerada pelo ClickHouse direto no R2, com proteção contra injeção de fórmulas no CSV e regra de ciclo de vida de 7 dias. *(O download autenticado é de lá: ele depende de sessão e de permissão no ambiente.)*
 - [ ] **4.13** `feat/export-scheduled` — exportação agendada (diária ou semanal) por projeto e ambiente, executada pelos jobs, com o e-mail de aviso. *(A tela que agenda é de lá; o e-mail leva ao dashboard, não traz anexo.)*
 - [x] **4.15** `feat/db-investigation` — as tabelas de Postgres que este marco pede: views salvas, releases, exportações e dashboards, com as *check constraints* no próprio esquema. *(Etapa nova. Ela vem antes da 4.2, da 4.7, da 4.12 e da 4.14. A tabela `issues` fica com a 4.6, junto do job que a escreve.)*
 
