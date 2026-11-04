@@ -27,6 +27,7 @@
     "./client": "./src/client.ts",
     "./log-store": "./src/log-store.ts",
     "./usage-store": "./src/usage-store.ts",
+    "./issues": "./src/issues.ts",
     "./search": "./src/search/index.ts"
   },
   "publishConfig": {
@@ -49,6 +50,10 @@
       "./usage-store": {
         "types": "./dist/usage-store.d.mts",
         "default": "./dist/usage-store.mjs"
+      },
+      "./issues": {
+        "types": "./dist/issues.d.mts",
+        "default": "./dist/issues.mjs"
       },
       "./search": {
         "types": "./dist/search/index.d.mts",

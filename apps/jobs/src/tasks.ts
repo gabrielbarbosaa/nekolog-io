@@ -1,7 +1,8 @@
-import type { BlobStore, LogStore, QuotaStore, UsageStore } from '@nekolog-io/adapters'
+import type { BlobStore, IssueStore, LogStore, QuotaStore, UsageStore } from '@nekolog-io/adapters'
 import { registerTasks } from './schedule.ts'
 import type { Task } from './task.ts'
 import { type CapacityAlert, capacityWatchTask, type DiskReader } from './tasks/capacity-watch.ts'
+import { type IssueSourceLike, issueRollupTask } from './tasks/issue-rollup.ts'
 import { type QuotaBlockEvent, quotaBlockTask } from './tasks/quota-block.ts'
 import { type SpoolResendEvent, spoolResendTask } from './tasks/spool-resend.ts'
 
@@ -11,6 +12,8 @@ export type TaskDeps = {
   usage: UsageStore
   quotas: QuotaStore
   dailyQuota?: number
+  issueSource?: IssueSourceLike
+  issues?: IssueStore
   onSpoolEvent?: (event: SpoolResendEvent) => void
   onQuotaEvent?: (event: QuotaBlockEvent) => void
   readDisks?: DiskReader
@@ -18,7 +21,13 @@ export type TaskDeps = {
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
+  const grouping =
+    deps.issueSource === undefined || deps.issues === undefined
+      ? []
+      : [issueRollupTask({ source: deps.issueSource, issues: deps.issues })]
+
   return registerTasks([
+    ...grouping,
     spoolResendTask({
       spool: deps.spool,
       logStore: deps.logStore,

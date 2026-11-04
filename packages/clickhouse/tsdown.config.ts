@@ -6,6 +6,7 @@ export default defineConfig({
     'src/client.ts',
     'src/log-store.ts',
     'src/usage-store.ts',
+    'src/issues.ts',
     'src/search/index.ts',
     'src/cli.ts',
   ],

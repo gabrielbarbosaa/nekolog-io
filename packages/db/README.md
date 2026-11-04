@@ -129,3 +129,35 @@ migrations antes de publicar os Workers.
 Isso ainda não está em OpenTofu — não há conta Neon, e a
 [seção 15.5 do plano](../../docs/PLANO.md) deixa Neon e Upstash para quando
 houver o que configurar.
+
+## Issues
+
+```
+issues                  issue_environments
+```
+
+É a etapa 4.6 e a [especificação 5](../../docs/ESPECIFICACOES.md): **uma issue é
+a combinação de projeto e fingerprint, com contagem por ambiente**. Por isso são
+duas tabelas: a `issues` guarda o estado que uma pessoa mexe (status,
+responsável, quando foi resolvida) e a `issue_environments` guarda a contagem,
+que é por ambiente.
+
+O `fingerprint` é **texto**, não número. Ele nasce como `UInt64` no ClickHouse,
+e `18446744073709551615` não cabe num `number` do JavaScript — guardar como
+`bigint` no Postgres só moveria o problema para o driver. A constraint exige de
+1 a 20 dígitos e recusa `0`, que é o valor que significa "sem fingerprint" e
+nunca deveria virar issue.
+
+As três regras que o `sqlIssueStore` do `@nekolog-io/adapters` escreve no
+`on conflict`, e que esta tabela torna possíveis:
+
+- `first_seen_at` nunca anda para frente e `last_seen_at` nunca anda para trás
+  (`least` e `greatest`), porque um lote atrasado chega fora de ordem;
+- uma issue **resolvida** que acontece de novo volta para `open` e ganha
+  `regressed_at` — mas só se a ocorrência for mais nova que a correção, senão um
+  lote de antes do deploy desfaria o conserto;
+- uma issue **ignorada** nunca volta. Ignorar é isso.
+
+`issues_resolved_means_there_is_a_moment` existe porque uma issue resolvida sem
+`resolved_at` deixaria a segunda regra sem referência: o `on conflict` compararia
+com `null` e nunca reabriria nada.
