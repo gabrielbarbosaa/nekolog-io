@@ -8,6 +8,13 @@ import { queryRows } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
 import type { Hono } from 'hono'
+import {
+  capacityAlert,
+  type OperatorAlert,
+  operatorNotifier,
+  quotaAlert,
+  spoolAlert,
+} from './alerts/operator.ts'
 import { createJobsApp } from './app.ts'
 import { sendHeartbeat } from './heartbeat.ts'
 import { type RunSummary, runDueTasks } from './run.ts'
@@ -29,6 +36,7 @@ export type JobsEnv = {
   CF_ACCESS_CLIENT_SECRET?: string
   JOBS_VERSION?: string
   HEARTBEAT_URL?: string
+  OPS_DISCORD_WEBHOOK_URL?: string
 }
 
 export type ScheduledEventLike = {
@@ -144,6 +152,7 @@ export function buildJobTasks(env: JobsEnv): readonly Task[] {
       : {}),
   }
   const dailyQuota = dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
+  const tellOperator = operatorNotifierFor(env)
 
   return buildTasks({
     spool: r2BlobStore(env.SPOOL),
@@ -151,10 +160,38 @@ export function buildJobTasks(env: JobsEnv): readonly Task[] {
     usage: clickHouseUsageStore(clickHouse),
     quotas: kvQuotaStore(env.KEYS),
     ...(dailyQuota === undefined ? {} : { dailyQuota }),
-    onSpoolEvent: writeSpoolEvent,
-    onQuotaEvent: writeQuotaEvent,
+    onSpoolEvent: (event) => {
+      writeSpoolEvent(event)
+      raise(tellOperator, spoolAlert(event))
+    },
+    onQuotaEvent: (event) => {
+      writeQuotaEvent(event)
+      raise(tellOperator, quotaAlert(event))
+    },
     readDisks: diskReaderFor(clickHouse),
-    onCapacityAlert: writeCapacityAlert,
+    onCapacityAlert: (alert) => {
+      writeCapacityAlert(alert)
+      raise(tellOperator, capacityAlert(alert))
+    },
+  })
+}
+
+function raise(tell: (alert: OperatorAlert) => Promise<void>, alert: OperatorAlert | null): void {
+  if (alert === null) {
+    return
+  }
+  void tell(alert)
+}
+
+export function operatorNotifierFor(env: JobsEnv): (alert: OperatorAlert) => Promise<void> {
+  return operatorNotifier({
+    ...(env.OPS_DISCORD_WEBHOOK_URL === undefined
+      ? {}
+      : { webhookUrl: env.OPS_DISCORD_WEBHOOK_URL }),
+    fetch: globalThis.fetch as never,
+    environment: env.CLICKHOUSE_DB,
+    onUndelivered: (alert, why) =>
+      write('warn', '[nekolog/jobs] operator', JSON.stringify({ kind: alert.kind, why })),
   })
 }
 

@@ -77,6 +77,17 @@ describe('the environments the jobs Worker deploys to', () => {
 })
 
 describe('what the Worker needs and what the configuration gives it', () => {
+  it('keeps every address the jobs post to as a secret, never as a var', () => {
+    for (const name of ['HEARTBEAT_URL', 'OPS_DISCORD_WEBHOOK_URL']) {
+      expect(SECRETS).toContain(name)
+    }
+
+    for (const environment of ENVIRONMENTS) {
+      expect(Object.keys(envFrom(environment))).not.toContain('OPS_DISCORD_WEBHOOK_URL')
+      expect(Object.keys(envFrom(environment))).not.toContain('HEARTBEAT_URL')
+    }
+  })
+
   it.each(ENVIRONMENTS)('satisfies the %s Worker once the secrets are in place', (environment) => {
     expect(() => assertEnv(withSecrets(environment))).not.toThrow()
   })
