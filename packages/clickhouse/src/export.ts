@@ -108,8 +108,16 @@ export function exportSelectList(format: ExportFormat): string {
   ).join(', ')
 }
 
+export function withoutTrailingSlashes(value: string): string {
+  let end = value.length
+  while (end > 0 && value[end - 1] === '/') {
+    end -= 1
+  }
+  return value.slice(0, end)
+}
+
 function endpointOf(destination: ExportDestination, objectKey: string): string {
-  const endpoint = destination.endpoint.replace(/\/+$/, '')
+  const endpoint = withoutTrailingSlashes(destination.endpoint)
   if (!/^https?:\/\/[^\s'"\\]+$/.test(endpoint)) {
     throw new Error('Refusing to export to an endpoint that is not a plain http or https address')
   }

@@ -12,6 +12,7 @@ import {
   guardedColumn,
   REDACTED,
   sqlText,
+  withoutTrailingSlashes,
 } from './export.ts'
 import { LOG_COLUMNS } from './search/context.ts'
 import { SCOPE_PREFIX } from './search/scope.ts'
@@ -107,6 +108,23 @@ describe('the formula guard', () => {
         expect(list).toContain(column)
       }
     }
+  })
+})
+
+describe('trimming the endpoint', () => {
+  it('drops every trailing slash and nothing else', () => {
+    expect(withoutTrailingSlashes('https://a/b///')).toBe('https://a/b')
+    expect(withoutTrailingSlashes('https://a/b')).toBe('https://a/b')
+    expect(withoutTrailingSlashes('///')).toBe('')
+    expect(withoutTrailingSlashes('')).toBe('')
+  })
+
+  it('stays linear on a pathological endpoint, where a regex would not', () => {
+    const hostile = `https://a/${'/'.repeat(200_000)}x`
+    const started = performance.now()
+
+    expect(withoutTrailingSlashes(hostile)).toBe(hostile)
+    expect(performance.now() - started).toBeLessThan(20)
   })
 })
 
