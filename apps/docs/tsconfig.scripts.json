@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "allowJs": true,
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["scripts", "tests/headers.test.ts"]
+  "include": ["scripts", "tests"]
 }

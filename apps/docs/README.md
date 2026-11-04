@@ -30,6 +30,36 @@ test` fails if one is missing (or if a translated page has no English source).
 Without that check a missing translation silently falls back to English, which
 is easy to miss in review.
 
+## What else the tests check
+
+Page parity is the weakest of the four checks, because it only counts files.
+Three more run beside it, and each exists because a sabotage run showed the
+suite could not tell the difference without it:
+
+- **Every internal link resolves** (`tests/links.test.ts`). With roughly a
+  hundred hand-written `/docs/…` links across 36 pages, a typo is the most
+  likely defect here and nothing else catches one — Astro builds a dead link
+  happily.
+- **No page links out of its own locale.** A `/docs/guides/x/` link inside a
+  `pt-br/` page drops the reader into English mid-sentence. This one also
+  catches a page that was copied from the English source and never translated,
+  since the copy brings the English links with it.
+- **Every guide is linked from the quickstart of its own locale**, so a new
+  guide cannot be added in one language and forgotten in the other two.
+- **Every page appears in the sidebar, and every sidebar entry has a page**
+  (`tests/guides.test.ts`). A slug with no page already fails the build; a page
+  with no slug builds fine and is reachable only by typing the URL, which is
+  what this half catches.
+- **Every server guide tells the reader to allow `traceparent` in CORS**, in all
+  three locales, and the tracing page names both `Access-Control-Allow-Headers`
+  and `Access-Control-Expose-Headers`. That note is the point of step 3.15:
+  without it the browser's `traceparent` turns a cross-origin call into a
+  preflight the API refuses, and the integration simply does not work.
+
+`tsconfig.scripts.json` covers the whole `tests/` directory (it needs
+`allowJs` for `locales.mjs`), so a type error in a test is a failure rather
+than something only vitest would find at runtime.
+
 ## No `astro check`
 
 `astro check` does not support TypeScript 7, which this monorepo uses, and Astro
