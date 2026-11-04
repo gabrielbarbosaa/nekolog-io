@@ -242,18 +242,54 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 
 ## M5 — Alertas e governança
 
-- [ ] **5.1** `feat/alert-rules` — regras de limiar, taxa de erro, nova issue, regressão e ausência (especificação 6), avaliadas pelos jobs em lotes.
-- [ ] **5.2** `feat/alert-channels` — e-mail, Slack, Discord e webhook, com proteção contra SSRF, segredos criptografados e webhooks assinados com HMAC.
-- [ ] **5.3** `feat/alert-history` — histórico e cooldown.
-- [ ] **5.4** `feat/env-settings` — retenção, amostragem e nível mínimo por ambiente.
-- [ ] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor.
-- [ ] **5.6** `feat/usage-quotas` — uso e cotas na interface.
-- [ ] **5.7** `feat/audit-log-ui` — audit log navegável.
-- [ ] **5.8** `security/alerts` — alertas de eventos de segurança para o operador.
-- [ ] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI.
-- [ ] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook.
+> **Nota (04/11/2026):** este marco foi separado entre os dois repositórios, como
+> o M2, o M3 e o M4. O critério é o de sempre (plano, seções 1, 2 e 5): SDK,
+> ingestão, jobs, `packages/*` e API pública são daqui; tela, sessão e permissão
+> são de lá. Como no M4, a maioria das etapas **mantém a caixa**, com a linha
+> dizendo qual metade é daqui.
+>
+> Quatro consequências que não são óbvias:
+>
+> - **O alerta é avaliado aqui e configurado lá.** A regra é uma linha no
+>   Postgres que a tela de lá escreve; quem a lê, avalia e dispara é o
+>   `apps/jobs`. Então a 5.1, a 5.2 e a 5.3 mantêm a caixa aqui pela metade que
+>   roda, não pela metade que se configura.
+> - **Não há uma etapa nova de tabelas, e isso é deliberado.** O M4 precisou da
+>   4.15 porque as tabelas de lá não tinham, aqui, nenhuma etapa que as
+>   escrevesse. Aqui as três tabelas do marco (`alert_rules`, `alert_channels`,
+>   `alert_events`) têm: elas vêm com a 5.1 e a 5.2, junto do job que as lê e
+>   escreve, que foi a lição da 4.6 — tabela cujo escritor ainda não existe é
+>   tabela desenhada no escuro.
+> - **A 5.9 é a API pública de leitura, e é inteira daqui.** É também onde cabe
+>   decidir onde mora uma escrita de servidor, que é o que trava a 4.7 e a 4.8:
+>   se a resposta for "um app novo", ele nasce aqui, e a 4.7, a 4.8 e a 4.9 vêm
+>   depois dela em vez de antes.
+> - **A rotação da 5.10 são duas chaves com donos diferentes.** O JWT é da
+>   sessão, que é de lá; o HMAC assina os webhooks da 5.2, que são daqui. A
+>   etapa mantém a caixa pela metade do HMAC.
+>
+> Os números e os nomes de branch **não mudaram**, pelo mesmo motivo do M2, do
+> M3 e do M4: as issues 5.1 a 5.10 já existem e o `internal/tracking` nunca
+> renomeia nem fecha nada. As duas que perderam a caixa continuam abertas aqui,
+> órfãs, e isso é o custo aceito — como as 3.10, 3.14, 4.2, 4.3, 4.10 e 4.14.
 
-**Pronto quando:** um pico de erros em `production` gera alerta no Discord em ~1 min.
+- [ ] **5.1** `feat/alert-rules` — regras de limiar, taxa de erro, nova issue, regressão e ausência (especificação 6), avaliadas pelos jobs em lotes. *(Daqui: as tabelas `alert_rules` e `alert_events` e o avaliador no `apps/jobs`. A tela que cria a regra é de lá.)*
+- [ ] **5.2** `feat/alert-channels` — e-mail, Slack, Discord e webhook, com proteção contra SSRF, segredos criptografados e webhooks assinados com HMAC. *(Daqui: a tabela `alert_channels`, o envio pelos jobs, a proteção contra SSRF e a assinatura HMAC. A tela que configura o canal é de lá.)*
+- [ ] **5.3** `feat/alert-history` — histórico e cooldown. *(Daqui: o cooldown, que é o job decidindo não disparar de novo. A tela do histórico é de lá.)*
+- [ ] **5.4** `feat/env-settings` — retenção, amostragem e nível mínimo por ambiente. *(Daqui: as colunas em `environments` e o cumprimento na ingestão — amostrar e cortar por nível é no servidor, não na tela. A tela de configuração é de lá.)*
+- [ ] **5.5** `feat/server-redaction` — regras de remoção de dados no servidor. *(Daqui: a aplicação das regras no `apps/ingest`, antes da gravação. A tela que escreve as regras é de lá.)*
+- [ ] **5.8** `security/alerts` — alertas de eventos de segurança para o operador. *(Daqui: os eventos que esta base levanta — abuso de key, cota, capacidade — pelos canais da 5.2. Os eventos de sessão e de login são de lá.)*
+- [ ] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
+- [ ] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*
+
+### O que acontece no nekolog-dashboard
+
+O escopo continua valendo; só a branch e o PR mudam de endereço.
+
+- **5.6** `feat/usage-quotas` — uso e cotas na interface (tela; o cálculo e o bloqueio já existem desde a 1.12).
+- **5.7** `feat/audit-log-ui` — audit log navegável (tela; a tabela `audit_log` existe desde a 2.2).
+
+**Pronto quando:** um pico de erros em `production` gera alerta no Discord em ~1 min. *(Como no M2, no M3 e no M4, o critério atravessa os dois repositórios: a regra é criada lá e avaliada aqui.)*
 
 ## M6 — 1.0
 
