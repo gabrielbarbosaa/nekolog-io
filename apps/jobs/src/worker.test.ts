@@ -6,6 +6,7 @@ import worker, {
   assertNoFailures,
   buildJobTasks,
   type JobsEnv,
+  operatorNotifierFor,
   runScheduled,
   writeSpoolEvent,
   writeSummary,
@@ -186,6 +187,112 @@ describe('assertEnv', () => {
 
   it('names every missing binding at once, not just the first', () => {
     expect(() => assertEnv({})).toThrow(/SPOOL.*CLICKHOUSE_URL/)
+  })
+})
+
+describe('the operator channel the worker builds', () => {
+  it('posts a capacity alert to the configured webhook', async () => {
+    const sent: Array<{ url: string; body: string }> = []
+    const original = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: { body: string }) => {
+      sent.push({ url, body: init.body })
+      return { ok: true, status: 204, text: async () => '' }
+    }) as never
+
+    try {
+      const notify = operatorNotifierFor({
+        ...ENV,
+        OPS_DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1/abc',
+      })
+      await notify({
+        severity: 'critical',
+        kind: 'disk-low',
+        headline: 'A disk is full',
+        detail: 'nearly nothing left',
+      })
+    } finally {
+      globalThis.fetch = original
+    }
+
+    expect(sent).toHaveLength(1)
+    expect(JSON.parse(sent[0]?.body ?? '{}').content).toContain('A disk is full')
+  })
+
+  it('names the environment the jobs run against, so two deployments are not confused', async () => {
+    const sent: string[] = []
+    const original = globalThis.fetch
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      sent.push(init.body)
+      return { ok: true, status: 204, text: async () => '' }
+    }) as never
+
+    try {
+      await operatorNotifierFor({
+        ...ENV,
+        OPS_DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1/abc',
+      })({ severity: 'warning', kind: 'k', headline: 'h', detail: 'd' })
+    } finally {
+      globalThis.fetch = original
+    }
+
+    expect(JSON.parse(sent[0] ?? '{}').content).toContain(ENV.CLICKHOUSE_DB)
+  })
+
+  it('sends nothing when no operator webhook is configured, and does not throw', async () => {
+    const original = globalThis.fetch
+    let called = false
+    globalThis.fetch = (async () => {
+      called = true
+      return { ok: true, status: 204, text: async () => '' }
+    }) as never
+
+    try {
+      await expect(
+        operatorNotifierFor(ENV)({
+          severity: 'warning',
+          kind: 'k',
+          headline: 'h',
+          detail: 'd',
+        }),
+      ).resolves.toBeUndefined()
+    } finally {
+      globalThis.fetch = original
+    }
+
+    expect(called).toBe(false)
+  })
+})
+
+describe('the tasks the worker builds reach the operator', () => {
+  it('posts when the capacity task cannot read a disk', async () => {
+    const sent: string[] = []
+    const original = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: { body: string }) => {
+      if (url.includes('discord.com')) {
+        sent.push(init.body)
+        return { ok: true, status: 204, text: async () => '' }
+      }
+      throw new Error('ClickHouse is unreachable')
+    }) as never
+
+    try {
+      const tasks = buildJobTasks({
+        ...ENV,
+        OPS_DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1/abc',
+      })
+      const capacity = tasks.find((task) => task.name === 'capacity-watch')
+
+      await capacity?.run({
+        scheduledAt: Date.now(),
+        signal: new AbortController().signal,
+      } as never)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    } finally {
+      globalThis.fetch = original
+    }
+
+    expect(sent.length).toBeGreaterThan(0)
+    expect(JSON.parse(sent[0] ?? '{}').content).toContain('CRITICAL')
   })
 })
 
