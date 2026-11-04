@@ -294,7 +294,7 @@ describe('waitUntil', () => {
 
     expect(response.status).toBe(202)
     expect(pending).toHaveLength(1)
-    expect(inserts).toHaveLength(1)
+    await vi.waitFor(() => expect(inserts).toHaveLength(1))
     release()
     await Promise.all(pending)
   })

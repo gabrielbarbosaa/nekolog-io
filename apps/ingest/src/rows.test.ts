@@ -113,7 +113,7 @@ describe('countryOf', () => {
 })
 
 describe('rowsFor', () => {
-  it('maps a plain log onto the table', () => {
+  it('maps a plain log onto the table', async () => {
     const batch = batchOf([
       {
         timestamp: '2026-10-31T15:30:00.000Z',
@@ -123,7 +123,7 @@ describe('rowsFor', () => {
       },
     ])
 
-    expect(rows(batch)[0]).toEqual({
+    expect((await rows(batch))[0]).toEqual({
       project_id: 'p_1',
       environment_id: 'e_1',
       timestamp: '2026-10-31 15:30:00.000',
@@ -146,7 +146,7 @@ describe('rowsFor', () => {
     })
   })
 
-  it('takes trace, session and error apart into their columns', () => {
+  it('takes trace, session and error apart into their columns', async () => {
     const batch = batchOf([
       {
         timestamp: '2026-10-31T15:30:00.000Z',
@@ -162,7 +162,7 @@ describe('rowsFor', () => {
       },
     ])
 
-    expect(rows(batch)[0]).toMatchObject({
+    expect((await rows(batch))[0]).toMatchObject({
       trace_id: 'a'.repeat(32),
       span_id: 'b'.repeat(16),
       session_id: 's_1',
@@ -173,7 +173,7 @@ describe('rowsFor', () => {
     })
   })
 
-  it('keeps an error message that differs from the log message, instead of losing it', () => {
+  it('keeps an error message that differs from the log message, instead of losing it', async () => {
     const batch = batchOf([
       {
         timestamp: '2026-10-31T15:30:00.000Z',
@@ -183,12 +183,12 @@ describe('rowsFor', () => {
       },
     ])
 
-    expect(rows(batch)[0]?.attributes).toEqual({
+    expect((await rows(batch))[0]?.attributes).toEqual({
       [ERROR_MESSAGE_ATTRIBUTE]: 'upstream timeout',
     })
   })
 
-  it('does not duplicate the message when they are the same', () => {
+  it('does not duplicate the message when they are the same', async () => {
     const batch = batchOf([
       {
         timestamp: '2026-10-31T15:30:00.000Z',
@@ -198,55 +198,59 @@ describe('rowsFor', () => {
       },
     ])
 
-    expect(rows(batch)[0]?.attributes).toEqual({})
+    expect((await rows(batch))[0]?.attributes).toEqual({})
   })
 
-  it('stamps project and environment from the principal, never from the batch', () => {
+  it('stamps project and environment from the principal, never from the batch', async () => {
     const batch = batchOf([{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }])
-    const mapped = rows(batch, { projectId: 'p_real', environmentId: 'e_real' })
+    const mapped = await rows(batch, { projectId: 'p_real', environmentId: 'e_real' })
 
     expect(mapped[0]).toMatchObject({ project_id: 'p_real', environment_id: 'e_real' })
   })
 
-  it('takes the retention the environment configured', () => {
+  it('takes the retention the environment configured', async () => {
     const batch = batchOf([{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }])
 
-    expect(rows(batch, { ...PRINCIPAL, retentionDays: 7 })[0]).toMatchObject({
+    expect((await rows(batch, { ...PRINCIPAL, retentionDays: 7 }))[0]).toMatchObject({
       retention_days: 7,
     })
   })
 
-  it('leaves optional resource fields empty rather than undefined', () => {
+  it('leaves optional resource fields empty rather than undefined', async () => {
     const batch = batchOf(
       [{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }],
       { runtime: 'browser' },
     )
 
-    expect(rows(batch)[0]).toMatchObject({ service: 'default', release: '', source: 'browser' })
+    expect((await rows(batch))[0]).toMatchObject({
+      service: 'default',
+      release: '',
+      source: 'browser',
+    })
   })
 
-  it('maps only the accepted events', () => {
+  it('maps only the accepted events', async () => {
     const batch = batchOf([
       { timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'kept' },
       { timestamp: '2026-10-31T15:30:00.000Z', level: 'verbose', message: 'dropped' },
     ])
 
-    expect(rows(batch).map((row) => row.message)).toEqual(['kept'])
+    expect((await rows(batch)).map((row) => row.message)).toEqual(['kept'])
   })
 
-  it('gives every row in a batch the same received_at', () => {
+  it('gives every row in a batch the same received_at', async () => {
     const batch = batchOf([
       { timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'a' },
       { timestamp: '2026-10-31T15:30:01.000Z', level: 'info', message: 'b' },
     ])
 
-    const received = new Set(rows(batch).map((row) => row.received_at))
+    const received = new Set((await rows(batch)).map((row) => row.received_at))
     expect(received.size).toBe(1)
   })
 
-  it('writes exactly the columns the migration creates', () => {
+  it('writes exactly the columns the migration creates', async () => {
     const batch = batchOf([{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }])
 
-    expect(Object.keys(rows(batch)[0] ?? {}).sort()).toEqual([...logsTableColumns()].sort())
+    expect(Object.keys((await rows(batch))[0] ?? {}).sort()).toEqual([...logsTableColumns()].sort())
   })
 })

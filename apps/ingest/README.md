@@ -365,3 +365,66 @@ de entrada para a mesma ingestão, fora de qualquer regra da zona.
 Depois de publicar, o workflow pergunta `/health` no hostname do ambiente. Se o
 Worker subiu sem algum binding ou sem algum segredo, o `assertEnv` derruba o
 primeiro request e a resposta não vem — é essa a verificação.
+
+## O fingerprint
+
+Calculado aqui, no insert, não nos jobs — ADR
+[0015](../../docs/adr/0015-fingerprint-calculado-na-ingestao.md). É a
+[especificação 5](../../docs/ESPECIFICACOES.md), e só roda para evento que tem
+`error` ou nível `error`/`fatal`. Num lote de 500 linhas de `info` o custo é
+zero.
+
+A primeira regra que se aplicar ganha:
+
+| Regra | Partes |
+|---|---|
+| manual | os textos que o evento mandou em `fingerprint` |
+| stack | `error.type` mais até 5 frames **do app** |
+| message | `error.type` mais a mensagem normalizada |
+| log | o serviço mais a mensagem normalizada |
+
+O resultado são os 8 primeiros bytes do SHA-256, gravados como texto decimal —
+o ClickHouse aceita `UInt64` entre aspas no `JSONEachRow`, e um `UInt64` de
+verdade não cabe num `number` do JavaScript. `0` continua significando "sem
+fingerprint".
+
+### A versão entra no hash
+
+`fingerprint_v1` e o nome da regra são as **duas primeiras partes** do texto que
+vira digest. É isso que faz uma mudança de algoritmo criar issues novas em vez de
+se misturar com as antigas, e é isso que impede um fingerprint de stack colidir
+com um de mensagem. Tem teste travando o valor de cada regra num número fixo:
+mudar o algoritmo sem querer quebra o teste.
+
+### O mesmo erro em dois navegadores é um erro só
+
+O Chrome escreve `at Object.onClick (https://…/vendor.9a8b7c6d.js:2:120)` e o
+Firefox escreve `onClick@https://…/vendor.9a8b7c6d.js:2:120`. Os dois viram
+`/assets/vendor.js`, porque:
+
+- frames de `node_modules`, do runtime (`node:`) e de extensão do navegador são
+  ignorados;
+- linha, coluna, query string e fragmento saem;
+- segmento que parece hash sai do nome do arquivo
+  (`vendor.9a8b7c6d.js` → `vendor.js`);
+- **em arquivo minificado o nome da função é descartado**, porque ele muda a cada
+  build — e é exatamente por isso que Chrome e Firefox batem, já que `onClick` e
+  `Object.onClick` são o mesmo lugar escrito de dois jeitos.
+
+Um cuidado que custou um bug: a **primeira linha** de um stack do Chrome
+(`TypeError: Cannot read properties of undefined (reading 'id')`) termina em
+parêntese e seria lida como frame. Um local só é aceito se não tiver espaço e
+tiver barra ou terminar em `:linha:coluna`.
+
+### A mensagem é normalizada, e só o primeiro kilobyte
+
+Número vira `<n>`, UUID vira `<uuid>`, hex longo vira `<hex>`, e-mail vira
+`<email>`, URL vira só o caminho, texto entre aspas vira `<str>`. É o que faz
+`order 1001 is gone` e `order 2002 is gone` serem a mesma issue.
+
+Só os primeiros **1024 caracteres** passam pelos regex, e isso é desempenho
+medido, não precaução. O regex de e-mail é quadrático numa entrada como
+`a@a@a@…`: sete mensagens hostis de 16 KB levavam **287 ms**. Num Worker com
+10 ms de CPU isso é a ingestão parando. Com o corte, as mesmas sete levam
+milissegundos — e agrupar pelo primeiro kilobyte de uma mensagem é tão bom
+quanto agrupar pelos dezesseis.
