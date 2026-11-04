@@ -266,6 +266,8 @@ describe('the export task', () => {
         markReady: async () => {},
         markFailed: async () => {},
         expire: async () => [],
+        awaitingNotice: async () => [],
+        markNotified: async () => {},
       },
       write: async () => ({ rows: 1, bytes: 1 }),
       destination: DESTINATION,

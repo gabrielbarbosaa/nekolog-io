@@ -411,6 +411,7 @@ export const exports = pgTable(
     rowCount: bigint('row_count', { mode: 'number' }),
     failure: text('failure'),
     startedAt: timestamp('started_at', { withTimezone: true }),
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -434,6 +435,10 @@ export const exports = pgTable(
     check('exports_failed_means_there_is_a_reason', sql`status <> 'failed' or failure is not null`),
     check('exports_running_means_it_started', sql`status <> 'running' or started_at is not null`),
     index('exports_waiting_to_run').on(table.createdAt).where(sql`status = 'pending'`),
+    index('exports_waiting_for_a_notice')
+      .on(table.createdAt)
+      .where(sql`status = 'ready' and schedule_id is not null and notified_at is null`),
+    check('exports_notice_follows_the_file', sql`notified_at is null or object_key is not null`),
     check('exports_size_is_not_negative', sql`byte_size is null or byte_size >= 0`),
     check('exports_row_count_is_not_negative', sql`row_count is null or row_count >= 0`),
     check(

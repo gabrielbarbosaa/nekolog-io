@@ -1,8 +1,18 @@
-import type { ExportOutcome, ExportStatus, ExportStore, PendingExport } from '../export-store.ts'
+import type {
+  ExportCadence,
+  ExportNotice,
+  ExportOutcome,
+  ExportStatus,
+  ExportStore,
+  PendingExport,
+} from '../export-store.ts'
 import { DEFAULT_STALE_AFTER_MS } from './sql-export-store.ts'
 
 export type MemoryExport = PendingExport & {
   status: ExportStatus
+  cadence?: ExportCadence
+  recipient?: { email: string; locale: string }
+  notifiedAt?: number
   objectKey?: string
   byteSize?: number
   rowCount?: number
@@ -80,6 +90,40 @@ export function memoryExportStore(
       found.status = 'failed'
       found.failure = reason
       found.finishedAt = at
+    },
+
+    async awaitingNotice(limit: number): Promise<ReadonlyArray<ExportNotice>> {
+      if (limit <= 0) {
+        return []
+      }
+
+      return [...rows.values()]
+        .filter(
+          (one) =>
+            one.status === 'ready' && one.notifiedAt === undefined && one.recipient !== undefined,
+        )
+        .sort((left, right) => left.createdAt - right.createdAt)
+        .slice(0, limit)
+        .map((one) => ({
+          id: one.id,
+          format: one.format,
+          cadence: one.cadence ?? null,
+          rangeFrom: one.rangeFrom,
+          rangeTo: one.rangeTo,
+          rowCount: one.rowCount ?? 0,
+          byteSize: one.byteSize ?? 0,
+          expiresAt: one.expiresAt,
+          locale: one.recipient?.locale ?? 'en',
+          email: one.recipient?.email ?? '',
+        }))
+    },
+
+    async markNotified(id: string, at: number): Promise<void> {
+      const found = rows.get(id)
+      if (found === undefined || found.status !== 'ready' || found.notifiedAt !== undefined) {
+        return
+      }
+      found.notifiedAt = at
     },
 
     async expire(now: number, limit: number): Promise<ReadonlyArray<string>> {
