@@ -85,6 +85,11 @@ O `q` é a mesma linguagem de busca do Explorer hospedado:
 aceita é `env:` — sua key já nomeia exatamente um ambiente, e o servidor coloca
 esse filtro em toda query por conta própria.
 
+A [referência da API](/docs/pt-br/api/reference/) e a
+[linguagem de busca](/docs/pt-br/api/search/) descrevem as duas por inteiro, e
+valem aqui sem mudança — é o mesmo app. Se você já roda OpenTelemetry, a
+ingestão também aceita [OTLP](/docs/pt-br/api/otlp/) em `POST /v1/otlp/logs`.
+
 Três regras valem saber antes de escrever um script. A key vai no cabeçalho
 `Authorization` e uma requisição com `?key=` é **recusada**, porque URL acaba em
 log de acesso e no histórico do navegador. Uma key **pública** também é

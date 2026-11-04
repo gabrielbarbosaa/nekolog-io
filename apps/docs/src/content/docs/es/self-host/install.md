@@ -86,6 +86,11 @@ curl -H "Authorization: Bearer $NEKOLOG_KEY" \
 `env:` — tu clave ya nombra exactamente un entorno, y el servidor pone ese
 filtro en cada consulta por su cuenta.
 
+La [referencia de la API](/docs/es/api/reference/) y el
+[lenguaje de búsqueda](/docs/es/api/search/) las describen por completo, y valen
+aquí sin cambios — es la misma app. Si ya usas OpenTelemetry, la ingesta también
+acepta [OTLP](/docs/es/api/otlp/) en `POST /v1/otlp/logs`.
+
 Tres reglas conviene saber antes de escribir un script. La clave va en la
 cabecera `Authorization` y una petición que lleve `?key=` es **rechazada**,
 porque una URL termina en los registros de acceso y en el historial del

@@ -85,6 +85,11 @@ curl -H "Authorization: Bearer $NEKOLOG_KEY" \
 is `env:` — your key already names exactly one environment, and the server puts
 that filter into every query itself.
 
+The [API reference](/docs/api/reference/) and the
+[search language](/docs/api/search/) describe both in full, and apply here
+unchanged — it is the same app. If you already run OpenTelemetry, the ingestion
+also takes [OTLP](/docs/api/otlp/) on `POST /v1/otlp/logs`.
+
 Three rules are worth knowing before you script against it. The key goes in the
 `Authorization` header and a request carrying `?key=` is **refused**, because a
 URL ends up in access logs and browser history. A **public** key is refused too:

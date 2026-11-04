@@ -41,7 +41,18 @@ export default defineConfig({
             { slug: 'guides/pino' },
             { slug: 'guides/winston' },
             { slug: 'guides/tracing' },
+            { slug: 'guides/alerts' },
           ],
+        },
+        {
+          label: 'API',
+          translations: { 'pt-BR': 'API', es: 'API' },
+          items: [{ slug: 'api/reference' }, { slug: 'api/search' }, { slug: 'api/otlp' }],
+        },
+        {
+          label: 'Reference',
+          translations: { 'pt-BR': 'Referência', es: 'Referencia' },
+          items: [{ slug: 'reference/privacy' }, { slug: 'reference/versioning' }],
         },
         {
           label: 'Run it yourself',

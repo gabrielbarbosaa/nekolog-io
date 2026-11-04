@@ -55,5 +55,15 @@ await log.flush() // importante em serverless, onde o processo pode encerrar ant
   [winston](/docs/pt-br/guides/winston/).
 - [Trace distribuído](/docs/pt-br/guides/tracing/) — uma linha do tempo só entre
   o front e o back, e o header que isso exige no CORS.
+- [Alertas](/docs/pt-br/guides/alerts/) — os cinco tipos de regra, e como
+  conferir que um webhook veio mesmo do NekoLog.
+- [A API pública](/docs/pt-br/api/reference/) e a
+  [linguagem de busca](/docs/pt-br/api/search/) — leia por conta própria tudo
+  que o dashboard mostra. Já usa OpenTelemetry? Tem
+  [endpoint OTLP](/docs/pt-br/api/otlp/).
+- [O que fica guardado](/docs/pt-br/reference/privacy/) — o que nunca sai do seu
+  processo, o que o servidor remove, e o que nunca é gravado.
+- [Versionamento e suporte](/docs/pt-br/reference/versioning/) — o que uma
+  mudança promete, e por quanto tempo uma versão antiga continua funcionando.
 - [Introdução](/docs/pt-br/getting-started/introduction/) — como as peças se
   encaixam e o que é open source.
