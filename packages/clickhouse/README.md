@@ -181,3 +181,86 @@ conferido, não o diretório.
 O pacote é **ESM apenas**. Os consumidores são Node 24, Workers e Next, todos
 ESM, e o `attw` roda com `--profile esm-only` — o aviso de "require resolveu
 para um arquivo ESM" é o resultado esperado, não uma falha.
+
+## A linguagem de busca
+
+```ts
+import { searchWhere } from '@nekolog-io/clickhouse/search'
+
+const { sql, params } = searchWhere('level:error -service:web "timed out"', {
+  projectId,
+  environmentIds,
+  from,
+  to,
+}, { environments: { production: 'env_...', staging: 'env_...' } })
+
+const rows = await queryRows(config, `SELECT * FROM logs WHERE ${sql} LIMIT 100`, { params })
+```
+
+É a [especificação 4](../../docs/ESPECIFICACOES.md): léxico, gramática, campos
+aceitos e a tradução para SQL. O parser mora aqui e não no dashboard porque os
+dois repositórios precisam da mesma linguagem, e uma segunda implementação da
+mesma gramática diverge no primeiro caso de canto.
+
+| Entrada | SQL |
+|---|---|
+| `level:error` | `level = {p1:String}` |
+| `service:api-*` | `startsWith(service, {p1:String})` |
+| `level:(error OR fatal)` | `level IN ({p1:String}, {p2:String})` |
+| `@orderId:123` | `attributes[{p1:String}] = {p2:String}` |
+| `@status>=500` | `toFloat64OrNull(attributes[{p1:String}]) >= {p2:Float64}` |
+| `timeout` | `hasToken(lower(message), {p1:String})` |
+| `"payment failed"` | `positionCaseInsensitive(message, {p1:String}) > 0` |
+
+### Nada do que a pessoa digita vira SQL
+
+Todo valor é **parâmetro**, inclusive o **nome do atributo**: o `@orderId` vira
+`attributes[{p1:String}]`, não `attributes['orderId']`. Interpolar a chave seria
+o único ponto de injeção da tradução inteira, e um `@a'] OR 1=1 --:x` fecha o
+colchete. O nome ainda é conferido contra a forma que a especificação 1 garante
+(`[A-Za-z0-9_.-]`), mas isso é cinto **e** suspensório: o parâmetro é quem
+protege.
+
+Campo que não existe é erro **com a posição no texto**, nunca um nome de coluna
+vindo de fora. O teste de fuzzing apaga os parâmetros do SQL gerado e exige que o
+esqueleto não tenha aspas, barra invertida, ponto e vírgula nem `--`.
+
+### O escopo é do servidor, e vem antes
+
+O `searchWhere` não devolve o filtro da pessoa sozinho: ele monta
+
+```
+project_id = {s_project:String} AND environment_id IN (...) AND
+timestamp >= {s_from:...} AND timestamp < {s_to:...} AND (<o que a pessoa escreveu>)
+```
+
+O filtro da pessoa vai **sempre entre parênteses**, mesmo quando é uma condição
+só, para nenhuma precedência alcançar o `AND` de fora. Os parâmetros do escopo
+usam o prefixo `s_` e os da busca são sempre `p<n>`, então uma busca não
+consegue nomear um parâmetro do escopo — e, se conseguisse, o `searchWhere`
+recusa antes de montar. Lista de ambientes vazia e período invertido também são
+recusa, não consulta: escopo que não escopa é bug, não filtro.
+
+### Duas decisões que parecem detalhe
+
+**`env:` é nome na entrada e id na saída.** O chamador passa o mapa
+`nome → environment_id`; sem o mapa, um `env:` é **erro**, porque comparar o
+nome com a coluna de id devolveria zero linhas em silêncio. Já um nome que não
+existe no mapa vira `0` — não casa com nada —, porque um prefixo pode
+legitimamente não casar e um favorito antigo não deveria virar erro.
+
+**Palavra vai por `hasToken`, o resto vai por substring.** O `hasToken` usa o
+índice de tokens sobre `lower(message)`, mas ele **levanta exceção** se a agulha
+tiver um separador. Então só uma palavra de `[A-Za-z0-9_]` vai por ali; qualquer
+outra coisa (e toda frase entre aspas) vai por `positionCaseInsensitive`. Tem
+teste de integração com `api.timeout` exatamente por isso.
+
+### Testes
+
+`parse.test.ts` e `compile.test.ts` são unitários; `search.fuzz.test.ts` joga
+texto hostil e montado contra o parser e exige que nada além de `SearchError`
+saia, que o esqueleto do SQL continue limpo e que o escopo não saia do lugar
+(com o bloco `the fuzzer itself` conferindo que as duas saídas acontecem, para a
+propriedade não passar por vacuidade); e `search.integration.test.ts` roda o SQL
+gerado contra um **ClickHouse de verdade**, que é o único lugar onde se descobre
+que `attributes[{p:String}]` funciona e que o `hasToken` não aceita um ponto.

@@ -26,7 +26,8 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./log-store": "./src/log-store.ts",
-    "./usage-store": "./src/usage-store.ts"
+    "./usage-store": "./src/usage-store.ts",
+    "./search": "./src/search/index.ts"
   },
   "publishConfig": {
     "bin": {
@@ -48,6 +49,10 @@
       "./usage-store": {
         "types": "./dist/usage-store.d.mts",
         "default": "./dist/usage-store.mjs"
+      },
+      "./search": {
+        "types": "./dist/search/index.d.mts",
+        "default": "./dist/search/index.mjs"
       }
     },
     "main": "./dist/index.mjs",
@@ -71,6 +76,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
+    "fast-check": "^4.10.2",
     "publint": "^0.3.25",
     "tsdown": "^0.23.2",
     "vitest": "^5.0.5"
