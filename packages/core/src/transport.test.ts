@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MAX_BATCH_BYTES, MAX_EVENTS_PER_BATCH } from './limits.ts'
+import { DEFAULT_MAX_BATCH_EVENTS, MAX_BATCH_BYTES, MAX_EVENTS_PER_BATCH } from './limits.ts'
 import {
   createTransport,
   type DropReason,
@@ -226,19 +226,65 @@ describe('batching', () => {
   })
 
   it('never exceeds the contract limits, whatever it is configured with', async () => {
-    const { transport } = setup([], {
+    const { transport, envelopes, calls } = setup([], {
       maxBatchEvents: MAX_EVENTS_PER_BATCH * 10,
       maxBatchBytes: MAX_BATCH_BYTES * 10,
     })
-    const { transport: unused } = setup()
-    void unused
 
-    for (let i = 0; i < MAX_EVENTS_PER_BATCH + 5; i++) {
+    for (let i = 0; i < MAX_EVENTS_PER_BATCH * 2 + 5; i++) {
       transport.emit(event(`e${i}`))
     }
     await transport.flush()
 
     expect(transport.size).toBe(0)
+    expect(calls.length).toBeGreaterThan(1)
+    for (const envelope of envelopes()) {
+      expect(envelope.events.length).toBeLessThanOrEqual(MAX_EVENTS_PER_BATCH)
+    }
+  })
+
+  it('never exceeds the byte ceiling either, which only big events reach', async () => {
+    const { transport, calls } = setup([], { maxBatchBytes: MAX_BATCH_BYTES * 10 })
+    const fat = 'x'.repeat(4 * 1024)
+
+    for (let i = 0; i < 400; i++) {
+      transport.emit(event(`${i} ${fat}`))
+    }
+    await transport.flush()
+
+    expect(calls.length).toBeGreaterThan(1)
+    for (const call of calls) {
+      expect(call.body.length).toBeLessThanOrEqual(MAX_BATCH_BYTES)
+    }
+  })
+
+  it('sends batches the free Worker can afford, not the biggest the contract allows', async () => {
+    const { transport, envelopes } = setup()
+
+    for (let i = 0; i < DEFAULT_MAX_BATCH_EVENTS * 2; i++) {
+      transport.emit(event(`e${i}`))
+    }
+    await transport.flush()
+
+    expect(DEFAULT_MAX_BATCH_EVENTS).toBeLessThan(MAX_EVENTS_PER_BATCH)
+    for (const envelope of envelopes()) {
+      expect(envelope.events.length).toBeLessThanOrEqual(DEFAULT_MAX_BATCH_EVENTS)
+    }
+    expect(envelopes().reduce((total, one) => total + one.events.length, 0)).toBe(
+      DEFAULT_MAX_BATCH_EVENTS * 2,
+    )
+  })
+
+  it('still lets a caller ask for the whole contract limit', async () => {
+    const { transport, envelopes } = setup([], { maxBatchEvents: MAX_EVENTS_PER_BATCH })
+
+    for (let i = 0; i < MAX_EVENTS_PER_BATCH; i++) {
+      transport.emit(event(`e${i}`))
+    }
+    await transport.flush()
+
+    expect(envelopes()).toHaveLength(1)
+    expect(envelopes()[0]?.events).toHaveLength(MAX_EVENTS_PER_BATCH)
   })
 })
 

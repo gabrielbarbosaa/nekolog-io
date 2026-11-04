@@ -25,6 +25,7 @@
     "ch:new": "pnpm --filter @nekolog-io/clickhouse ch new",
     "db:generate": "pnpm --filter @nekolog-io/db db:generate",
     "db:migrate": "pnpm --filter @nekolog-io/db db:migrate",
+    "load": "pnpm --filter @internal/load load",
     "seed": "pnpm --filter @internal/seed seed",
     "tracking": "pnpm --filter @internal/tracking tracking",
     "changeset": "changeset",

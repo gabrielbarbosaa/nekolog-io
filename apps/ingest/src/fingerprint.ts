@@ -215,11 +215,18 @@ function unsignedFromBytes(bytes: Uint8Array): bigint {
   return value
 }
 
-export async function hashParts(rule: FingerprintRule, parts: readonly string[]): Promise<string> {
-  const text = [FINGERPRINT_VERSION, rule, ...parts].join('\n')
+export function fingerprintTextFor(rule: FingerprintRule, parts: readonly string[]): string {
+  return [FINGERPRINT_VERSION, rule, ...parts].join('\n')
+}
+
+export async function hashText(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
   const value = unsignedFromBytes(new Uint8Array(digest))
   return value === 0n ? '1' : value.toString()
+}
+
+export async function hashParts(rule: FingerprintRule, parts: readonly string[]): Promise<string> {
+  return hashText(fingerprintTextFor(rule, parts))
 }
 
 export async function fingerprintFor(input: FingerprintInput): Promise<string> {
@@ -228,4 +235,25 @@ export async function fingerprintFor(input: FingerprintInput): Promise<string> {
     return NO_FINGERPRINT
   }
   return hashParts(found.rule, found.parts)
+}
+
+export type Fingerprinter = (input: FingerprintInput) => string | Promise<string>
+
+export function createFingerprinter(): Fingerprinter {
+  const seen = new Map<string, Promise<string>>()
+
+  return (input) => {
+    const found = fingerprintPartsFor(input)
+    if (found === undefined) {
+      return NO_FINGERPRINT
+    }
+
+    const text = fingerprintTextFor(found.rule, found.parts)
+    let pending = seen.get(text)
+    if (pending === undefined) {
+      pending = hashText(text)
+      seen.set(text, pending)
+    }
+    return pending
+  }
 }
