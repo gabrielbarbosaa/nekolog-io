@@ -31,6 +31,20 @@ export interface PendingAlert {
   type: string
   channels: readonly string[]
   changedAt: number
+  cooldownMinutes: number
+  lastFiringNoticeAt: number | null
+}
+
+export const ALERT_SUPPRESSIONS = ['cooldown', 'no_channel'] as const
+export type AlertSuppression = (typeof ALERT_SUPPRESSIONS)[number]
+
+export const ALERT_HISTORY_DAYS = 90
+export const MAX_PRUNED_EVENTS_PER_RUN = 500
+
+export interface NoticeOutcome {
+  notifiedAt: number | null
+  channelsSent: number
+  suppressed: AlertSuppression | null
 }
 
 export interface AlertChannelStore {
@@ -40,4 +54,6 @@ export interface AlertChannelStore {
 export interface AlertNoticeStore {
   awaitingNotice(limit: number): Promise<ReadonlyArray<PendingAlert>>
   markNotified(ruleId: string, at: number, forChangeAt: number): Promise<void>
+  recordOutcome(ruleId: string, changedAt: number, outcome: NoticeOutcome): Promise<void>
+  prune(before: number, limit: number): Promise<number>
 }
