@@ -2,6 +2,7 @@ import type { ParsedBatch } from '@internal/schema'
 import type { IngestPrincipal } from './app.ts'
 import { boundedTimestampMs, clockSkewMs } from './clock-skew.ts'
 import { fingerprintFor, NO_FINGERPRINT } from './fingerprint.ts'
+import { decideIntake, settingsFrom } from './intake.ts'
 
 export const DEFAULT_RETENTION_DAYS = 30
 export const UNRESOLVED_FINGERPRINT = NO_FINGERPRINT
@@ -44,6 +45,7 @@ export type RowContext = {
   receivedAt: number
   country: string
   admitAttribute?: (key: string) => boolean
+  onDropped?: (reason: 'below_min_level' | 'sampled_out') => void
 }
 
 export async function rowsFor(
@@ -53,10 +55,19 @@ export async function rowsFor(
 ): Promise<Array<Record<string, unknown>>> {
   const receivedAt = clickHouseTimestamp(context.receivedAt)
   const retentionDays = principal.retentionDays ?? DEFAULT_RETENTION_DAYS
+  const settings = settingsFrom(principal)
 
   const admitAttribute = context.admitAttribute
 
-  const built = batch.accepted.map(async ({ event }) => {
+  const admitted = batch.accepted.filter(({ event, index }) => {
+    const decision = decideIntake(event, settings, `${batch.batchId}:${index}`)
+    if (!decision.keep) {
+      context.onDropped?.(decision.reason as 'below_min_level' | 'sampled_out')
+    }
+    return decision.keep
+  })
+
+  const built = admitted.map(async ({ event }) => {
     const attributes: Record<string, string> = {}
     for (const [key, value] of Object.entries(event.attributes ?? {})) {
       if (admitAttribute !== undefined && !admitAttribute(key)) {

@@ -54,7 +54,7 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "lint": "pnpm run build && publint && attw --pack . --profile node16"
+    "lint": "publint && attw --pack . --profile node16"
   },
   "peerDependencies": {
     "next": ">=14",

@@ -76,6 +76,12 @@ export function createKeyAuthenticator(options: KeyAuthenticatorOptions): Authen
     if (record.retentionDays !== undefined) {
       principal.retentionDays = record.retentionDays
     }
+    if (record.minLevel !== undefined) {
+      principal.minLevel = record.minLevel
+    }
+    if (record.sampleRate !== undefined) {
+      principal.sampleRate = record.sampleRate
+    }
 
     return { ok: true, principal }
   }

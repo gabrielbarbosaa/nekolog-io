@@ -9,6 +9,8 @@ export type IngestPrincipal = {
   projectId: string
   environmentId: string
   retentionDays?: number
+  minLevel?: string
+  sampleRate?: number
   keyKind?: 'public' | 'secret'
   keyLocation?: 'header' | 'query'
   allowedOrigin?: string | null

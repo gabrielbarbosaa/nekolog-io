@@ -44,7 +44,7 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "lint": "pnpm run build && publint && attw --pack ."
+    "lint": "publint && attw --pack ."
   },
   "peerDependencies": {
     "react": ">=18"
