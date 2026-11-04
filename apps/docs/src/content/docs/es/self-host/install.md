@@ -78,6 +78,8 @@ curl -H "Authorization: Bearer $NEKOLOG_KEY" \
 | `GET /v1/histogram` | conteo por cubo y por nivel: `q`, `from`, `to`, `bucket` |
 | `GET /v1/issues` | errores agrupados por huella: `status`, `since`, `until`, `cursor` |
 | `GET /openapi.json` | el contrato completo, para generar un cliente o solo leerlo |
+| `POST /v1/releases` | registra que una versión salió — `nekolog releases create` |
+| `POST /v1/sourcemaps` | sube un mapa a una release — `nekolog sourcemaps upload` |
 
 `q` es el mismo lenguaje de búsqueda que usa el Explorer alojado:
 `level:error service:api @status>=500 "timeout"`. Lo único que no acepta es
@@ -88,8 +90,9 @@ Tres reglas conviene saber antes de escribir un script. La clave va en la
 cabecera `Authorization` y una petición que lleve `?key=` es **rechazada**,
 porque una URL termina en los registros de acceso y en el historial del
 navegador. Una clave **pública** también se rechaza: está publicada en cada
-navegador que abre tu página. Y la API solo lee — un `POST` a cualquiera de esas
-rutas es un 404.
+navegador que abre tu página. Y las dos rutas que escriben son las únicas que
+escriben: `POST` a `/v1/logs` es 404, `GET` en `/v1/releases` es 404, y
+escribir pide `logs:write` donde leer pide `logs:read`.
 
 :::danger[Pon TLS delante de esta también]
 El puerto 8789 lleva una clave capaz de leer todos los registros del entorno.
@@ -123,8 +126,10 @@ Faltan tres cosas, y ninguna es un defecto que debas sortear:
   que este stack no te pide, así que las tareas de exportación directamente no
   están conectadas en el contenedor de jobs — en vez de conectadas y fallando
   cada minuto.
-- **La resolución de source maps.** Necesita un lugar donde subir los mapas, que
-  todavía se está diseñando.
+- **La resolución de source maps.** Subirlos funciona — `nekolog sourcemaps
+  upload` los guarda en un volumen Docker propio, igual que el servicio alojado
+  los guarda en un bucket. Aplicar uno a un stack trace ocurre en una pantalla,
+  y las pantallas son del panel.
 
 Todo lo demás corre: ingesta, OTLP, redacción, muestreo, nivel mínimo, cuotas,
 agrupación de errores y alertas hacia un webhook.

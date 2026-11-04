@@ -244,6 +244,9 @@ importers:
       '@internal/seed':
         specifier: workspace:*
         version: link:../../internal/seed
+      '@internal/self-host':
+        specifier: workspace:*
+        version: link:../../internal/self-host
       '@nekolog-io/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters

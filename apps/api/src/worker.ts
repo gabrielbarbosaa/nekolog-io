@@ -1,8 +1,11 @@
 import {
+  blobSourceMapStore,
   cachedKeyStore,
   type KvNamespace,
   kvKeyStore,
   memoryRateLimiter,
+  type R2BucketLike,
+  r2BlobStore,
   sqlIssueReader,
   sqlReleaseStore,
 } from '@nekolog-io/adapters'
@@ -18,6 +21,7 @@ export const DEFAULT_REQUESTS_PER_MINUTE = 120
 
 export type ApiEnv = {
   KEYS: KvNamespace
+  SOURCEMAPS: R2BucketLike
   CLICKHOUSE_URL: string
   CLICKHOUSE_DB: string
   CLICKHOUSE_READ_USER: string
@@ -34,6 +38,7 @@ export type ExecutionContextLike = {
 
 const REQUIRED: ReadonlyArray<keyof ApiEnv> = [
   'KEYS',
+  'SOURCEMAPS',
   'CLICKHOUSE_URL',
   'CLICKHOUSE_DB',
   'CLICKHOUSE_READ_USER',
@@ -117,6 +122,7 @@ export function buildApiApp(env: ApiEnv): Hono {
       authenticateWrite: createWriteAuthenticator({ keyStore }),
       issues: sqlIssueReader(sql),
       releases: sqlReleaseStore(sql),
+      sourceMaps: blobSourceMapStore(r2BlobStore(env.SOURCEMAPS)),
       limits: {
         rateLimiter: memoryRateLimiter(),
         requestsPerWindow: requestsPerMinuteFrom(env.API_REQUESTS_PER_MINUTE),

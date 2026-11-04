@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseSeedDocument } from '@internal/seed'
+import { fileBlobStore } from '@internal/self-host'
 import type { SqlRunner } from '@nekolog-io/adapters'
 import { ping } from '@nekolog-io/clickhouse/client'
 import postgres from 'postgres'
@@ -35,7 +36,19 @@ async function main(): Promise<void> {
   await sql`select 1`
   const run: SqlRunner = async (text, params) => sql.unsafe(text, params as never[])
 
-  const server = await startLocalApi({ config, document, sql: run, onError: reportToConsole })
+  if (config.sourceMapsDir === undefined) {
+    throw new Error(
+      'The self-host api container is missing SOURCEMAPS_DIR. Without it nothing could upload a source map.',
+    )
+  }
+
+  const server = await startLocalApi({
+    config,
+    document,
+    sql: run,
+    blobs: fileBlobStore(config.sourceMapsDir),
+    onError: reportToConsole,
+  })
 
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.on(signal, () => {

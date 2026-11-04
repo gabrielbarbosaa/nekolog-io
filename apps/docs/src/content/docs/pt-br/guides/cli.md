@@ -96,6 +96,36 @@ coloque a sua key na rede:
   proxy reverso com certificado na frente do seu self-host. `http://localhost`
   é permitido, porque nada sai da máquina.
 
+## Subindo source maps
+
+```bash
+npx @nekolog-io/cli sourcemaps upload 1.4.2 --dir dist
+```
+
+Registre a release antes — o upload recusa uma versão que este ambiente nunca
+viu, para a contagem na release continuar verdadeira. Depois ele percorre o
+`--dir`, pega todo `.map` que achar e manda um por um. Caminho aninhado vira um
+nome só (`assets/index.mjs.map` vira `assets-index.mjs.map`), e `node_modules`
+e pastas com ponto ficam de fora porque não são o seu build.
+
+| | |
+|---|---|
+| `--key <key>` | a key **secreta** do ambiente (padrão: `$NEKOLOG_KEY`) |
+| `--dir <path>` | a saída do build a percorrer (padrão: `dist`) |
+| `--api <url>` | onde a API pública responde |
+
+Subir o mesmo nome de novo substitui e **não** aumenta a contagem, então repetir
+é tão inofensivo quanto repetir o `releases create`. Um mapa acima de 8 MB é
+**pulado e nomeado**, não descartado em silêncio, e um upload que o servidor
+recusar para a rodada inteira dizendo o arquivo e o motivo que o servidor deu.
+
+:::note[Por que o servidor não lê o seu mapa inteiro]
+Ele confere a forma — os primeiros kilobytes precisam abrir um objeto JSON e
+nomear `mappings` ou `sections`, e um `version` declarado precisa ser 3 — e
+guarda o resto sem ler. Fazer o parse de megabytes de JSON não cabe no orçamento
+de CPU de um Worker, e o mapa é lido onde de fato é usado.
+:::
+
 ## Depois de rodar
 
 Abra o guia do que ele instalou: [Browser](/docs/pt-br/guides/browser/),

@@ -248,4 +248,29 @@ export {
   RELEASE_ID_PREFIX,
   sqlReleaseStore,
 } from './releases/sql-release-store.ts'
+export type { SourceMapShape } from './source-map.ts'
+export {
+  assertSourceMapBody,
+  assertSourceMapName,
+  InvalidSourceMap,
+  MAX_SOURCE_MAP_BYTES,
+  MAX_SOURCE_MAP_NAME_CHARS,
+  MAX_SOURCE_MAPS_PER_RELEASE,
+  SOURCE_MAP_CONTENT_TYPE,
+  SOURCE_MAP_HEAD_BYTES,
+  SOURCE_MAP_NAME,
+  SOURCE_MAP_PREFIX,
+  sourceMapKey,
+  UTF8_BOM,
+  withoutBom,
+} from './source-map.ts'
+export type {
+  SourceMapStore,
+  SourceMapUpload,
+  StoredSourceMap,
+} from './source-maps/blob-source-map-store.ts'
+export {
+  blobSourceMapStore,
+  sourceMapPrefix,
+} from './source-maps/blob-source-map-store.ts'
 export type { EnvironmentUsage, UsageStore } from './usage-store.ts'

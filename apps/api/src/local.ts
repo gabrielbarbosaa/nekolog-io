@@ -1,6 +1,8 @@
 import { serve } from '@hono/node-server'
 import { keyStoreFromDocument, type SeedDocument } from '@internal/seed'
 import {
+  type BlobStore,
+  blobSourceMapStore,
   memoryRateLimiter,
   type SqlRunner,
   sqlIssueReader,
@@ -23,6 +25,7 @@ export type LocalApiConfig = {
   clickhouse: ClickHouseConfig
   databaseUrl: string
   requestsPerMinute: number
+  sourceMapsDir?: string
 }
 
 export type LocalApiEnv = {
@@ -35,6 +38,7 @@ export type LocalApiEnv = {
   CLICKHOUSE_READ_PASSWORD?: string
   DATABASE_URL?: string
   API_REQUESTS_PER_MINUTE?: string
+  SOURCEMAPS_DIR?: string
 }
 
 const REQUIRED: ReadonlyArray<keyof LocalApiEnv> = [
@@ -80,6 +84,9 @@ export function localApiConfigFrom(env: LocalApiEnv): LocalApiConfig {
     },
     databaseUrl: env.DATABASE_URL as string,
     requestsPerMinute: requestsPerMinuteFrom(env.API_REQUESTS_PER_MINUTE),
+    ...(env.SOURCEMAPS_DIR === undefined || env.SOURCEMAPS_DIR === ''
+      ? {}
+      : { sourceMapsDir: env.SOURCEMAPS_DIR }),
   }
 }
 
@@ -87,6 +94,7 @@ export type LocalApiOptions = {
   config: LocalApiConfig
   document: SeedDocument
   sql: SqlRunner
+  blobs?: BlobStore
   onError?: (error: unknown) => void
 }
 
@@ -97,6 +105,7 @@ export async function localApiApp(options: LocalApiOptions): Promise<Hono> {
     authenticateWrite: createWriteAuthenticator({ keyStore }),
     issues: sqlIssueReader(options.sql),
     releases: sqlReleaseStore(options.sql),
+    ...(options.blobs === undefined ? {} : { sourceMaps: blobSourceMapStore(options.blobs) }),
     limits: {
       rateLimiter: memoryRateLimiter(),
       requestsPerWindow: options.config.requestsPerMinute,

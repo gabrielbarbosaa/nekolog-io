@@ -89,6 +89,16 @@ describe('the self-host compose', () => {
     expect(api).toContain('nekolog_state:/var/lib/nekolog/state:ro')
   })
 
+  it('gives the source maps a volume of their own, written by the api and nobody else', () => {
+    expect(serviceBlock('api')).toContain('nekolog_sourcemaps:/var/lib/nekolog/sourcemaps\n')
+    expect(serviceBlock('api')).toContain('SOURCEMAPS_DIR: /var/lib/nekolog/sourcemaps')
+
+    for (const service of ['ingest', 'jobs', 'bootstrap']) {
+      expect(serviceBlock(service), service).not.toContain('nekolog_sourcemaps')
+    }
+    expect(COMPOSE).toMatch(/\nvolumes:[\s\S]*\n {2}nekolog_sourcemaps:/)
+  })
+
   it('lets only the jobs container write the block list, and only bootstrap the seed', () => {
     const ingest = serviceBlock('ingest')
     const jobs = serviceBlock('jobs')
@@ -135,6 +145,17 @@ describe('the image and the scripts around it', () => {
   it('runs as somebody other than root', () => {
     expect(DOCKERFILE).toMatch(/\nUSER node\n/)
     expect(DOCKERFILE.indexOf('USER node')).toBeGreaterThan(DOCKERFILE.indexOf('chown -R node'))
+  })
+
+  it('creates every mounted directory in the image, or the volume lands owned by root', () => {
+    const mounted = [...COMPOSE.matchAll(/- nekolog_[a-z]+:(\/var\/lib\/nekolog\/[a-z]+)/g)].map(
+      (match) => match[1] as string,
+    )
+
+    expect(mounted.length).toBeGreaterThan(0)
+    for (const path of new Set(mounted)) {
+      expect(DOCKERFILE, `${path} is mounted but never created in the image`).toContain(path)
+    }
   })
 
   it('writes the first keys to a file and not to the container log', () => {

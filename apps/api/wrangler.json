@@ -24,6 +24,12 @@
           "id": "${KV_NAMESPACE_ID}"
         }
       ],
+      "r2_buckets": [
+        {
+          "binding": "SOURCEMAPS",
+          "bucket_name": "${SOURCEMAPS_BUCKET}"
+        }
+      ],
       "vars": {
         "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
         "CLICKHOUSE_DB": "nekolog_dev"
@@ -43,6 +49,12 @@
           "id": "${KV_NAMESPACE_ID}"
         }
       ],
+      "r2_buckets": [
+        {
+          "binding": "SOURCEMAPS",
+          "bucket_name": "${SOURCEMAPS_BUCKET}"
+        }
+      ],
       "vars": {
         "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
         "CLICKHOUSE_DB": "nekolog_qa"
@@ -60,6 +72,12 @@
         {
           "binding": "KEYS",
           "id": "${KV_NAMESPACE_ID}"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SOURCEMAPS",
+          "bucket_name": "${SOURCEMAPS_BUCKET}"
         }
       ],
       "vars": {

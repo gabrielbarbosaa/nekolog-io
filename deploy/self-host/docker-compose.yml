@@ -120,8 +120,10 @@ services:
       CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?set CLICKHOUSE_READ_PASSWORD in .env}
       DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
       API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-120}
+      SOURCEMAPS_DIR: /var/lib/nekolog/sourcemaps
     volumes:
       - nekolog_state:/var/lib/nekolog/state:ro
+      - nekolog_sourcemaps:/var/lib/nekolog/sourcemaps
     ports:
       - "${API_PUBLISH:-8789}:8789"
     command: ["node", "apps/api/src/serve-self-host.ts"]
@@ -162,3 +164,4 @@ volumes:
   nekolog_state:
   nekolog_spool:
   nekolog_kv:
+  nekolog_sourcemaps:

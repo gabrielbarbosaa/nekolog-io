@@ -27,6 +27,7 @@ const ENVIRONMENTS = ['dev', 'qa', 'prod']
 
 const VALUES: Record<string, string> = {
   KV_NAMESPACE_ID: '1dc8e2b0f9a64c0e9f3a1b2c3d4e5f60',
+  SOURCEMAPS_BUCKET: 'nekolog-sourcemaps',
   CLICKHOUSE_URL: 'https://clickhouse.example.invalid',
 }
 
@@ -62,13 +63,22 @@ describe('the environments the public API deploys to', () => {
     expect((blockOf(environment).vars as JsonObject).CLICKHOUSE_DB).toBe(`nekolog_${environment}`)
   })
 
-  it.each(ENVIRONMENTS)('binds KEYS in %s, and nothing it does not read', (environment) => {
-    expect(bindingNames(blockOf(environment))).toEqual(['KEYS'])
+  it.each(ENVIRONMENTS)('binds KEYS and SOURCEMAPS in %s, and nothing else', (environment) => {
+    expect(bindingNames(blockOf(environment)).sort()).toEqual(['KEYS', 'SOURCEMAPS'])
   })
 
-  it.each(ENVIRONMENTS)('writes nowhere: %s has no R2 bucket at all', (environment) => {
-    expect(blockOf(environment).r2_buckets).toBeUndefined()
-  })
+  it.each(ENVIRONMENTS)(
+    'reaches the source map bucket of %s and no other bucket',
+    (environment) => {
+      const buckets = blockOf(environment).r2_buckets as Array<Record<string, unknown>>
+
+      expect(buckets).toHaveLength(1)
+      expect(buckets[0]?.binding).toBe('SOURCEMAPS')
+      expect(String(buckets[0]?.bucket_name)).toContain('sourcemaps')
+      expect(JSON.stringify(blockOf(environment))).not.toContain('SPOOL')
+      expect(JSON.stringify(blockOf(environment))).not.toContain('EXPORTS')
+    },
+  )
 })
 
 describe('what the Worker needs and what the configuration gives it', () => {

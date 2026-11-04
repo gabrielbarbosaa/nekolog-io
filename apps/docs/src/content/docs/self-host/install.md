@@ -77,6 +77,8 @@ curl -H "Authorization: Bearer $NEKOLOG_KEY" \
 | `GET /v1/histogram` | counts per bucket and level: `q`, `from`, `to`, `bucket` |
 | `GET /v1/issues` | errors grouped by fingerprint: `status`, `since`, `until`, `cursor` |
 | `GET /openapi.json` | the full contract, for a client generator or for reading |
+| `POST /v1/releases` | record that a version went out — `nekolog releases create` |
+| `POST /v1/sourcemaps` | upload one map against a release — `nekolog sourcemaps upload` |
 
 `q` is the same search language the hosted Explorer uses:
 `level:error service:api @status>=500 "timeout"`. The one thing it will not take
@@ -86,8 +88,10 @@ that filter into every query itself.
 Three rules are worth knowing before you script against it. The key goes in the
 `Authorization` header and a request carrying `?key=` is **refused**, because a
 URL ends up in access logs and browser history. A **public** key is refused too:
-it is published to every browser that loads your page. And the API only reads —
-a `POST` to any of those routes is a 404.
+it is published to every browser that loads your page. And the two routes that
+write are the only ones that write: a `POST` to `/v1/logs` is a 404, a `GET` on
+`/v1/releases` is a 404, and writing needs `logs:write` where reading needs
+`logs:read`.
 
 :::danger[Put TLS in front of this one as well]
 Port 8789 carries a key that can read every log in the environment.
@@ -119,8 +123,10 @@ Three things are missing, and none of them is a bug you should work around:
   That needs object storage and credentials this stack does not ask you for, so
   the export tasks are not wired into the self-host jobs container at all —
   rather than wired and failing every minute.
-- **Source-map resolution.** It needs a place to upload maps to, which is still
-  being designed.
+- **Source-map resolution.** Uploading them works — `nekolog sourcemaps upload`
+  stores them in a Docker volume of their own, the same way the hosted service
+  stores them in a bucket. Applying one to a stack trace happens on a screen,
+  and the screens are the dashboard's.
 
 Everything else runs: ingestion, OTLP, redaction, sampling, minimum level,
 quotas, issue grouping and alerts to a webhook.

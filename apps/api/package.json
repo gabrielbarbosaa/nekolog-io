@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.5",
     "@internal/seed": "workspace:*",
+    "@internal/self-host": "workspace:*",
     "@neondatabase/serverless": "^1.2.0",
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/clickhouse": "workspace:*",

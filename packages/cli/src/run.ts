@@ -3,6 +3,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { describe, InitRefused, init, type Runner, type Workspace } from './init.ts'
 import { createRelease, DEFAULT_API_URL, describeRelease, ReleaseRefused } from './releases.ts'
+import { describeUpload, uploadSourceMaps } from './sourcemaps.ts'
 
 export const USAGE: string = `nekolog init — detect the framework, install the sdk and write the .env
 
@@ -17,6 +18,12 @@ nekolog releases create <version> — record that a version went out
   --commit <sha>  7 to 40 lowercase hex characters, from \`git rev-parse HEAD\`
   --at <moment>   when it went out, ISO 8601 (default: now)
   --api <url>     where the public api answers (default: ${DEFAULT_API_URL})
+
+nekolog sourcemaps upload <version> — upload every .map of a build
+
+  --key <key>     the secret key of the environment (default: $NEKOLOG_KEY)
+  --dir <path>    the build output to walk (default: dist)
+  --api <url>     where the public api answers (default: ${DEFAULT_API_URL})
 `
 
 export type Parsed = {
@@ -30,9 +37,10 @@ export type Parsed = {
   commit?: string
   at?: string
   api?: string
+  dir?: string
 }
 
-const WITH_VALUE = ['--key', '--cwd', '--env', '--commit', '--at', '--api'] as const
+const WITH_VALUE = ['--key', '--cwd', '--env', '--commit', '--at', '--api', '--dir'] as const
 
 export function parseArgs(argv: readonly string[]): Parsed {
   const parsed: Parsed = { command: argv[0] ?? '', install: true, cwd: '.', positional: [] }
@@ -66,10 +74,12 @@ export function parseArgs(argv: readonly string[]): Parsed {
       parsed.at = value
     } else if (flag === '--api') {
       parsed.api = value
+    } else if (flag === '--dir') {
+      parsed.dir = value
     }
   }
 
-  if (parsed.command === 'releases') {
+  if (parsed.command === 'releases' || parsed.command === 'sourcemaps') {
     parsed.subcommand = parsed.positional[0]
     parsed.positional = parsed.positional.slice(1)
   }
@@ -133,11 +143,40 @@ async function recordRelease(parsed: Parsed): Promise<number> {
   }
 }
 
+async function pushSourceMaps(parsed: Parsed): Promise<number> {
+  if (parsed.subcommand !== 'upload') {
+    process.stdout.write(USAGE)
+    return 1
+  }
+
+  const version = parsed.positional[0] ?? ''
+  try {
+    const report = await uploadSourceMaps({
+      key: parsed.key ?? process.env.NEKOLOG_KEY,
+      version,
+      dir: parsed.dir,
+      apiUrl: parsed.api ?? process.env.NEKOLOG_API_URL,
+    })
+    for (const line of describeUpload(report, version)) {
+      process.stdout.write(`${line}\n`)
+    }
+    return 0
+  } catch (error) {
+    const message = error instanceof ReleaseRefused ? error.message : String(error)
+    process.stderr.write(`nekolog sourcemaps upload: ${message}\n`)
+    return 1
+  }
+}
+
 export async function main(argv: readonly string[]): Promise<number> {
   const parsed = parseArgs(argv)
 
   if (parsed.command === 'releases') {
     return recordRelease(parsed)
+  }
+
+  if (parsed.command === 'sourcemaps') {
+    return pushSourceMaps(parsed)
   }
 
   if (parsed.command !== 'init') {

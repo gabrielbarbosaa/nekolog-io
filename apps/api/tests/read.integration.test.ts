@@ -1,4 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -9,7 +11,9 @@ import {
   seedStatements,
   toDocument,
 } from '@internal/seed'
+import { fileBlobStore } from '@internal/self-host'
 import {
+  blobSourceMapStore,
   type IssueOccurrence,
   sqlIssueReader,
   sqlIssueStore,
@@ -88,6 +92,7 @@ function migrationStatements(): string[] {
 }
 
 let sql: postgres.Sql
+let maps: string
 let seed: Seed
 let document: SeedDocument
 let app: ReturnType<typeof createApiApp>
@@ -119,6 +124,26 @@ async function write(path: string, key: string, payload: unknown): Promise<Respo
   )
 }
 
+const SOURCE_MAP: string = JSON.stringify({
+  version: 3,
+  sources: ['src/app.ts'],
+  mappings: 'AAAA',
+})
+
+async function upload(key: string, version: string, name: string, map: string): Promise<Response> {
+  const target = new URL('https://api.nekolog.io/v1/sourcemaps')
+  target.searchParams.set('release', version)
+  target.searchParams.set('name', name)
+
+  return app.request(
+    new Request(target, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: map,
+    }),
+  )
+}
+
 async function readJson(path: string, key: string): Promise<Record<string, never>> {
   const response = await read(path, key)
   expect(response.status, `${path} answered ${response.status}`).toBe(200)
@@ -131,6 +156,8 @@ beforeAll(async () => {
   if (!reachable) {
     return
   }
+
+  maps = await mkdtemp(join(tmpdir(), 'nekolog-api-maps-'))
 
   await execute(config, `CREATE DATABASE IF NOT EXISTS ${database}`, { database: null })
   await migrate(config)
@@ -173,6 +200,7 @@ beforeAll(async () => {
     authenticate: createReadAuthenticator({ keyStore }),
     authenticateWrite: createWriteAuthenticator({ keyStore }),
     releases: sqlReleaseStore(run),
+    sourceMaps: blobSourceMapStore(fileBlobStore(maps)),
     database,
     query: (statement, params) =>
       queryRows<Record<string, unknown>>(config, statement, { params }) as Promise<
@@ -275,6 +303,7 @@ afterAll(async () => {
     return
   }
   await execute(config, `DROP DATABASE IF EXISTS ${database}`, { database: null })
+  await rm(maps, { recursive: true, force: true })
   await sql?.end({ timeout: 5 })
   const admin = postgres(POSTGRES_URL, { max: 1, onnotice: () => {} })
   try {
@@ -410,7 +439,7 @@ describe.skipIf(!reachable)('the public API over a real ClickHouse and a real Po
     expect(await response.json()).toMatchObject({ error: { code: 'invalid_key' } })
   })
 
-  it('serves an OpenAPI document that names the three routes it just answered on', async () => {
+  it('serves an OpenAPI document that names every route it just answered on', async () => {
     const response = await app.request('https://api.nekolog.io/openapi.json')
     const served = (await response.json()) as { paths: Record<string, unknown> }
 
@@ -422,6 +451,7 @@ describe.skipIf(!reachable)('the public API over a real ClickHouse and a real Po
       '/v1/issues',
       '/v1/logs',
       '/v1/releases',
+      '/v1/sourcemaps',
     ])
   })
 
@@ -471,6 +501,69 @@ describe.skipIf(!reachable)('the public API over a real ClickHouse and a real Po
     `
     expect(rows).toHaveLength(1)
     expect(rows[0]?.environment_id).toBe(environmentNamed('staging').id)
+  })
+
+  it('stores a source map on disk and counts it on the release row', async () => {
+    const { key } = environmentNamed('production')
+    await write('/v1/releases', key, { version: '2.0.0' })
+
+    const first = await upload(key, '2.0.0', 'app.js.map', SOURCE_MAP)
+    expect(first.status, await first.clone().text()).toBe(201)
+    expect(await first.json()).toMatchObject({
+      sourceMap: { name: 'app.js.map' },
+      release: { version: '2.0.0', sourcemapCount: 1 },
+    })
+
+    const second = await upload(key, '2.0.0', 'vendor.js.map', SOURCE_MAP)
+    expect(
+      ((await second.json()) as { release: { sourcemapCount: number } }).release.sourcemapCount,
+    ).toBe(2)
+
+    const rows = await sql`select id, sourcemap_count from releases where version = '2.0.0'`
+    expect(rows[0]?.sourcemap_count).toBe(2)
+
+    const onDisk = await readdir(join(maps, 'sourcemaps', seed.project.id, String(rows[0]?.id)))
+    expect(onDisk.sort()).toEqual(['app.js.map', 'vendor.js.map'])
+  })
+
+  it('does not raise the count when the same map is uploaded again', async () => {
+    const { key } = environmentNamed('production')
+    await write('/v1/releases', key, { version: '2.1.0' })
+
+    await upload(key, '2.1.0', 'app.js.map', SOURCE_MAP)
+    const again = await upload(key, '2.1.0', 'app.js.map', SOURCE_MAP)
+
+    expect(
+      ((await again.json()) as { release: { sourcemapCount: number } }).release.sourcemapCount,
+    ).toBe(1)
+
+    const rows = await sql`select sourcemap_count from releases where version = '2.1.0'`
+    expect(rows[0]?.sourcemap_count).toBe(1)
+  })
+
+  it('refuses a map for a release this environment never recorded', async () => {
+    const response = await upload(
+      environmentNamed('production').key,
+      'never-recorded',
+      'app.js.map',
+      SOURCE_MAP,
+    )
+
+    expect(response.status).toBe(404)
+    expect(existsSync(join(maps, 'sourcemaps'))).toBe(true)
+  })
+
+  it('refuses a name that would escape the release folder', async () => {
+    const { key } = environmentNamed('production')
+    await write('/v1/releases', key, { version: '2.2.0' })
+
+    for (const name of ['../escape.map', 'a/b.map', 'app.js']) {
+      const response = await upload(key, '2.2.0', name, SOURCE_MAP)
+      expect(response.status, name).toBe(400)
+    }
+
+    const rows = await sql`select sourcemap_count from releases where version = '2.2.0'`
+    expect(rows[0]?.sourcemap_count).toBe(0)
   })
 
   it('refuses a public key on the one route that writes', async () => {

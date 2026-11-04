@@ -1,9 +1,17 @@
-import type { IssueReader, IssueStatus, RateLimiter, ReleaseStore } from '@nekolog-io/adapters'
+import type {
+  IssueReader,
+  IssueStatus,
+  RateLimiter,
+  ReleaseStore,
+  SourceMapStore,
+} from '@nekolog-io/adapters'
 import {
   InvalidRelease,
+  InvalidSourceMap,
   ISSUE_STATUSES,
   IssueCursorError,
   MAX_ISSUE_ROWS,
+  MAX_SOURCE_MAP_BYTES,
 } from '@nekolog-io/adapters'
 import {
   bucketSecondsFor,
@@ -44,6 +52,7 @@ export type ApiDeps = {
   database: string
   issues?: IssueReader
   releases?: ReleaseStore
+  sourceMaps?: SourceMapStore
   openapi?: (origin: string) => unknown
   limits?: ApiLimits
   onError?: (error: unknown) => void
@@ -319,6 +328,58 @@ export function createApiApp(deps: ApiDeps): Hono {
     })
   })
 
+  app.post('/v1/sourcemaps', async (c) => {
+    const maps = deps.sourceMaps
+    const releases = deps.releases
+    if (maps === undefined || releases === undefined) {
+      return fail('not_found', 'This deployment stores no source maps')
+    }
+
+    const admitted = await admitWriter(c.req.raw)
+    if (admitted instanceof Response) {
+      return admitted
+    }
+
+    const params = new URL(c.req.raw.url).searchParams
+    const version = params.get('release')
+    if (version === null || version === '') {
+      throw new ApiError('invalid_query', 'Which release? Pass ?release=<version>.')
+    }
+    const name = params.get('name')
+
+    const declared = Number(c.req.header('content-length') ?? '')
+    if (Number.isFinite(declared) && declared > MAX_SOURCE_MAP_BYTES) {
+      return fail('payload_too_large', `A source map is at most ${MAX_SOURCE_MAP_BYTES} bytes.`)
+    }
+
+    const release = await releases.byVersion(admitted.environmentId, version)
+    if (release === null) {
+      return fail(
+        'not_found',
+        `There is no release called ${JSON.stringify(version)} in this environment. Record it first.`,
+      )
+    }
+
+    const body = new Uint8Array(await c.req.raw.arrayBuffer())
+    const stored = await maps.put({
+      projectId: admitted.projectId,
+      releaseId: release.id,
+      name: name ?? '',
+      body,
+    })
+
+    await releases.countSourceMaps(release.id, stored.total)
+
+    return c.json(
+      {
+        sourceMap: { name: stored.name, bytes: stored.bytes },
+        release: { id: release.id, version: release.version, sourcemapCount: stored.total },
+      },
+      201,
+      { 'cache-control': 'no-store' },
+    )
+  })
+
   app.notFound(() => fail('not_found', 'No such endpoint'))
 
   app.onError((error) => {
@@ -333,6 +394,12 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
     if (error instanceof InvalidRelease) {
       return fail('invalid_query', `${error.field}: ${error.message}`)
+    }
+    if (error instanceof InvalidSourceMap) {
+      return fail(
+        error.oversize ? 'payload_too_large' : 'invalid_query',
+        `${error.field}: ${error.message}`,
+      )
     }
     report(deps, error)
     return fail('internal_error', 'Unexpected error')
