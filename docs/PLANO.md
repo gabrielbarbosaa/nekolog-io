@@ -147,7 +147,7 @@ No ambiente de desenvolvimento, o compose também sobe o **Mailpit**, que captur
   - `nekolog_pk_…` (pública): só envia logs, usada no front.
   - `nekolog_sk_…` (secreta): envia e/ou lê logs pela API, com escopos (`logs:write`, `logs:read`).
 - **A key define o ambiente.** O SDK não precisa da opção `environment`, e uma key de staging nunca grava em produção.
-- **Configurações por ambiente:** origens permitidas (keys públicas), retenção em dias, nível mínimo aceito, taxa de amostragem, cota diária e regras extras de remoção de dados sensíveis.
+- **Configurações por ambiente:** origens permitidas (keys públicas), retenção em dias, nível mínimo aceito, taxa de amostragem, cota diária e regras extras de remoção de dados sensíveis. O nível mínimo e a amostragem são **cumpridos na ingestão**, não na tela: a tela escreve a coluna, a key leva o valor até o Worker pela KV e o evento que não passa nunca chega a virar linha. A amostragem é **determinística**, semeada no `traceId` (ou, na falta dele, na sessão), para um trace inteiro ficar ou sair junto — amostrar evento a evento deixaria metade de um trace, que não serve para investigar nada. E **`error` e `fatal` nunca são amostrados**: perder erro por amostragem é exatamente o que ninguém quer.
 - **Segurança das keys:** só o hash SHA-256 é guardado; a key aparece uma única vez; o dashboard mostra o "último uso". Ao criar ou revogar, o dashboard atualiza o KV, e a revogação leva até ~60 s para valer em todo lugar.
 - **No browser, a key vai na URL** (`/v1/logs?key=pk_…`), porque o `sendBeacon` não envia headers. No back-end, vai em `Authorization: Bearer sk_…`.
 

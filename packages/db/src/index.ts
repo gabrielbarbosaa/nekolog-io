@@ -197,6 +197,8 @@ export const environments = pgTable(
     name: text('name').notNull(),
     color: text('color'),
     retentionDays: integer('retention_days').notNull().default(7),
+    minLevel: text('min_level').notNull().default('trace'),
+    sampleRate: doublePrecision('sample_rate').notNull().default(1),
     dailyEventQuota: integer('daily_event_quota'),
     originAllowlist: text('origin_allowlist').array(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -207,6 +209,11 @@ export const environments = pgTable(
     check('environments_id_shape', sql`id ~ '^env_[0-9A-HJKMNP-TV-Z]{26}$'`),
     check('environments_name_shape', sql`name ~ '^[a-z][a-z0-9-]{0,30}$'`),
     check('environments_retention_is_at_least_a_day', sql`retention_days >= 1`),
+    check(
+      'environments_min_level_is_a_level',
+      sql`min_level in ('trace', 'debug', 'info', 'warn', 'error', 'fatal')`,
+    ),
+    check('environments_sample_rate_is_a_share', sql`sample_rate > 0 and sample_rate <= 1`),
     check(
       'environments_quota_is_positive_when_set',
       sql`daily_event_quota is null or daily_event_quota > 0`,

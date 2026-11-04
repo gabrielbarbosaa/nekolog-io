@@ -308,6 +308,58 @@ describe.skipIf(!reachable)('a log from the sdk reaching ClickHouse', () => {
     expect(reachable[0]?.total).toBe('1')
   })
 
+  it('never writes what the environment minimum level keeps out', async () => {
+    const quietKey = generateApiKey('secret')
+    await keyStore.set(await hashApiKey(quietKey), { ...RECORD, minLevel: 'warn' })
+
+    const response = await fetch(`${endpoint}/v1/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${quietKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b31',
+        sdk: { name: '@nekolog-io/node', version: '0.0.0' },
+        resource: { service: 'quiet', runtime: 'node' },
+        events: [
+          { timestamp: new Date().toISOString(), level: 'debug', message: 'too quiet to keep' },
+          { timestamp: new Date().toISOString(), level: 'error', message: 'loud enough to keep' },
+        ],
+      }),
+    })
+
+    const kept = await storedWhere("service = 'quiet'")
+
+    expect(response.status).toBe(202)
+    expect(kept.map((row) => row.message)).toEqual(['loud enough to keep'])
+  })
+
+  it('never samples out an error, however low the rate', async () => {
+    const sampledKey = generateApiKey('secret')
+    await keyStore.set(await hashApiKey(sampledKey), { ...RECORD, sampleRate: 0.0001 })
+
+    await fetch(`${endpoint}/v1/logs`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${sampledKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        batchId: '01933b9e-7c1a-7d4f-9a51-3f0f6c2e8b32',
+        sdk: { name: '@nekolog-io/node', version: '0.0.0' },
+        resource: { service: 'sampled', runtime: 'node' },
+        events: Array.from({ length: 20 }, (_, at) => ({
+          timestamp: new Date().toISOString(),
+          level: at % 2 === 0 ? 'info' : 'error',
+          message: `sampled ${at}`,
+        })),
+      }),
+    })
+
+    const kept = await storedWhere("service = 'sampled'")
+    const levels = kept.map((row) => row.level)
+
+    expect(levels.filter((level) => level === 'error')).toHaveLength(10)
+    expect(levels.filter((level) => level === 'info').length).toBeLessThan(10)
+  })
+
   it('writes nothing at all for a key the store does not know', async () => {
     const before = await queryRows<{ total: string }>(
       config,

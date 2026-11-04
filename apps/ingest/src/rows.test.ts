@@ -293,6 +293,66 @@ describe('rowsFor', () => {
   })
 })
 
+describe('what the environment settings keep out', () => {
+  it('writes every level when nothing was configured', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'trace', message: 'a' },
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'fatal', message: 'b' },
+    ])
+
+    expect((await rows(batch)).map((row) => row.message)).toEqual(['a', 'b'])
+  })
+
+  it('drops what is below the minimum level the environment set', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'debug', message: 'quiet' },
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'error', message: 'loud' },
+    ])
+
+    const built = await rowsFor(batch, { ...PRINCIPAL, minLevel: 'warn' }, CONTEXT)
+
+    expect(built.map((row) => row.message)).toEqual(['loud'])
+  })
+
+  it('says what it dropped and why, so the run can report it', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'debug', message: 'quiet' },
+    ])
+    const dropped: string[] = []
+
+    await rowsFor(
+      batch,
+      { ...PRINCIPAL, minLevel: 'warn' },
+      { ...CONTEXT, onDropped: (reason) => dropped.push(reason) },
+    )
+
+    expect(dropped).toEqual(['below_min_level'])
+  })
+
+  it('samples ordinary logs but never an error', async () => {
+    const events = Array.from({ length: 60 }, (_, at) => ({
+      timestamp: '2026-10-31T15:30:00.000Z',
+      level: at % 2 === 0 ? 'info' : 'error',
+      message: `m${at}`,
+    }))
+    const batch = batchOf(events)
+
+    const built = await rowsFor(batch, { ...PRINCIPAL, sampleRate: 0.01 }, CONTEXT)
+    const levels = built.map((row) => row.level)
+
+    expect(levels.filter((level) => level === 'error')).toHaveLength(30)
+    expect(levels.filter((level) => level === 'info').length).toBeLessThan(30)
+  })
+
+  it('writes nothing at all when every event was kept out', async () => {
+    const batch = batchOf([
+      { timestamp: '2026-10-31T15:30:00.000Z', level: 'debug', message: 'quiet' },
+    ])
+
+    expect(await rowsFor(batch, { ...PRINCIPAL, minLevel: 'fatal' }, CONTEXT)).toEqual([])
+  })
+})
+
 describe('the clock of whoever sent the batch', () => {
   it('records how far behind the sender is, in milliseconds', async () => {
     const batch = batchOf([

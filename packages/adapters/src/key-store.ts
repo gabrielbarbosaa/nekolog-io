@@ -5,6 +5,8 @@ export interface KeyRecord {
   originAllowlist: ReadonlyArray<string> | null
   blocked: boolean
   retentionDays?: number
+  minLevel?: string
+  sampleRate?: number
 }
 
 export interface KeyStore {
