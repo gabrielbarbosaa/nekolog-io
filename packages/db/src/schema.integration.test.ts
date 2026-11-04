@@ -137,12 +137,17 @@ describe.skipIf(!reachable)('the migration this package ships', () => {
     expect(rows.map((row) => row.table_name)).toEqual([
       'api_keys',
       'audit_log',
+      'dashboards',
       'email_suppressions',
       'environments',
+      'export_schedules',
+      'exports',
       'invites',
       'memberships',
       'organizations',
       'projects',
+      'releases',
+      'saved_views',
       'users',
     ])
   })
@@ -259,6 +264,71 @@ const TABLES: Array<[string, string, Insert]> = [
         organization_id: await organization(tx),
         action: 'member.invited',
         target_type: 'invite',
+      })}`
+    },
+  ],
+  [
+    'saved_views',
+    ID_PREFIXES.savedView,
+    async (tx, badId) => {
+      await tx`insert into saved_views ${tx({
+        id: badId,
+        project_id: await project(tx, await organization(tx)),
+        name: 'Errors today',
+      })}`
+    },
+  ],
+  [
+    'dashboards',
+    ID_PREFIXES.dashboard,
+    async (tx, badId) => {
+      await tx`insert into dashboards ${tx({
+        id: badId,
+        project_id: await project(tx, await organization(tx)),
+        name: 'Overview',
+      })}`
+    },
+  ],
+  [
+    'releases',
+    ID_PREFIXES.release,
+    async (tx, badId) => {
+      const projectId = await project(tx, await organization(tx))
+      await tx`insert into releases ${tx({
+        id: badId,
+        project_id: projectId,
+        environment_id: await environment(tx, projectId),
+        version: '1.4.2',
+      })}`
+    },
+  ],
+  [
+    'export_schedules',
+    ID_PREFIXES.exportSchedule,
+    async (tx, badId) => {
+      const projectId = await project(tx, await organization(tx))
+      await tx`insert into export_schedules ${tx({
+        id: badId,
+        project_id: projectId,
+        environment_id: await environment(tx, projectId),
+        cadence: 'daily',
+        format: 'csv',
+      })}`
+    },
+  ],
+  [
+    'exports',
+    ID_PREFIXES.export,
+    async (tx, badId) => {
+      const projectId = await project(tx, await organization(tx))
+      await tx`insert into exports ${tx({
+        id: badId,
+        project_id: projectId,
+        environment_id: await environment(tx, projectId),
+        format: 'csv',
+        range_from: new Date(Date.now() - 3_600_000),
+        range_to: new Date(),
+        expires_at: new Date(Date.now() + 7 * 86_400_000),
       })}`
     },
   ],
@@ -597,5 +667,447 @@ describe.skipIf(!reachable)('a suppressed address', () => {
         })}`
       }),
     ).rejects.toThrow()
+  })
+})
+
+describe.skipIf(!reachable)('a row that names a project and an environment', () => {
+  async function twoProjects(tx: postgres.TransactionSql): Promise<[string, string]> {
+    const organizationId = await organization(tx)
+    const mine = await project(tx, organizationId)
+    const theirs = await project(tx, organizationId)
+    return [mine, await environment(tx, theirs)]
+  }
+
+  it('cannot borrow an environment from another project, on saved_views', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, otherEnvironmentId] = await twoProjects(tx)
+        await tx`insert into saved_views ${tx({
+          id: id(ID_PREFIXES.savedView),
+          project_id: projectId,
+          environment_id: otherEnvironmentId,
+          name: 'Errors today',
+        })}`
+      }),
+    ).rejects.toThrow(/saved_views_environment_belongs_to_the_project/)
+  })
+
+  it('cannot borrow an environment from another project, on releases', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, otherEnvironmentId] = await twoProjects(tx)
+        await tx`insert into releases ${tx({
+          id: id(ID_PREFIXES.release),
+          project_id: projectId,
+          environment_id: otherEnvironmentId,
+          version: '1.4.2',
+        })}`
+      }),
+    ).rejects.toThrow(/releases_environment_belongs_to_the_project/)
+  })
+
+  it('cannot borrow an environment from another project, on exports', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, otherEnvironmentId] = await twoProjects(tx)
+        await tx`insert into exports ${tx({
+          id: id(ID_PREFIXES.export),
+          project_id: projectId,
+          environment_id: otherEnvironmentId,
+          format: 'csv',
+          range_from: new Date(Date.now() - 3_600_000),
+          range_to: new Date(),
+          expires_at: new Date(Date.now() + 7 * 86_400_000),
+        })}`
+      }),
+    ).rejects.toThrow(/exports_environment_belongs_to_the_project/)
+  })
+
+  it('cannot borrow an environment from another project, on export_schedules', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, otherEnvironmentId] = await twoProjects(tx)
+        await tx`insert into export_schedules ${tx({
+          id: id(ID_PREFIXES.exportSchedule),
+          project_id: projectId,
+          environment_id: otherEnvironmentId,
+          cadence: 'daily',
+          format: 'csv',
+        })}`
+      }),
+    ).rejects.toThrow(/export_schedules_environment_belongs_to_the_project/)
+  })
+
+  it('accepts the environment that really is the projects own', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      await tx`insert into releases ${tx({
+        id: id(ID_PREFIXES.release),
+        project_id: projectId,
+        environment_id: await environment(tx, projectId),
+        version: '1.4.2',
+      })}`
+    })
+  })
+
+  it('goes away when the environment does', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      const environmentId = await environment(tx, projectId)
+      await tx`insert into releases ${tx({
+        id: id(ID_PREFIXES.release),
+        project_id: projectId,
+        environment_id: environmentId,
+        version: '1.4.2',
+      })}`
+
+      await tx`delete from environments where id = ${environmentId}`
+
+      const left = await tx`select count(*)::int as n from releases`
+      expect(left[0]?.n).toBe(0)
+    })
+  })
+})
+
+describe.skipIf(!reachable)('an export', () => {
+  async function place(tx: postgres.TransactionSql): Promise<[string, string]> {
+    const projectId = await project(tx, await organization(tx))
+    return [projectId, await environment(tx, projectId)]
+  }
+
+  function row(projectId: string, environmentId: string, extra: Record<string, unknown> = {}) {
+    return {
+      id: id(ID_PREFIXES.export),
+      project_id: projectId,
+      environment_id: environmentId,
+      format: 'csv',
+      range_from: new Date(Date.now() - 3_600_000),
+      range_to: new Date(),
+      expires_at: new Date(Date.now() + 7 * 86_400_000),
+      ...extra,
+    }
+  }
+
+  it('cannot say it is ready without an object to download', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(row(projectId, environmentId, { status: 'ready' }))}`
+      }),
+    ).rejects.toThrow(/exports_ready_means_there_is_an_object/)
+  })
+
+  it('cannot say it failed without saying why', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(row(projectId, environmentId, { status: 'failed' }))}`
+      }),
+    ).rejects.toThrow(/exports_failed_means_there_is_a_reason/)
+  })
+
+  it('cannot cover a period that ends before it starts', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(
+          row(projectId, environmentId, {
+            range_from: new Date(),
+            range_to: new Date(Date.now() - 3_600_000),
+          }),
+        )}`
+      }),
+    ).rejects.toThrow(/exports_range_moves_forward/)
+  })
+
+  it('cannot expire before it was asked for', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(
+          row(projectId, environmentId, { expires_at: new Date(Date.now() - 1000) }),
+        )}`
+      }),
+    ).rejects.toThrow(/exports_expire_after_they_are_asked_for/)
+  })
+
+  it('cannot point outside the exports prefix', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(
+          row(projectId, environmentId, { status: 'ready', object_key: 'sourcemaps/secret.map' }),
+        )}`
+      }),
+    ).rejects.toThrow(/exports_object_key_stays_inside_the_prefix/)
+  })
+
+  it('cannot climb out of the prefix with a dot dot', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        await tx`insert into exports ${tx(
+          row(projectId, environmentId, {
+            status: 'ready',
+            object_key: 'exports/../sourcemaps/secret.map',
+          }),
+        )}`
+      }),
+    ).rejects.toThrow(/exports_object_key_has_no_dot_dot/)
+  })
+
+  it('is accepted when it is ready and the key is where it belongs', async () => {
+    await inRollback(async (tx) => {
+      const [projectId, environmentId] = await place(tx)
+      await tx`insert into exports ${tx(
+        row(projectId, environmentId, {
+          status: 'ready',
+          object_key: 'exports/prj_1/2026-11-03/abc.csv.gz',
+          byte_size: 1024,
+          row_count: 10,
+        }),
+      )}`
+    })
+  })
+
+  it('keeps its row when the schedule that asked for it is deleted', async () => {
+    await inRollback(async (tx) => {
+      const [projectId, environmentId] = await place(tx)
+      const scheduleId = id(ID_PREFIXES.exportSchedule)
+      await tx`insert into export_schedules ${tx({
+        id: scheduleId,
+        project_id: projectId,
+        environment_id: environmentId,
+        cadence: 'daily',
+        format: 'csv',
+      })}`
+      await tx`insert into exports ${tx(row(projectId, environmentId, { schedule_id: scheduleId }))}`
+
+      await tx`delete from export_schedules where id = ${scheduleId}`
+
+      const left = await tx`select schedule_id from exports`
+      expect(left.length).toBe(1)
+      expect(left[0]?.schedule_id).toBe(null)
+    })
+  })
+})
+
+describe.skipIf(!reachable)('a release', () => {
+  it('cannot repeat a version inside one environment', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        const environmentId = await environment(tx, projectId)
+        for (const _ of [1, 2]) {
+          await tx`insert into releases ${tx({
+            id: id(ID_PREFIXES.release),
+            project_id: projectId,
+            environment_id: environmentId,
+            version: '1.4.2',
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/releases_one_version_per_environment/)
+  })
+
+  it('may carry the same version in another environment', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      for (const name of ['production', 'staging']) {
+        await tx`insert into releases ${tx({
+          id: id(ID_PREFIXES.release),
+          project_id: projectId,
+          environment_id: await environment(tx, projectId, name),
+          version: '1.4.2',
+        })}`
+      }
+    })
+  })
+
+  it('cannot carry a version with space around it', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        await tx`insert into releases ${tx({
+          id: id(ID_PREFIXES.release),
+          project_id: projectId,
+          environment_id: await environment(tx, projectId),
+          version: ' 1.4.2 ',
+        })}`
+      }),
+    ).rejects.toThrow(/releases_version_shape/)
+  })
+
+  it('cannot carry something that is not a commit in the commit column', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        await tx`insert into releases ${tx({
+          id: id(ID_PREFIXES.release),
+          project_id: projectId,
+          environment_id: await environment(tx, projectId),
+          version: '1.4.2',
+          commit: 'HEAD~1',
+        })}`
+      }),
+    ).rejects.toThrow(/releases_commit_is_hex_when_set/)
+  })
+})
+
+describe.skipIf(!reachable)('a saved view', () => {
+  it('cannot repeat a shared name inside one project', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        for (const _ of [1, 2]) {
+          await tx`insert into saved_views ${tx({
+            id: id(ID_PREFIXES.savedView),
+            project_id: projectId,
+            name: 'Errors today',
+            shared: true,
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/saved_views_one_shared_name_per_project/)
+  })
+
+  it('lets two people keep a private view with the same name', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      for (const _ of [1, 2]) {
+        await tx`insert into saved_views ${tx({
+          id: id(ID_PREFIXES.savedView),
+          project_id: projectId,
+          name: 'My errors',
+        })}`
+      }
+    })
+  })
+
+  it('cannot carry a query longer than the parser will take', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into saved_views ${tx({
+          id: id(ID_PREFIXES.savedView),
+          project_id: await project(tx, await organization(tx)),
+          name: 'Huge',
+          query: 'a'.repeat(2001),
+        })}`
+      }),
+    ).rejects.toThrow(/saved_views_query_is_bounded/)
+  })
+
+  it('cannot carry a period nobody can parse', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into saved_views ${tx({
+          id: id(ID_PREFIXES.savedView),
+          project_id: await project(tx, await organization(tx)),
+          name: 'Since forever',
+          time_range: 'forever',
+        })}`
+      }),
+    ).rejects.toThrow(/saved_views_time_range_shape/)
+  })
+})
+
+describe.skipIf(!reachable)('a dashboard', () => {
+  it('cannot keep its widgets in anything but a list', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into dashboards ${tx({
+          id: id(ID_PREFIXES.dashboard),
+          project_id: await project(tx, await organization(tx)),
+          name: 'Overview',
+          widgets: tx.json({ first: 'chart' }),
+        })}`
+      }),
+    ).rejects.toThrow(/dashboards_widgets_are_a_list/)
+  })
+
+  it('cannot hold more widgets than a page can draw', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into dashboards ${tx({
+          id: id(ID_PREFIXES.dashboard),
+          project_id: await project(tx, await organization(tx)),
+          name: 'Everything',
+          widgets: tx.json(Array.from({ length: 51 }, (_, at) => ({ at }))),
+        })}`
+      }),
+    ).rejects.toThrow(/dashboards_widget_count_is_bounded/)
+  })
+})
+
+describe.skipIf(!reachable)('a scheduled export', () => {
+  it('cannot have two live schedules of one cadence in one environment', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        const environmentId = await environment(tx, projectId)
+        for (const _ of [1, 2]) {
+          await tx`insert into export_schedules ${tx({
+            id: id(ID_PREFIXES.exportSchedule),
+            project_id: projectId,
+            environment_id: environmentId,
+            cadence: 'daily',
+            format: 'csv',
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/export_schedules_one_live_cadence_per_environment/)
+  })
+
+  it('lets a new one replace a disabled one', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      const environmentId = await environment(tx, projectId)
+      await tx`insert into export_schedules ${tx({
+        id: id(ID_PREFIXES.exportSchedule),
+        project_id: projectId,
+        environment_id: environmentId,
+        cadence: 'daily',
+        format: 'csv',
+        disabled_at: new Date(),
+      })}`
+      await tx`insert into export_schedules ${tx({
+        id: id(ID_PREFIXES.exportSchedule),
+        project_id: projectId,
+        environment_id: environmentId,
+        cadence: 'daily',
+        format: 'json',
+      })}`
+    })
+  })
+})
+
+describe.skipIf(!reachable)('two dashboards', () => {
+  it('cannot repeat a shared name inside one project', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const projectId = await project(tx, await organization(tx))
+        for (const _ of [1, 2]) {
+          await tx`insert into dashboards ${tx({
+            id: id(ID_PREFIXES.dashboard),
+            project_id: projectId,
+            name: 'Overview',
+            shared: true,
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/dashboards_one_shared_name_per_project/)
+  })
+
+  it('may both be called the same thing while they are private', async () => {
+    await inRollback(async (tx) => {
+      const projectId = await project(tx, await organization(tx))
+      for (const _ of [1, 2]) {
+        await tx`insert into dashboards ${tx({
+          id: id(ID_PREFIXES.dashboard),
+          project_id: projectId,
+          name: 'My overview',
+        })}`
+      }
+    })
   })
 })

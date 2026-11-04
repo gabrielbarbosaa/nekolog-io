@@ -18,9 +18,8 @@ function sqlFilesIn(directory: string): string[] {
 }
 
 function declaredNamesIn(source: string): string[] {
-  return [...source.matchAll(/\b(?:check|uniqueIndex|index)\('([a-z0-9_]+)'/g)]
-    .map((match) => match[1] ?? '')
-    .sort()
+  const named = /\b(?:check|uniqueIndex|index)\('([a-z0-9_]+)'|\bname: '([a-z0-9_]+)'/g
+  return [...source.matchAll(named)].map((match) => match[1] ?? match[2] ?? '').sort()
 }
 
 function countOf(source: string, pattern: RegExp): number {
@@ -81,12 +80,11 @@ describe('the migrations this package ships', () => {
   })
 
   it('cascade and null out exactly as often as the schema asks', () => {
-    expect(countOf(migrationSql, /ON DELETE cascade/g)).toBe(
-      countOf(schemaSource, /onDelete: 'cascade'/g),
-    )
-    expect(countOf(migrationSql, /ON DELETE set null/g)).toBe(
-      countOf(schemaSource, /onDelete: 'set null'/g),
-    )
+    const asked = (action: string) =>
+      countOf(schemaSource, new RegExp(`onDelete: '${action}'|\\.onDelete\\('${action}'\\)`, 'g'))
+
+    expect(countOf(migrationSql, /ON DELETE cascade/g)).toBe(asked('cascade'))
+    expect(countOf(migrationSql, /ON DELETE set null/g)).toBe(asked('set null'))
   })
 
   it('were generated with the dialect and schema the config names', () => {
@@ -94,6 +92,17 @@ describe('the migrations this package ships', () => {
 
     expect(config).toContain(`dialect: '${DIALECT}'`)
     expect(config).toContain(`schema: '${SCHEMA}'`)
+  })
+
+  it('keep a journal that drizzle-kit can still parse', () => {
+    const journal = readFileSync(join(MIGRATIONS, 'meta', '_journal.json'))
+
+    expect(
+      journal.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])),
+      'the journal starts with a UTF-8 BOM, which makes `pnpm db:generate` die on JSON.parse',
+    ).toBe(false)
+
+    expect(() => JSON.parse(journal.toString('utf8'))).not.toThrow()
   })
 
   it('are numbered without a gap, so none was deleted by hand', () => {
