@@ -29,6 +29,7 @@ export default defineConfig({
           translations: { 'pt-BR': 'Guias', es: 'Guías' },
           items: [
             { slug: 'guides/cli' },
+            { slug: 'guides/bundler-plugin' },
             { slug: 'guides/browser' },
             { slug: 'guides/react' },
             { slug: 'guides/next' },

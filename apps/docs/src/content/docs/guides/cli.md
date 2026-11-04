@@ -126,6 +126,10 @@ rest unread. Parsing megabytes of JSON does not fit the CPU budget of a Worker,
 and the map is parsed where it is actually used.
 :::
 
+If your build and your deploy are the same job, the
+[bundler plugin](/docs/guides/bundler-plugin/) does both of these from inside
+the build instead, so nobody has to remember to run them.
+
 ## After it runs
 
 Open the guide for what it installed: [Browser](/docs/guides/browser/),

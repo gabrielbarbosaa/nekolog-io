@@ -1,7 +1,13 @@
 import type { Dirent } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, relative, resolve, sep } from 'node:path'
-import { assertApiUrl, assertReleaseVersion, assertSecretKey, ReleaseRefused } from './releases.ts'
+import {
+  assertApiUrl,
+  assertReleaseVersion,
+  assertSecretKey,
+  ReleaseRefused,
+  reasonFrom,
+} from './releases.ts'
 
 export const SOURCEMAPS_PATH = '/v1/sourcemaps'
 export const MAX_SOURCE_MAP_BYTES: number = 8 * 1024 * 1024
@@ -73,18 +79,6 @@ export function uploadRequest(options: UploadOptions, name: string, body: Uint8A
     },
     body,
   })
-}
-
-function reasonFrom(status: number, text: string): string {
-  try {
-    const parsed = JSON.parse(text) as { error?: { code?: string; message?: string } }
-    if (parsed.error?.message) {
-      return `${parsed.error.code ?? String(status)}: ${parsed.error.message}`
-    }
-  } catch {
-    // the server answered something that is not our error shape
-  }
-  return `HTTP ${status}`
 }
 
 export async function uploadSourceMaps(options: UploadOptions): Promise<UploadReport> {

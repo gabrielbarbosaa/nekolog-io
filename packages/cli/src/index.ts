@@ -25,6 +25,7 @@ export {
   PUBLIC_KEY_PREFIX,
   RELEASES_PATH,
   ReleaseRefused,
+  reasonFrom,
   releaseRequest,
   SECRET_KEY_PREFIX,
 } from './releases.ts'

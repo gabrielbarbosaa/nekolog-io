@@ -53,6 +53,10 @@ upload recusa uma versão que o ambiente nunca viu.
 Mapa acima de 8 MB é **pulado e nomeado**, não descartado em silêncio. Subir o
 mesmo nome de novo substitui e não aumenta a contagem.
 
+Se o build e o deploy são o mesmo job, o `@nekolog-io/bundler-plugin` faz os
+dois comandos acima de dentro do build, no Vite, no webpack, no Rollup e no
+esbuild.
+
 ## O que ele escolhe, e por quê
 
 A ordem importa, porque projeto de verdade tem mais de uma dessas:

@@ -16,6 +16,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@nekolog-io/bundler-plugin": "workspace:*",
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
