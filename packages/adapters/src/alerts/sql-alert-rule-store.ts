@@ -20,12 +20,16 @@ limit $1
 
 const APPLY = `
 update alert_rules as rules
-set state = moved.state::alert_state, state_changed_at = moved.at::timestamptz
+set
+  state = moved.state::alert_state,
+  state_changed_at = moved.at::timestamptz,
+  last_measured = moved.measured
 from (
   select
     unnest($1::text[]) as id,
     unnest($2::text[]) as state,
-    unnest($3::timestamptz[]) as at
+    unnest($3::timestamptz[]) as at,
+    unnest($4::double precision[]) as measured
 ) as moved
 where rules.id = moved.id
   and rules.disabled_at is null
@@ -111,6 +115,7 @@ export function sqlAlertRuleStore(run: SqlRunner): AlertRuleStore {
         transitions.map((one) => one.ruleId),
         transitions.map((one) => one.to),
         transitions.map((one) => moment(one.at)),
+        transitions.map((one) => one.measured),
       ])
 
       return rows.length

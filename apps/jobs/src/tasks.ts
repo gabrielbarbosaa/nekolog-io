@@ -1,4 +1,6 @@
 import type {
+  AlertChannelStore,
+  AlertNoticeStore,
   AlertRuleStore,
   BlobStore,
   ExportScheduleStore,
@@ -11,6 +13,7 @@ import type {
 } from '@nekolog-io/adapters'
 import type { AlertTarget } from '@nekolog-io/clickhouse/alerts'
 import type { ExportDestination } from '@nekolog-io/clickhouse/export'
+import type { DeliveryOptions } from './alerts/deliver.ts'
 import { registerTasks } from './schedule.ts'
 import type { Task } from './task.ts'
 import {
@@ -19,6 +22,7 @@ import {
   alertEvaluateTask,
   type IssueActivitySource,
 } from './tasks/alert-evaluate.ts'
+import { type AlertNotifyEvent, alertNotifyTask } from './tasks/alert-notify.ts'
 import { type CapacityAlert, capacityWatchTask, type DiskReader } from './tasks/capacity-watch.ts'
 import { type ExportNotifyEvent, exportNotifyTask } from './tasks/export-notify.ts'
 import { type ExportRunEvent, type ExportWriter, exportRunTask } from './tasks/export-run.ts'
@@ -56,6 +60,10 @@ export type TaskDeps = {
   alertTarget?: AlertTarget
   issueActivity?: IssueActivitySource
   onAlertEvent?: (event: AlertEvaluateEvent) => void
+  alertNotices?: AlertNoticeStore
+  alertChannels?: AlertChannelStore
+  alertDelivery?: DeliveryOptions
+  onAlertNotifyEvent?: (event: AlertNotifyEvent) => void
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
@@ -124,8 +132,23 @@ export function buildTasks(deps: TaskDeps): readonly Task[] {
           }),
         ]
 
+  const notifying_alerts =
+    deps.alertNotices === undefined ||
+    deps.alertChannels === undefined ||
+    deps.alertDelivery === undefined
+      ? []
+      : [
+          alertNotifyTask({
+            notices: deps.alertNotices,
+            channels: deps.alertChannels,
+            delivery: deps.alertDelivery,
+            ...(deps.onAlertNotifyEvent === undefined ? {} : { onEvent: deps.onAlertNotifyEvent }),
+          }),
+        ]
+
   return registerTasks([
     ...alerting,
+    ...notifying_alerts,
     ...grouping,
     ...exporting,
     ...scheduling,

@@ -1,7 +1,15 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { type SqlRunner, sqlAlertRuleStore, sqlIssueActivity } from '@nekolog-io/adapters'
+import {
+  newChannelSecret,
+  type SqlRunner,
+  sealSecret,
+  sqlAlertChannelStore,
+  sqlAlertNoticeStore,
+  sqlAlertRuleStore,
+  sqlIssueActivity,
+} from '@nekolog-io/adapters'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -329,6 +337,215 @@ describe.skipIf(!reachable)('the SQL alert rule store against a real Postgres', 
 
     expect(await store.live(0)).toEqual([])
     expect(await store.applyTransitions([])).toBe(0)
+  })
+})
+
+describe.skipIf(!reachable)('the alert channels table', () => {
+  const KEY = 'a'.repeat(64)
+
+  async function addChannel(overrides: Record<string, unknown> = {}): Promise<string> {
+    const channelId = id('ch_')
+    await sql`insert into alert_channels ${sql({
+      id: channelId,
+      project_id: projectId,
+      name: channelId,
+      kind: 'slack',
+      target: 'https://hooks.slack.com/services/T000/B000/XXXX',
+      ...overrides,
+    })}`
+    return channelId
+  }
+
+  async function clearChannels(): Promise<void> {
+    await sql`delete from alert_channels where project_id = ${projectId}`
+  }
+
+  it('refuses an address that is not https for anything but e-mail', async () => {
+    await clearChannels()
+
+    await expect(addChannel({ target: 'http://hooks.slack.com/x' })).rejects.toThrow(
+      /alert_channels_an_address_is_https_or_an_email/,
+    )
+    await expect(addChannel({ kind: 'discord', target: 'ops@example.com' })).rejects.toThrow(
+      /alert_channels_an_address_is_https_or_an_email/,
+    )
+  })
+
+  it('insists an e-mail address is lowercase, has an at and no space', async () => {
+    await clearChannels()
+
+    await expect(addChannel({ kind: 'email', target: 'OPS@example.com' })).rejects.toThrow(
+      /alert_channels_an_address_is_https_or_an_email/,
+    )
+    await expect(addChannel({ kind: 'email', target: 'ops example.com' })).rejects.toThrow(
+      /alert_channels_an_address_is_https_or_an_email/,
+    )
+    await expect(addChannel({ kind: 'email', target: 'ops@example.com' })).resolves.toMatch(/^ch_/)
+  })
+
+  it('refuses a webhook with no sealed secret, because nothing could sign it', async () => {
+    await clearChannels()
+
+    await expect(
+      addChannel({ kind: 'webhook', target: 'https://ops.example.com/hook' }),
+    ).rejects.toThrow(/alert_channels_a_webhook_carries_a_sealed_secret/)
+  })
+
+  it('refuses a secret that was not sealed, so a plaintext one cannot be stored', async () => {
+    await clearChannels()
+
+    for (const sealed of ['hunter2', 'v1.notHex.alsoNotHex', 'v1.aabb', 'AABB']) {
+      await expect(
+        addChannel({
+          kind: 'webhook',
+          target: 'https://ops.example.com/hook',
+          sealed_secret: sealed,
+        }),
+      ).rejects.toThrow(/alert_channels_a_secret_is_never_stored_in_the_clear/)
+    }
+  })
+
+  it('accepts a secret the sealer produced', async () => {
+    await clearChannels()
+    const channelId = id('ch_')
+    const sealed = await sealSecret(newChannelSecret(), KEY, channelId)
+
+    await sql`insert into alert_channels ${sql({
+      id: channelId,
+      project_id: projectId,
+      name: channelId,
+      kind: 'webhook',
+      target: 'https://ops.example.com/hook',
+      sealed_secret: sealed,
+    })}`
+
+    const [row] = await sql`select sealed_secret from alert_channels where id = ${channelId}`
+    expect(row?.sealed_secret).toBe(sealed)
+  })
+
+  it('refuses a locale nobody writes the alert in', async () => {
+    await clearChannels()
+
+    await expect(addChannel({ locale: 'fr' })).rejects.toThrow(/alert_channels_locale_is_supported/)
+  })
+
+  it('refuses two live channels with the same name in one project', async () => {
+    await clearChannels()
+    await addChannel({ name: 'ops' })
+
+    await expect(addChannel({ name: 'ops' })).rejects.toThrow(/alert_channels_one_name_per_project/)
+  })
+
+  it('reads back only the channels the rule named, and only live ones', async () => {
+    await clearChannels()
+    const wanted = await addChannel()
+    const disabled = await addChannel({ disabled_at: new Date(NOW) })
+    const unrelated = await addChannel()
+    const store = sqlAlertChannelStore(run)
+
+    const found = await store.byIds(projectId, [wanted, disabled])
+
+    expect(found.map((one) => one.id)).toEqual([wanted])
+    expect(found[0]).toMatchObject({ kind: 'slack', locale: 'en' })
+    expect(found.map((one) => one.id)).not.toContain(unrelated)
+  })
+
+  it('reads back nothing for a project the channels do not belong to', async () => {
+    await clearChannels()
+    const channelId = await addChannel()
+    const store = sqlAlertChannelStore(run)
+
+    expect(await store.byIds('prj_somebody_else', [channelId])).toEqual([])
+  })
+
+  it('asks the database for nothing when the rule named no channel', async () => {
+    const store = sqlAlertChannelStore(run)
+
+    expect(await store.byIds(projectId, [])).toEqual([])
+  })
+})
+
+describe.skipIf(!reachable)('the alerts waiting for a notice', () => {
+  it('offers a rule whose state changed, with what it measured', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    const [waiting] = await sqlAlertNoticeStore(run).awaitingNotice(10)
+
+    expect(waiting).toMatchObject({
+      ruleId,
+      state: 'firing',
+      measured: 99,
+      threshold: 50,
+      window: '5m',
+      environmentName: 'production',
+      type: 'threshold',
+    })
+    expect(waiting?.changedAt).toBe(NOW)
+  })
+
+  it('offers it once, and again only when the state changes again', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    expect(await notices.awaitingNotice(10)).toHaveLength(1)
+    await notices.markNotified(ruleId, NOW + MINUTE, NOW)
+    expect(await notices.awaitingNotice(10)).toEqual([])
+
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 1, at: NOW + 2 * MINUTE }])
+    expect(await notices.awaitingNotice(10)).toHaveLength(1)
+  })
+
+  it('never swallows a notice for a change that happened while it was sending', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    const [taken] = await notices.awaitingNotice(10)
+
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 1, at: NOW + MINUTE }])
+    await notices.markNotified(ruleId, NOW + 2 * MINUTE, taken?.changedAt ?? 0)
+
+    const [still] = await notices.awaitingNotice(10)
+    expect(still?.state).toBe('ok')
+    expect(still?.changedAt).toBe(NOW + MINUTE)
+  })
+
+  it('never offers a rule that never changed state', async () => {
+    await clear()
+    await addRule()
+
+    expect(await sqlAlertNoticeStore(run).awaitingNotice(10)).toEqual([])
+  })
+
+  it('never offers a rule that was disabled since it fired', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    await sql`update alert_rules set disabled_at = now() where id = ${ruleId}`
+
+    expect(await sqlAlertNoticeStore(run).awaitingNotice(10)).toEqual([])
+  })
+
+  it('names the channels the condition carries, so the notifier can find them', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    const [waiting] = await sqlAlertNoticeStore(run).awaitingNotice(10)
+
+    expect(waiting?.channels).toEqual([CHANNEL])
+  })
+
+  it('asks the database for nothing at all when there is no room', async () => {
+    expect(await sqlAlertNoticeStore(run).awaitingNotice(0)).toEqual([])
   })
 })
 

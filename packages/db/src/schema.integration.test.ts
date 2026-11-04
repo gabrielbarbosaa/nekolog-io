@@ -135,6 +135,7 @@ describe.skipIf(!reachable)('the migration this package ships', () => {
     `
 
     expect(rows.map((row) => row.table_name)).toEqual([
+      'alert_channels',
       'alert_rules',
       'api_keys',
       'audit_log',
