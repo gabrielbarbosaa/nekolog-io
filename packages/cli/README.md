@@ -1,0 +1,59 @@
+# @nekolog-io/cli
+
+```bash
+npx @nekolog-io/cli init
+```
+
+Olha o seu `package.json`, descobre o framework, instala o SDK certo e escreve
+as variáveis no `.env`.
+
+| | |
+|---|---|
+| `--key <key>` | a key a escrever, `nekolog_pk_…` ou `nekolog_sk_…` |
+| `--no-install` | escreve o `.env` e **imprime** o comando de instalação, em vez de rodar |
+| `--cwd <path>` | onde está o projeto |
+| `--env <file>` | qual arquivo escrever (padrão `.env`) |
+
+## O que ele escolhe, e por quê
+
+A ordem importa, porque projeto de verdade tem mais de uma dessas:
+
+| Achou | Instala |
+|---|---|
+| `next` | `@nekolog-io/next` |
+| `@nestjs/core` | `@nekolog-io/nestjs` |
+| `fastify` / `hono` / `express` | o pacote do framework mais o `@nekolog-io/node` |
+| `react` | `@nekolog-io/react` |
+| `vite` sem react | `@nekolog-io/browser` |
+| nada disso | `@nekolog-io/node` |
+
+`next` ganha de `react` e `@nestjs/core` ganha de `express` porque nos dois
+casos o de fora é quem manda. Ele sempre diz **por que** escolheu.
+
+O gerenciador vem do lockfile: `pnpm-lock.yaml`, `bun.lock`, `yarn.lock`,
+`package-lock.json`. Sem lockfile, `npm`.
+
+## O que ele nunca faz
+
+**Não sobrescreve variável que já existe.** Se o `.env` já tem `NEKOLOG_KEY`,
+ele passa reto e diz que passou. A sua key de verdade não é trocada por um
+`replace_me` — nem pela key que você acabou de passar no `--key`.
+
+**Não escreve key secreta em variável pública.** Num projeto Next ele pede as
+duas: `NEKOLOG_KEY` para o servidor e `NEXT_PUBLIC_NEKOLOG_KEY` para o
+navegador. Um `--key nekolog_sk_…` preenche só a primeira; a outra fica com o
+marcador. Uma key secreta num `NEXT_PUBLIC_` ia direto para o bundle.
+
+**Não escreve nada se a key não parece uma key.** A validação acontece
+*antes* de qualquer escrita, então um `--key` errado não deixa meio arquivo
+para trás.
+
+**Não roda nada por shell.** O gerenciador é chamado com a lista de
+argumentos, `shell: false`. Tem teste passando um argumento com `&` no meio e
+conferindo que ele chega inteiro do outro lado.
+
+**Não cria `package.json`.** Pasta sem um é pasta errada, e ele diz isso em
+vez de inventar um projeto.
+
+Se a instalação falhar, o `.env` **continua escrito** e a mensagem diz o que
+falta rodar.
