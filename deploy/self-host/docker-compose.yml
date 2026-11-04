@@ -1,0 +1,141 @@
+name: nekolog
+
+x-image: &image
+  build:
+    context: ../..
+    dockerfile: deploy/self-host/Dockerfile
+  image: nekolog/self-host:local
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: nekolog
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_DEFAULT_PASSWORD:?set CLICKHOUSE_DEFAULT_PASSWORD in .env}
+      CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?set CLICKHOUSE_READ_PASSWORD in .env}
+      CLICKHOUSE_INSERT_PASSWORD: ${CLICKHOUSE_INSERT_PASSWORD:?set CLICKHOUSE_INSERT_PASSWORD in .env}
+      CLICKHOUSE_JOBS_PASSWORD: ${CLICKHOUSE_JOBS_PASSWORD:?set CLICKHOUSE_JOBS_PASSWORD in .env}
+      CLICKHOUSE_MIGRATOR_PASSWORD: ${CLICKHOUSE_MIGRATOR_PASSWORD:?set CLICKHOUSE_MIGRATOR_PASSWORD in .env}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/nekolog.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nekolog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: nekolog
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nekolog"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    logging: *logging
+
+  bootstrap:
+    <<: *image
+    restart: "no"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: nekolog
+      CLICKHOUSE_MIGRATOR_USER: nekolog_migrator
+      CLICKHOUSE_MIGRATOR_PASSWORD: ${CLICKHOUSE_MIGRATOR_PASSWORD:?set CLICKHOUSE_MIGRATOR_PASSWORD in .env}
+      DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
+      SEED_FILE: /var/lib/nekolog/state/.nekolog-seed.json
+      KEYS_FILE: /var/lib/nekolog/state/first-run-keys.txt
+      SEED_ENVIRONMENTS: ${SEED_ENVIRONMENTS:-production}
+      SEED_RETENTION_DAYS: ${SEED_RETENTION_DAYS:-30}
+    volumes:
+      - ./bootstrap.sh:/bootstrap.sh:ro
+      - nekolog_state:/var/lib/nekolog/state
+    command: ["sh", "/bootstrap.sh"]
+    logging: *logging
+
+  ingest:
+    <<: *image
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8787"
+      INGEST_HOST: 0.0.0.0
+      INGEST_SEED_FILE: /var/lib/nekolog/state/.nekolog-seed.json
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: nekolog
+      CLICKHOUSE_INSERT_USER: nekolog_ingest
+      CLICKHOUSE_INSERT_PASSWORD: ${CLICKHOUSE_INSERT_PASSWORD:?set CLICKHOUSE_INSERT_PASSWORD in .env}
+      INGEST_EVENTS_PER_MINUTE: ${INGEST_EVENTS_PER_MINUTE:-2000}
+      SPOOL_DIR: /var/lib/nekolog/spool
+      KV_DIR: /var/lib/nekolog/kv
+    volumes:
+      - nekolog_state:/var/lib/nekolog/state:ro
+      - nekolog_spool:/var/lib/nekolog/spool
+      - nekolog_kv:/var/lib/nekolog/kv:ro
+    ports:
+      - "${INGEST_PUBLISH:-8787}:8787"
+    command: ["node", "apps/ingest/src/serve-self-host.ts"]
+    logging: *logging
+
+  jobs:
+    <<: *image
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      JOBS_PORT: "8788"
+      JOBS_HOST: 0.0.0.0
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: nekolog
+      CLICKHOUSE_JOBS_USER: nekolog_jobs
+      CLICKHOUSE_JOBS_PASSWORD: ${CLICKHOUSE_JOBS_PASSWORD:?set CLICKHOUSE_JOBS_PASSWORD in .env}
+      DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
+      NEKOLOG_CONSOLE_URL: ${NEKOLOG_CONSOLE_URL:?set NEKOLOG_CONSOLE_URL in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      DAILY_EVENT_QUOTA: ${DAILY_EVENT_QUOTA:-}
+      OPS_DISCORD_WEBHOOK_URL: ${OPS_DISCORD_WEBHOOK_URL:-}
+      HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+      SPOOL_DIR: /var/lib/nekolog/spool
+      KV_DIR: /var/lib/nekolog/kv
+    volumes:
+      - nekolog_spool:/var/lib/nekolog/spool
+      - nekolog_kv:/var/lib/nekolog/kv
+    ports:
+      - "127.0.0.1:${JOBS_PUBLISH:-8788}:8788"
+    command: ["node", "apps/jobs/src/serve.ts"]
+    logging: *logging
+
+volumes:
+  clickhouse_data:
+  postgres_data:
+  nekolog_state:
+  nekolog_spool:
+  nekolog_kv:

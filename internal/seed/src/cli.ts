@@ -11,6 +11,7 @@ import {
   toDocument,
 } from './document.ts'
 import { buildSeed, DEFAULT_ENVIRONMENTS, DEFAULT_RETENTION_DAYS, mintKey } from './model.ts'
+import { seedStatements } from './postgres.ts'
 import { keyRecordsFor } from './records.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
@@ -21,6 +22,8 @@ const USAGE = `
 pnpm seed init     cria organização, projeto, ambientes e keys
 pnpm seed add-key  gera mais uma key para um ambiente que já existe
 pnpm seed show     mostra o que existe, sem segredo nenhum
+pnpm seed sync-db  escreve a organização, o projeto, os ambientes e os hashes
+                   das keys no Postgres de DATABASE_URL, sem segredo nenhum
 
   --organization <nome>   padrão: NekoLog
   --project <nome>        padrão: nekolog
@@ -159,6 +162,30 @@ async function addKey(values: Record<string, string | boolean | undefined>): Pro
   write('A key antiga continua valendo — revogue quando tiver trocado tudo que a usa.')
 }
 
+async function syncDb(values: Record<string, string | boolean | undefined>): Promise<void> {
+  const document = readDocument(resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE)))
+  const url = process.env.DATABASE_URL
+  if (url === undefined || url === '') {
+    throw new Error('Preciso de DATABASE_URL para escrever no Postgres.')
+  }
+
+  const { default: postgres } = await import('postgres')
+  const sql = postgres(url, { max: 1, onnotice: () => {} })
+  try {
+    for (const statement of seedStatements(document)) {
+      await sql.unsafe(statement.text, statement.params as never[])
+    }
+  } finally {
+    await sql.end({ timeout: 5 })
+  }
+
+  const keys = document.environments.reduce((total, entry) => total + entry.keys.length, 0)
+  write(
+    `${document.environments.length} ambientes e ${keys} hashes de key escritos no Postgres. ` +
+      'Nenhuma key em claro saiu daqui.',
+  )
+}
+
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -192,6 +219,10 @@ async function main(): Promise<void> {
   }
   if (command === 'show') {
     summarise(readDocument(resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE))))
+    return
+  }
+  if (command === 'sync-db') {
+    await syncDb(values)
     return
   }
 

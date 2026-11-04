@@ -1,6 +1,7 @@
 import { buildSeed, toDocument } from '@internal/seed'
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_LOCAL_HOST,
   DEFAULT_LOCAL_PORT,
   type LocalIngestEnv,
   localIngestApp,
@@ -35,6 +36,7 @@ describe('the configuration read from the environment', () => {
   it('carries the ClickHouse credentials and the defaults', () => {
     expect(localIngestConfigFrom(ENV)).toEqual({
       port: DEFAULT_LOCAL_PORT,
+      host: DEFAULT_LOCAL_HOST,
       seedFile: '.nekolog-seed.json',
       clickhouse: {
         url: 'http://localhost:8123',
@@ -61,6 +63,12 @@ describe('the configuration read from the environment', () => {
     )
   })
 
+  it('stays on the loopback unless somebody asks for another interface', () => {
+    expect(localIngestConfigFrom(ENV).host).toBe('127.0.0.1')
+    expect(localIngestConfigFrom({ ...ENV, INGEST_HOST: '' }).host).toBe('127.0.0.1')
+    expect(localIngestConfigFrom({ ...ENV, INGEST_HOST: '0.0.0.0' }).host).toBe('0.0.0.0')
+  })
+
   it('refuses a rate limit that is not a positive whole number', () => {
     expect(() => localIngestConfigFrom({ ...ENV, INGEST_EVENTS_PER_MINUTE: '0' })).toThrow(
       'INGEST_EVENTS_PER_MINUTE',
@@ -71,6 +79,7 @@ describe('the configuration read from the environment', () => {
 describe('the app the local ingestion serves', () => {
   const config = {
     port: 0,
+    host: '127.0.0.1',
     seedFile: 'unused',
     clickhouse: { url: 'http://127.0.0.1:1', database: 'x', user: 'u', password: 'p' },
     eventsPerMinute: 10,

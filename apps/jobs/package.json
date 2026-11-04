@@ -6,17 +6,22 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
+    "serve": "node src/serve.ts",
     "deploy:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@internal/self-host": "workspace:*",
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/clickhouse": "workspace:*",
     "@internal/spool": "workspace:*",
-    "hono": "^4.10.6"
+    "hono": "^4.10.6",
+    "postgres": "^4.0.0"
   },
   "devDependencies": {
     "@apps/ingest": "workspace:*",
     "@internal/deploy": "workspace:*",
+    "@internal/seed": "workspace:*",
     "@types/node": "^24.0.0",
     "vitest": "^5.0.5",
     "wrangler": "^4.156.0"

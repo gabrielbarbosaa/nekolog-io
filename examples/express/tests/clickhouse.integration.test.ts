@@ -138,7 +138,13 @@ describe.skipIf(!reachable)('the express example reaching ClickHouse', () => {
     seed = await buildSeed({ organization: 'NekoLog', project: 'example', retentionDays: 3 })
 
     ingest = await startLocalIngest({
-      config: { port: 0, seedFile: 'unused', clickhouse: config, eventsPerMinute: 10_000 },
+      config: {
+        port: 0,
+        host: '127.0.0.1',
+        seedFile: 'unused',
+        clickhouse: config,
+        eventsPerMinute: 10_000,
+      },
       document: toDocument(seed),
       onError: (error) => {
         process.stderr.write(`[ingest] ${String(error)}\n`)

@@ -1,28 +1,21 @@
-import {
-  type KvNamespace,
-  kvQuotaStore,
-  type R2BucketLike,
-  r2BlobStore,
-} from '@nekolog-io/adapters'
-import { queryRows } from '@nekolog-io/clickhouse/client'
-import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
-import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
+import { type KvNamespace, type R2BucketLike, r2BlobStore } from '@nekolog-io/adapters'
 import type { Hono } from 'hono'
-import {
-  capacityAlert,
-  type OperatorAlert,
-  operatorNotifier,
-  quotaAlert,
-  spoolAlert,
-} from './alerts/operator.ts'
+import { type OperatorAlert, operatorNotifier } from './alerts/operator.ts'
 import { createJobsApp } from './app.ts'
 import { sendHeartbeat } from './heartbeat.ts'
 import { type RunSummary, runDueTasks } from './run.ts'
 import type { Task } from './task.ts'
-import type { CapacityAlert, DiskReading } from './tasks/capacity-watch.ts'
-import type { QuotaBlockEvent } from './tasks/quota-block.ts'
-import type { SpoolResendEvent } from './tasks/spool-resend.ts'
 import { buildTasks } from './tasks.ts'
+import { assertNoFailures, coreTaskDeps, write, writeSummary } from './wiring.ts'
+
+export {
+  assertNoFailures,
+  diskReaderFor,
+  writeCapacityAlert,
+  writeQuotaEvent,
+  writeSpoolEvent,
+  writeSummary,
+} from './wiring.ts'
 
 export type JobsEnv = {
   KEYS: KvNamespace
@@ -82,105 +75,29 @@ export function assertEnv(env: Partial<JobsEnv>): JobsEnv {
   return env as JobsEnv
 }
 
-function write(level: 'log' | 'warn', ...args: unknown[]): void {
-  const target = (
-    globalThis as unknown as {
-      console?: Record<string, ((...args: unknown[]) => void) | undefined>
-    }
-  ).console
-  try {
-    target?.[level]?.(...args)
-  } catch {
-    return
-  }
-}
+export function buildJobTasks(env: JobsEnv): readonly Task[] {
+  const dailyQuota = dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
 
-export function writeSummary(summary: RunSummary): void {
-  write('log', JSON.stringify({ app: 'nekolog/jobs', ...summary }))
-}
-
-export function writeSpoolEvent(event: SpoolResendEvent): void {
-  if (event.kind === 'resent') {
-    return
-  }
-  write('warn', '[nekolog/jobs] spool', JSON.stringify({ kind: event.kind, key: event.key }))
-}
-
-export function writeQuotaEvent(event: QuotaBlockEvent): void {
-  write(
-    'warn',
-    '[nekolog/jobs] quota',
-    JSON.stringify({
-      kind: event.kind,
-      environmentId: event.environmentId,
-      events: event.events,
-      quota: event.quota,
+  return buildTasks(
+    coreTaskDeps({
+      spool: r2BlobStore(env.SPOOL),
+      kv: env.KEYS,
+      clickHouse: {
+        url: env.CLICKHOUSE_URL,
+        database: env.CLICKHOUSE_DB,
+        user: env.CLICKHOUSE_JOBS_USER,
+        password: env.CLICKHOUSE_JOBS_PASSWORD,
+        ...(env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET
+          ? {
+              accessClientId: env.CF_ACCESS_CLIENT_ID,
+              accessClientSecret: env.CF_ACCESS_CLIENT_SECRET,
+            }
+          : {}),
+      },
+      ...(dailyQuota === undefined ? {} : { dailyQuota }),
+      tellOperator: operatorNotifierFor(env),
     }),
   )
-}
-
-export function writeCapacityAlert(alert: CapacityAlert): void {
-  write('warn', '[nekolog/jobs] capacity', JSON.stringify(alert))
-}
-
-export function diskReaderFor(config: Parameters<typeof queryRows>[0]) {
-  return async (signal: AbortSignal): Promise<DiskReading[]> => {
-    const rows = await queryRows<{ name: string; free_space: string; total_space: string }>(
-      config,
-      'select name, free_space, total_space from system.disks',
-      { fetch: (input, init) => fetch(input, { ...init, signal }) },
-    )
-    return rows.map((row) => ({
-      name: row.name,
-      freeBytes: Number(row.free_space),
-      totalBytes: Number(row.total_space),
-    }))
-  }
-}
-
-export function buildJobTasks(env: JobsEnv): readonly Task[] {
-  const clickHouse = {
-    url: env.CLICKHOUSE_URL,
-    database: env.CLICKHOUSE_DB,
-    user: env.CLICKHOUSE_JOBS_USER,
-    password: env.CLICKHOUSE_JOBS_PASSWORD,
-    ...(env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET
-      ? {
-          accessClientId: env.CF_ACCESS_CLIENT_ID,
-          accessClientSecret: env.CF_ACCESS_CLIENT_SECRET,
-        }
-      : {}),
-  }
-  const dailyQuota = dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
-  const tellOperator = operatorNotifierFor(env)
-
-  return buildTasks({
-    spool: r2BlobStore(env.SPOOL),
-    logStore: clickHouseLogStore(clickHouse),
-    usage: clickHouseUsageStore(clickHouse),
-    quotas: kvQuotaStore(env.KEYS),
-    ...(dailyQuota === undefined ? {} : { dailyQuota }),
-    onSpoolEvent: (event) => {
-      writeSpoolEvent(event)
-      raise(tellOperator, spoolAlert(event))
-    },
-    onQuotaEvent: (event) => {
-      writeQuotaEvent(event)
-      raise(tellOperator, quotaAlert(event))
-    },
-    readDisks: diskReaderFor(clickHouse),
-    onCapacityAlert: (alert) => {
-      writeCapacityAlert(alert)
-      raise(tellOperator, capacityAlert(alert))
-    },
-  })
-}
-
-function raise(tell: (alert: OperatorAlert) => Promise<void>, alert: OperatorAlert | null): void {
-  if (alert === null) {
-    return
-  }
-  void tell(alert)
 }
 
 export function operatorNotifierFor(env: JobsEnv): (alert: OperatorAlert) => Promise<void> {
@@ -193,17 +110,6 @@ export function operatorNotifierFor(env: JobsEnv): (alert: OperatorAlert) => Pro
     onUndelivered: (alert, why) =>
       write('warn', '[nekolog/jobs] operator', JSON.stringify({ kind: alert.kind, why })),
   })
-}
-
-export function assertNoFailures(summary: RunSummary): RunSummary {
-  if (summary.failed === 0) {
-    return summary
-  }
-  const broken = summary.ran
-    .filter((outcome) => outcome.status !== 'ok')
-    .map((outcome) => `${outcome.name} (${outcome.status})`)
-    .join(', ')
-  throw new Error(`Scheduled tasks did not finish: ${broken}`)
 }
 
 export type RunScheduledOptions = {
