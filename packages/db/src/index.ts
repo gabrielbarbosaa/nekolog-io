@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -55,6 +56,10 @@ export const ALERT_TYPES = [
   'absence',
 ] as const
 export const ALERT_STATES = ['ok', 'firing'] as const
+export const ALERT_CHANNEL_KINDS = ['email', 'slack', 'discord', 'webhook'] as const
+
+export const MAX_ALERT_CHANNEL_NAME_CHARS = 120
+export const MAX_ALERT_CHANNELS_PER_PROJECT = 20
 
 export const MAX_ALERT_RULES_PER_PROJECT = 20
 export const MAX_ALERT_RULE_NAME_CHARS = 120
@@ -72,6 +77,7 @@ export const exportCadence = pgEnum('export_cadence', EXPORT_CADENCES)
 export const issueStatus = pgEnum('issue_status', ISSUE_STATUSES)
 export const alertType = pgEnum('alert_type', ALERT_TYPES)
 export const alertState = pgEnum('alert_state', ALERT_STATES)
+export const alertChannelKind = pgEnum('alert_channel_kind', ALERT_CHANNEL_KINDS)
 
 export const users = pgTable(
   'users',
@@ -541,6 +547,7 @@ export const alertRules = pgTable(
     state: alertState('state').notNull().default('ok'),
     stateChangedAt: timestamp('state_changed_at', { withTimezone: true }),
     lastNotifiedAt: timestamp('last_notified_at', { withTimezone: true }),
+    lastMeasured: doublePrecision('last_measured'),
     createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -551,6 +558,9 @@ export const alertRules = pgTable(
       foreignColumns: [environments.id, environments.projectId],
       name: 'alert_rules_environment_belongs_to_the_project',
     }).onDelete('cascade'),
+    index('alert_rules_waiting_for_a_notice')
+      .on(table.stateChangedAt)
+      .where(sql`disabled_at is null and state_changed_at is not null`),
     index('alert_rules_to_evaluate')
       .on(table.type, table.environmentId)
       .where(sql`disabled_at is null`),
@@ -577,6 +587,52 @@ export const alertRules = pgTable(
     check(
       'alert_rules_firing_means_there_is_a_moment',
       sql`state <> 'firing' or state_changed_at is not null`,
+    ),
+  ],
+)
+
+export const alertChannels = pgTable(
+  'alert_channels',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    kind: alertChannelKind('kind').notNull(),
+    target: text('target').notNull(),
+    sealedSecret: text('sealed_secret'),
+    locale: text('locale').notNull().default('en'),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('alert_channels_by_project').on(table.projectId).where(sql`disabled_at is null`),
+    uniqueIndex('alert_channels_one_name_per_project')
+      .on(table.projectId, table.name)
+      .where(sql`disabled_at is null`),
+    check('alert_channels_id_shape', sql`id ~ '^ch_${sql.raw(ULID_PATTERN)}$'`),
+    check('alert_channels_name_is_not_blank', sql`length(btrim(name)) > 0`),
+    check('alert_channels_locale_is_supported', sql`locale in ('en', 'pt-BR', 'es')`),
+    check(
+      'alert_channels_name_is_bounded',
+      sql`length(name) <= ${sql.raw(String(MAX_ALERT_CHANNEL_NAME_CHARS))}`,
+    ),
+    check(
+      'alert_channels_an_address_is_https_or_an_email',
+      sql`case kind
+        when 'email' then target = lower(target) and target like '%@%' and target not like '% %'
+        else target like 'https://%'
+      end`,
+    ),
+    check(
+      'alert_channels_a_webhook_carries_a_sealed_secret',
+      sql`kind <> 'webhook' or sealed_secret is not null`,
+    ),
+    check(
+      'alert_channels_a_secret_is_never_stored_in_the_clear',
+      sql`sealed_secret is null or sealed_secret ~ '^v[0-9]+\\.[0-9a-f]+\\.[0-9a-f]+$'`,
     ),
   ],
 )

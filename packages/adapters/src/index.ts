@@ -1,4 +1,17 @@
 export type {
+  AlertChannel,
+  AlertChannelKind,
+  AlertChannelStore,
+  AlertLocale,
+  AlertNoticeStore,
+  PendingAlert,
+} from './alert-channel.ts'
+export {
+  ALERT_CHANNEL_KINDS,
+  ALERT_LOCALES,
+  MAX_ALERT_CHANNELS_PER_PROJECT,
+} from './alert-channel.ts'
+export type {
   AlertCondition,
   AlertOperator,
   AlertRule,
@@ -27,7 +40,35 @@ export {
   WINDOW_MINUTES,
   windowMinutes,
 } from './alert-rule.ts'
+export {
+  fromHex,
+  newChannelSecret,
+  openSecret,
+  SECRET_BOX_KEY_BYTES,
+  SECRET_BOX_NONCE_BYTES,
+  SECRET_BOX_VERSION,
+  SIGNATURE_HEADER,
+  sealSecret,
+  secretKeyBytes,
+  signPayload,
+  toHex,
+} from './alerts/secret-box.ts'
+export {
+  sqlAlertChannelStore,
+  sqlAlertNoticeStore,
+} from './alerts/sql-alert-channel-store.ts'
 export { sqlAlertRuleStore, sqlIssueActivity } from './alerts/sql-alert-rule-store.ts'
+export type { WebhookUrl } from './alerts/webhook-target.ts'
+export {
+  ALLOWED_WEBHOOK_PORTS,
+  assertWebhookTarget,
+  isPrivateIpv4,
+  isPrivateIpv6,
+  isWebhookTargetAllowed,
+  looksLikeAnIpAddress,
+  MAX_WEBHOOK_URL_CHARS,
+  WebhookTargetError,
+} from './alerts/webhook-target.ts'
 export type { BlobStore } from './blob-store.ts'
 export type { MemoryBlobStore } from './blobs/memory-blob-store.ts'
 export { memoryBlobStore } from './blobs/memory-blob-store.ts'

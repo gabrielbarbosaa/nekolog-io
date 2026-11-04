@@ -160,7 +160,7 @@ No ambiente de desenvolvimento, o compose também sobe o **Mailpit**, que captur
 - **Usuários e acesso:** `users`, `organizations`, `memberships` (owner/admin/member/viewer), `invites`
 - **Projetos:** `projects`, `environments`, `api_keys`
 - **Investigação:** `saved_views`, `dashboards`, `issues` (status, responsável, primeira e última ocorrência), `releases`
-- **Alertas:** `alert_rules`, `alert_channels`, `alert_events`
+- **Alertas:** `alert_rules`, `alert_channels`, `alert_events`. O segredo de um canal nunca fica em claro: a coluna `sealed_secret` guarda `v1.<nonce>.<cifra>` em hexadecimal (AES-256-GCM com a `ENCRYPTION_KEY`, e o **id do canal como dado autenticado**, então um segredo copiado para outra linha não abre), e uma *check constraint* recusa qualquer coisa fora desse formato. O endereço de um webhook passa pela proteção contra SSRF **na escrita e de novo no envio**, porque a linha pode ser mais velha que a proteção (ameaça E7).
 - **Auditoria:** `audit_log`
 
 A tabela `users` tem `id`, `name`, `email` (único, em minúsculas), `password_hash`, `email_verified_at`, `password_changed_at`, `locale`, `timezone`, `is_operator`, `suspended_at` e `created_at`. Sessões e códigos não ficam no Postgres.
