@@ -15,7 +15,7 @@ import {
 import type { SqlRunner } from '../issues/sql-issue-store.ts'
 
 const BY_IDS = `
-select id, project_id, name, kind, target, sealed_secret, locale
+select id, project_id, name, kind, target, sealed_secret, previous_sealed_secret, locale
 from alert_channels
 where project_id = $1 and disabled_at is null and id = any($2::text[])
 order by name
@@ -111,6 +111,10 @@ export function sqlAlertChannelStore(run: SqlRunner): AlertChannelStore {
         kind: textFrom(row.kind, 'kind') as AlertChannelKind,
         target: textFrom(row.target, 'target'),
         sealedSecret: row.sealed_secret === null ? null : textFrom(row.sealed_secret, 'secret'),
+        previousSealedSecret:
+          row.previous_sealed_secret === null || row.previous_sealed_secret === undefined
+            ? null
+            : textFrom(row.previous_sealed_secret, 'previous secret'),
         locale: textFrom(row.locale, 'locale'),
       }))
     },

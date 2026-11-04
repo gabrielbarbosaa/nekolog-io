@@ -14,6 +14,7 @@ export interface AlertChannel {
   kind: AlertChannelKind
   target: string
   sealedSecret: string | null
+  previousSealedSecret: string | null
   locale: string
 }
 

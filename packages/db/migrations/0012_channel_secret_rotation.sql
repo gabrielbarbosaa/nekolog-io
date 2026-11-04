@@ -1,0 +1,5 @@
+ALTER TABLE "alert_channels" ADD COLUMN "previous_sealed_secret" text;--> statement-breakpoint
+ALTER TABLE "alert_channels" ADD COLUMN "secret_rotated_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "alert_channels" ADD CONSTRAINT "alert_channels_a_previous_secret_is_never_stored_in_the_clear" CHECK (previous_sealed_secret is null or previous_sealed_secret ~ '^v[0-9]+\.[0-9a-f]+\.[0-9a-f]+$');--> statement-breakpoint
+ALTER TABLE "alert_channels" ADD CONSTRAINT "alert_channels_a_previous_secret_says_when_it_was_replaced" CHECK (previous_sealed_secret is null or secret_rotated_at is not null);--> statement-breakpoint
+ALTER TABLE "alert_channels" ADD CONSTRAINT "alert_channels_a_previous_secret_is_not_the_current_one" CHECK (previous_sealed_secret is null or previous_sealed_secret <> sealed_secret);

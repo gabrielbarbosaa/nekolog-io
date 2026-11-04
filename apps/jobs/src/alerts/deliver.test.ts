@@ -47,6 +47,7 @@ function channel(overrides: Partial<AlertChannel> = {}): AlertChannel {
     kind: 'slack',
     target: 'https://hooks.slack.com/services/T000/B000/XXXX',
     sealedSecret: null,
+    previousSealedSecret: null,
     locale: 'en',
     ...overrides,
   }
@@ -130,6 +131,50 @@ describe('what each kind of channel receives', () => {
     const signature = one.sent[0]?.init.headers[SIGNATURE_HEADER.toLowerCase()]
     expect(signature).toBe(await signPayload(one.sent[0]?.init.body ?? '', secret))
     expect(signature).toMatch(/^sha256=[0-9a-f]{64}$/)
+  })
+
+  it('sends both signatures while a rotation overlaps', async () => {
+    const current = newChannelSecret()
+    const previous = newChannelSecret()
+    const one = harness()
+
+    await deliver(
+      alert(),
+      channel({
+        kind: 'webhook',
+        target: 'https://ops.example.com/hook',
+        sealedSecret: await sealSecret(current, KEY, CHANNEL),
+        previousSealedSecret: await sealSecret(previous, KEY, CHANNEL),
+      }),
+      one.options,
+    )
+
+    const header = one.sent[0]?.init.headers[SIGNATURE_HEADER.toLowerCase()] ?? ''
+    const body = one.sent[0]?.init.body ?? ''
+
+    expect(header.split(',')).toHaveLength(2)
+    expect(header).toContain(await signPayload(body, current))
+    expect(header).toContain(await signPayload(body, previous))
+  })
+
+  it('sends one signature once the rotation is finished', async () => {
+    const current = newChannelSecret()
+    const one = harness()
+
+    await deliver(
+      alert(),
+      channel({
+        kind: 'webhook',
+        target: 'https://ops.example.com/hook',
+        sealedSecret: await sealSecret(current, KEY, CHANNEL),
+        previousSealedSecret: null,
+      }),
+      one.options,
+    )
+
+    expect(
+      (one.sent[0]?.init.headers[SIGNATURE_HEADER.toLowerCase()] ?? '').split(','),
+    ).toHaveLength(1)
   })
 
   it('never signs with the key that opens the box, only with what was inside', async () => {

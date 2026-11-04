@@ -45,8 +45,11 @@ export {
   WINDOW_MINUTES,
   windowMinutes,
 } from './alert-rule.ts'
+export type { ResealOptions, ResealReport } from './alerts/reseal.ts'
+export { RESEAL_BATCH, resealChannelSecrets } from './alerts/reseal.ts'
 export {
   fromHex,
+  MAX_SIGNATURES,
   newChannelSecret,
   openSecret,
   SECRET_BOX_KEY_BYTES,
@@ -55,6 +58,7 @@ export {
   SIGNATURE_HEADER,
   sealSecret,
   secretKeyBytes,
+  signatureHeader,
   signPayload,
   toHex,
 } from './alerts/secret-box.ts'

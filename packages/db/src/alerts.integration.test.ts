@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   newChannelSecret,
+  openSecret,
+  resealChannelSecrets,
   type SqlRunner,
   sealSecret,
   sqlAlertChannelStore,
@@ -422,6 +424,84 @@ describe.skipIf(!reachable)('the alert channels table', () => {
 
     const [row] = await sql`select sealed_secret from alert_channels where id = ${channelId}`
     expect(row?.sealed_secret).toBe(sealed)
+  })
+
+  it('refuses a previous secret that was not sealed, or that has no moment', async () => {
+    await clearChannels()
+    const channelId = id('ch_')
+    const sealed = await sealSecret(newChannelSecret(), KEY, channelId)
+
+    await expect(
+      addChannel({ previous_sealed_secret: 'hunter2', secret_rotated_at: new Date(NOW) }),
+    ).rejects.toThrow(/alert_channels_a_previous_secret_is_never_stored_in_the_clear/)
+
+    await expect(addChannel({ previous_sealed_secret: sealed })).rejects.toThrow(
+      /alert_channels_a_previous_secret_says_when_it_was_replaced/,
+    )
+  })
+
+  it('refuses a previous secret that is the current one, which would rotate nothing', async () => {
+    await clearChannels()
+    const channelId = id('ch_')
+    const sealed = await sealSecret(newChannelSecret(), KEY, channelId)
+
+    await expect(
+      addChannel({
+        kind: 'webhook',
+        target: 'https://ops.example.com/hook',
+        sealed_secret: sealed,
+        previous_sealed_secret: sealed,
+        secret_rotated_at: new Date(NOW),
+      }),
+    ).rejects.toThrow(/alert_channels_a_previous_secret_is_not_the_current_one/)
+  })
+
+  it('reads a channel mid-rotation back with both secrets', async () => {
+    await clearChannels()
+    const channelId = id('ch_')
+    const current = await sealSecret(newChannelSecret(), KEY, channelId)
+    const previous = await sealSecret(newChannelSecret(), KEY, channelId)
+
+    await sql`insert into alert_channels ${sql({
+      id: channelId,
+      project_id: projectId,
+      name: channelId,
+      kind: 'webhook',
+      target: 'https://ops.example.com/hook',
+      sealed_secret: current,
+      previous_sealed_secret: previous,
+      secret_rotated_at: new Date(NOW),
+    })}`
+
+    const [found] = await sqlAlertChannelStore(run).byIds(projectId, [channelId])
+
+    expect(found?.sealedSecret).toBe(current)
+    expect(found?.previousSealedSecret).toBe(previous)
+  })
+
+  it('moves every sealed secret onto a new key, and can be run twice', async () => {
+    await clearChannels()
+    const channelId = id('ch_')
+    const secret = newChannelSecret()
+
+    await sql`insert into alert_channels ${sql({
+      id: channelId,
+      project_id: projectId,
+      name: channelId,
+      kind: 'webhook',
+      target: 'https://ops.example.com/hook',
+      sealed_secret: await sealSecret(secret, KEY, channelId),
+    })}`
+
+    const newKey = 'c'.repeat(64)
+    const first = await resealChannelSecrets(run, KEY, newKey)
+    const second = await resealChannelSecrets(run, KEY, newKey)
+
+    const [row] = await sql`select sealed_secret from alert_channels where id = ${channelId}`
+
+    expect(first).toMatchObject({ resealed: 1, failed: [] })
+    expect(second).toMatchObject({ resealed: 0, alreadyNew: 1 })
+    expect(await openSecret(row?.sealed_secret as string, newKey, channelId)).toBe(secret)
   })
 
   it('refuses a locale nobody writes the alert in', async () => {

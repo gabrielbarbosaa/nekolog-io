@@ -64,17 +64,47 @@ tokens de canal guardados no Postgres.
 ⚠️ **Trocar a chave sem recriptografar torna esses dados ilegíveis
 permanentemente.** Não existe recuperação.
 
-Procedimento (ainda não implementado — precisa de um script dedicado):
+Procedimento:
 
 1. Faça backup do Postgres **antes** (veja
    [restauração de backup](restauracao-de-backup.md)).
-2. Com a chave antiga e a nova disponíveis, rode o script que lê cada valor
-   cifrado, decifra com a antiga e regrava com a nova.
-3. Só depois remova a chave antiga.
+2. Com as duas chaves em mãos, rode `resealChannelSecrets(run, antiga, nova)`
+   **primeiro com `dryRun: true`**. Ele abre cada segredo com a chave antiga e
+   não grava nada: se o relatório vier com `failed` vazio, a chave antiga
+   realmente abre tudo. Se vier com algo em `failed`, **pare** — ainda há um
+   segredo que a chave antiga não abre, e trocar agora o perde.
+3. Rode de novo sem o `dryRun`. Cada linha é regravada com a chave nova, e a
+   escrita só vale se a linha ainda estiver como foi lida — duas execuções ao
+   mesmo tempo não se atropelam.
+4. **Rodar duas vezes não faz mal.** Um segredo já na chave nova é reconhecido
+   e deixado quieto, contado em `alreadyNew`. Isso é o que permite retomar uma
+   execução interrompida no meio.
+5. Só depois remova a chave antiga.
 
-> **Pendência real:** esse script não existe. Precisa ser escrito antes do M5,
-> quando canais de alerta passarem a guardar segredo. Rotacionar essa chave
-> hoje, sem ele, destrói dados.
+O segredo em rotação (`previous_sealed_secret`) é movido junto, então uma
+rotação de chave do banco no meio de uma rotação de segredo de webhook não
+quebra nenhuma das duas.
+
+> **Resolvido na etapa 5.10.** Até então este procedimento não existia, e
+> trocar a `ENCRYPTION_KEY` destruía os dados cifrados.
+
+## 3b. Segredo que assina um webhook de alerta
+
+Cada canal de webhook tem o seu, de 32 bytes, gerado pelo servidor. Trocar um
+sem avisar quem recebe quebra a verificação do outro lado, então a troca tem
+uma janela:
+
+1. Gere um segredo novo e guarde o atual em `previous_sealed_secret`, com
+   `secret_rotated_at` marcado. O banco recusa um `previous` sem esse momento,
+   e recusa um `previous` igual ao atual.
+2. A partir daí o `X-NekoLog-Signature` sai com **as duas** assinaturas,
+   separadas por vírgula, a nova primeiro. Quem recebe continua funcionando com
+   qualquer uma das duas — é o mesmo desenho que o Stripe e o GitHub usam.
+3. Avise quem recebe para passar a conferir a nova.
+4. Limpe o `previous_sealed_secret`. A assinatura volta a ser uma só.
+
+Nunca há três: o código recusa mandar mais de duas assinaturas, porque uma
+janela que acumula é uma janela que ninguém fecha.
 
 ## 4. Senhas do ClickHouse
 

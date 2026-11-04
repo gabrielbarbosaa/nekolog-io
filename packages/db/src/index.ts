@@ -623,6 +623,8 @@ export const alertChannels = pgTable(
     kind: alertChannelKind('kind').notNull(),
     target: text('target').notNull(),
     sealedSecret: text('sealed_secret'),
+    previousSealedSecret: text('previous_sealed_secret'),
+    secretRotatedAt: timestamp('secret_rotated_at', { withTimezone: true }),
     locale: text('locale').notNull().default('en'),
     createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
@@ -654,6 +656,18 @@ export const alertChannels = pgTable(
     check(
       'alert_channels_a_secret_is_never_stored_in_the_clear',
       sql`sealed_secret is null or sealed_secret ~ '^v[0-9]+\\.[0-9a-f]+\\.[0-9a-f]+$'`,
+    ),
+    check(
+      'alert_channels_a_previous_secret_is_never_stored_in_the_clear',
+      sql`previous_sealed_secret is null or previous_sealed_secret ~ '^v[0-9]+\\.[0-9a-f]+\\.[0-9a-f]+$'`,
+    ),
+    check(
+      'alert_channels_a_previous_secret_says_when_it_was_replaced',
+      sql`previous_sealed_secret is null or secret_rotated_at is not null`,
+    ),
+    check(
+      'alert_channels_a_previous_secret_is_not_the_current_one',
+      sql`previous_sealed_secret is null or previous_sealed_secret <> sealed_secret`,
     ),
   ],
 )
