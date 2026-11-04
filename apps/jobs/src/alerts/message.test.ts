@@ -27,6 +27,8 @@ function alert(overrides: Partial<PendingAlert> = {}): PendingAlert {
     type: 'threshold',
     channels: ['ch_01JBQ8R4T7V2WXYZ0123456789'],
     changedAt: Date.UTC(2026, 10, 4, 12, 0, 0),
+    cooldownMinutes: 30,
+    lastFiringNoticeAt: null,
     ...overrides,
   }
 }

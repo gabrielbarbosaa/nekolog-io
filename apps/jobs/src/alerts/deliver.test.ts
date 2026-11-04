@@ -33,6 +33,8 @@ function alert(overrides: Partial<PendingAlert> = {}): PendingAlert {
     type: 'threshold',
     channels: [CHANNEL],
     changedAt: AT,
+    cooldownMinutes: 30,
+    lastFiringNoticeAt: null,
     ...overrides,
   }
 }

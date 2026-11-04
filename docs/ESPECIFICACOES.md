@@ -288,6 +288,8 @@ Cada regra é guardada em `alert_rules.condition` (JSON) e avaliada pelos jobs a
 
 - **Janelas:** `1m`, `5m`, `15m` e `1h`.
 - **Estados:** `ok` → `firing` → `resolved`. Quando o alerta se resolve, a pessoa também é avisada. O `cooldown` evita repetir o aviso.
+
+> **Correção (04/11/2026, etapas 5.1 e 5.3):** a regra guarda **dois** estados, `ok` e `firing`, não três. "Resolvido" é a volta para `ok`, e é ela que manda o aviso de que acabou — um terceiro valor no enum seria um estado em que a regra nunca fica parada. Cada mudança vira uma linha em `alert_events`, gravada **no mesmo comando** que move a regra, então uma execução que morre entre as duas coisas não existe. O `cooldown` conta a partir do **último aviso de disparo que realmente saiu** (`alert_events` com `state = 'firing'` e `notified_at` preenchido), e vale **só para o disparo**: o aviso de que o alerta se resolveu nunca é segurado, senão a pessoa fica achando que ainda está quebrado. Um aviso segurado também vira história, com `suppressed = 'cooldown'`, para a tela poder dizer por que ninguém foi avisado.
 - **Conteúdo do aviso:** nome da regra, ambiente, valor medido e limite, e um link para o Explorer já com a busca e o período, no idioma de quem recebe.
 - **Webhooks** levam o header `X-NekoLog-Signature` (HMAC-SHA256 do corpo com um segredo por canal), para quem recebe confirmar que veio do NekoLog.
 - **Limite do Worker gratuito:** cada execução pode fazer no máximo 50 subrequests. Por isso os jobs agrupam todas as regras do mesmo tipo e ambiente numa única query ao ClickHouse e, se houver muitas regras, processam em lotes que se revezam a cada minuto.

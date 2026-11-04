@@ -34,6 +34,7 @@ export const ID_PREFIXES = {
   issue: 'iss_',
   alertRule: 'alr_',
   alertChannel: 'ch_',
+  alertEvent: 'ale_',
 } as const
 
 export const ULID_CHARS = 26
@@ -57,6 +58,9 @@ export const ALERT_TYPES = [
 ] as const
 export const ALERT_STATES = ['ok', 'firing'] as const
 export const ALERT_CHANNEL_KINDS = ['email', 'slack', 'discord', 'webhook'] as const
+export const ALERT_SUPPRESSIONS = ['cooldown', 'no_channel'] as const
+
+export const ALERT_HISTORY_DAYS = 90
 
 export const MAX_ALERT_CHANNEL_NAME_CHARS = 120
 export const MAX_ALERT_CHANNELS_PER_PROJECT = 20
@@ -78,6 +82,7 @@ export const issueStatus = pgEnum('issue_status', ISSUE_STATUSES)
 export const alertType = pgEnum('alert_type', ALERT_TYPES)
 export const alertState = pgEnum('alert_state', ALERT_STATES)
 export const alertChannelKind = pgEnum('alert_channel_kind', ALERT_CHANNEL_KINDS)
+export const alertSuppression = pgEnum('alert_suppression', ALERT_SUPPRESSIONS)
 
 export const users = pgTable(
   'users',
@@ -633,6 +638,47 @@ export const alertChannels = pgTable(
     check(
       'alert_channels_a_secret_is_never_stored_in_the_clear',
       sql`sealed_secret is null or sealed_secret ~ '^v[0-9]+\\.[0-9a-f]+\\.[0-9a-f]+$'`,
+    ),
+  ],
+)
+
+export const alertEvents = pgTable(
+  'alert_events',
+  {
+    id: text('id').primaryKey(),
+    ruleId: text('rule_id')
+      .notNull()
+      .references(() => alertRules.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    environmentId: text('environment_id').notNull(),
+    state: alertState('state').notNull(),
+    measured: doublePrecision('measured').notNull(),
+    threshold: doublePrecision('threshold'),
+    at: timestamp('at', { withTimezone: true }).notNull(),
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    suppressed: alertSuppression('suppressed'),
+    channelsSent: integer('channels_sent').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.environmentId, table.projectId],
+      foreignColumns: [environments.id, environments.projectId],
+      name: 'alert_events_environment_belongs_to_the_project',
+    }).onDelete('cascade'),
+    uniqueIndex('alert_events_one_per_change').on(table.ruleId, table.at),
+    index('alert_events_by_environment_and_time').on(table.environmentId, table.at),
+    index('alert_events_cooldown')
+      .on(table.ruleId, table.at)
+      .where(sql`state = 'firing' and notified_at is not null`),
+    check('alert_events_id_shape', sql`id ~ '^ale_${sql.raw(ULID_PATTERN)}$'`),
+    check('alert_events_channels_sent_is_not_negative', sql`channels_sent >= 0`),
+    check('alert_events_a_notice_reached_a_channel', sql`notified_at is null or channels_sent > 0`),
+    check(
+      'alert_events_a_suppressed_event_sent_nothing',
+      sql`suppressed is null or (notified_at is null and channels_sent = 0)`,
     ),
   ],
 )

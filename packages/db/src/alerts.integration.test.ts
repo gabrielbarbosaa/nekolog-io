@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+﻿import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -78,6 +78,7 @@ let staging: string
 const CHANNEL = 'ch_01JBQ8R4T7V2WXYZ0123456789'
 const NOW = Date.UTC(2026, 10, 4, 12, 0, 0)
 const MINUTE = 60 * 1000
+const DAY = 24 * 60 * MINUTE
 
 function condition(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -546,6 +547,195 @@ describe.skipIf(!reachable)('the alerts waiting for a notice', () => {
 
   it('asks the database for nothing at all when there is no room', async () => {
     expect(await sqlAlertNoticeStore(run).awaitingNotice(0)).toEqual([])
+  })
+})
+
+describe.skipIf(!reachable)('the alert history', () => {
+  async function eventsOf(ruleId: string): Promise<Array<Record<string, unknown>>> {
+    return [...(await sql`select * from alert_events where rule_id = ${ruleId} order by at`)]
+  }
+
+  it('records one event for every state change, next to the transition', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 2, at: NOW + MINUTE }])
+
+    const events = await eventsOf(ruleId)
+
+    expect(events.map((row) => row.state)).toEqual(['firing', 'ok'])
+    expect(events.map((row) => row.measured)).toEqual([99, 2])
+    expect(events[0]?.threshold).toBe(50)
+    expect(events[0]?.id).toMatch(/^ale_[0-9A-HJKMNP-TV-Z]{26}$/)
+  })
+
+  it('records nothing for a transition the rule refused', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 1, at: NOW }])
+
+    expect(await eventsOf(ruleId)).toEqual([])
+  })
+
+  it('records at most one event per moment, so a replay cannot double the history', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    await sql`update alert_rules set state = 'ok' where id = ${ruleId}`
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    expect(await eventsOf(ruleId)).toHaveLength(1)
+  })
+
+  it('writes what the notice did back onto the event', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const notices = sqlAlertNoticeStore(run)
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    await notices.recordOutcome(ruleId, NOW, {
+      notifiedAt: NOW + 1000,
+      channelsSent: 2,
+      suppressed: null,
+    })
+
+    const [event] = await eventsOf(ruleId)
+    expect(event).toMatchObject({ channels_sent: 2, suppressed: null })
+    expect(event?.notified_at).not.toBeNull()
+  })
+
+  it('refuses an event that claims a notice reached nobody', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    await expect(
+      sql`update alert_events set notified_at = now() where rule_id = ${ruleId}`,
+    ).rejects.toThrow(/alert_events_a_notice_reached_a_channel/)
+  })
+
+  it('refuses a suppressed event that also says it was sent', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    await expect(
+      sql`update alert_events set suppressed = 'cooldown', channels_sent = 1 where rule_id = ${ruleId}`,
+    ).rejects.toThrow(/alert_events_a_suppressed_event_sent_nothing/)
+  })
+
+  it('offers the moment of the last firing notice, which is what the cooldown counts from', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    await notices.recordOutcome(ruleId, NOW, {
+      notifiedAt: NOW,
+      channelsSent: 1,
+      suppressed: null,
+    })
+    await notices.markNotified(ruleId, NOW, NOW)
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 1, at: NOW + MINUTE }])
+
+    const [waiting] = await notices.awaitingNotice(10)
+
+    expect(waiting?.lastFiringNoticeAt).toBe(NOW)
+    expect(waiting?.cooldownMinutes).toBe(30)
+  })
+
+  it('counts the last firing notice, not the last notice of any kind', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+    await notices.recordOutcome(ruleId, NOW, { notifiedAt: NOW, channelsSent: 1, suppressed: null })
+    await notices.markNotified(ruleId, NOW, NOW)
+
+    await rules.applyTransitions([{ ruleId, to: 'ok', measured: 1, at: NOW + MINUTE }])
+    await notices.recordOutcome(ruleId, NOW + MINUTE, {
+      notifiedAt: NOW + MINUTE,
+      channelsSent: 1,
+      suppressed: null,
+    })
+    await notices.markNotified(ruleId, NOW + MINUTE, NOW + MINUTE)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW + 2 * MINUTE }])
+
+    const [waiting] = await notices.awaitingNotice(10)
+
+    expect(waiting?.lastFiringNoticeAt).toBe(NOW)
+  })
+
+  it('counts no firing notice until one actually went out', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    const [waiting] = await sqlAlertNoticeStore(run).awaitingNotice(10)
+
+    expect(waiting?.lastFiringNoticeAt).toBeNull()
+  })
+
+  it('prunes only what is older than the window, oldest first', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 1, at: NOW - 200 * DAY }])
+    await sql`update alert_rules set state = 'ok' where id = ${ruleId}`
+    await rules.applyTransitions([{ ruleId, to: 'firing', measured: 2, at: NOW }])
+
+    expect(await notices.prune(NOW - 90 * DAY, 100)).toBe(1)
+
+    const left = await eventsOf(ruleId)
+    expect(left).toHaveLength(1)
+    expect(left[0]?.measured).toBe(2)
+  })
+
+  it('takes the oldest first when it cannot take them all in one run', async () => {
+    await clear()
+    const ruleId = await addRule()
+    const rules = sqlAlertRuleStore(run)
+    const notices = sqlAlertNoticeStore(run)
+
+    for (const [at, measured] of [
+      [NOW - 300 * DAY, 1],
+      [NOW - 200 * DAY, 2],
+      [NOW - 100 * DAY, 3],
+    ] as const) {
+      await sql`update alert_rules set state = 'ok' where id = ${ruleId}`
+      await rules.applyTransitions([{ ruleId, to: 'firing', measured, at }])
+    }
+
+    expect(await notices.prune(NOW - 90 * DAY, 1)).toBe(1)
+
+    const left = await eventsOf(ruleId)
+    expect(left.map((row) => row.measured)).toEqual([2, 3])
+  })
+
+  it('asks the database for nothing when there is no room to prune', async () => {
+    expect(await sqlAlertNoticeStore(run).prune(NOW, 0)).toBe(0)
+  })
+
+  it('goes away with the rule it belongs to', async () => {
+    await clear()
+    const ruleId = await addRule()
+    await sqlAlertRuleStore(run).applyTransitions([{ ruleId, to: 'firing', measured: 99, at: NOW }])
+
+    await sql`delete from alert_rules where id = ${ruleId}`
+
+    expect(await eventsOf(ruleId)).toEqual([])
   })
 })
 

@@ -1,4 +1,4 @@
-import type { AlertChannel, PendingAlert } from '@nekolog-io/adapters'
+import type { AlertChannel, NoticeOutcome, PendingAlert } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import type { DeliveryOptions, Fetcher } from '../alerts/deliver.ts'
 import type { TaskContext } from '../task.ts'
@@ -26,6 +26,8 @@ function alert(overrides: Partial<PendingAlert> = {}): PendingAlert {
     type: 'threshold',
     channels: [CHANNEL],
     changedAt: AT,
+    cooldownMinutes: 30,
+    lastFiringNoticeAt: null,
     ...overrides,
   }
 }
@@ -50,6 +52,7 @@ function context(signal = new AbortController().signal): TaskContext {
 type Harness = {
   sent: string[]
   notified: Array<{ ruleId: string; at: number }>
+  outcomes: Array<{ ruleId: string; outcome: NoticeOutcome }>
   events: AlertNotifyEvent[]
   run: (signal?: AbortSignal) => Promise<AlertNotifyReport>
 }
@@ -65,7 +68,9 @@ function harness(
 ): Harness {
   const sent: string[] = []
   const notified: Array<{ ruleId: string; at: number }> = []
+  const outcomes: Array<{ ruleId: string; outcome: NoticeOutcome }> = []
   const events: AlertNotifyEvent[] = []
+  let pruned = 0
 
   const delivery: DeliveryOptions = {
     dashboardUrl: DASHBOARD,
@@ -89,6 +94,13 @@ function harness(
       async markNotified(ruleId, at) {
         notified.push({ ruleId, at })
       },
+      async recordOutcome(ruleId, _changedAt, outcome) {
+        outcomes.push({ ruleId, outcome })
+      },
+      async prune() {
+        pruned += 1
+        return pruned
+      },
     },
     channels: {
       byIds:
@@ -102,6 +114,7 @@ function harness(
   return {
     sent,
     notified,
+    outcomes,
     events,
     run: async (signal) => (await task.run(context(signal))) as AlertNotifyReport,
   }
@@ -251,6 +264,114 @@ describe('the notify task', () => {
     })
 
     expect(await one.run()).toMatchObject({ stopped: 'store_unavailable', sent: 0 })
+  })
+
+  it('records in the history what each notice did', async () => {
+    const one = harness([alert()], [channel(CHANNEL)])
+
+    await one.run()
+
+    expect(one.outcomes).toEqual([
+      { ruleId: RULE, outcome: { notifiedAt: AT, channelsSent: 1, suppressed: null } },
+    ])
+  })
+
+  it('records why a notice went nowhere, without pretending it was sent', async () => {
+    const one = harness([alert()], [])
+
+    await one.run()
+
+    expect(one.outcomes).toEqual([
+      { ruleId: RULE, outcome: { notifiedAt: null, channelsSent: 0, suppressed: 'no_channel' } },
+    ])
+  })
+
+  it('writes no history for an alert whose channels all refused, so the retry is honest', async () => {
+    const one = harness([alert()], [channel(CHANNEL)], {
+      post: async () => {
+        throw new Error('slack is down')
+      },
+    })
+
+    await one.run()
+
+    expect(one.outcomes).toEqual([])
+  })
+
+  it('prunes the history once the alerts are done', async () => {
+    const one = harness([], [])
+
+    expect(await one.run()).toMatchObject({ pruned: 1 })
+  })
+})
+
+describe('the cooldown', () => {
+  it('holds back a second firing notice inside the window', async () => {
+    const one = harness(
+      [alert({ lastFiringNoticeAt: AT - 10 * 60_000, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+
+    const report = await one.run()
+
+    expect(report).toMatchObject({ heldBack: 1, sent: 0 })
+    expect(one.sent).toEqual([])
+    expect(one.outcomes[0]?.outcome).toEqual({
+      notifiedAt: null,
+      channelsSent: 0,
+      suppressed: 'cooldown',
+    })
+  })
+
+  it('lets a firing notice through once the window has passed', async () => {
+    const one = harness(
+      [alert({ lastFiringNoticeAt: AT - 31 * 60_000, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+
+    expect(await one.run()).toMatchObject({ heldBack: 0, sent: 1 })
+  })
+
+  it('never holds back the notice that says it is over', async () => {
+    const one = harness(
+      [alert({ state: 'ok', lastFiringNoticeAt: AT - 1000, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+
+    const report = await one.run()
+
+    expect(report).toMatchObject({ heldBack: 0, sent: 1 })
+  })
+
+  it('lets the very first firing notice through, having nothing to count from', async () => {
+    const one = harness([alert({ lastFiringNoticeAt: null })], [channel(CHANNEL)])
+
+    expect(await one.run()).toMatchObject({ heldBack: 0, sent: 1 })
+  })
+
+  it('stops offering an alert it held back, so it is not weighed again every minute', async () => {
+    const one = harness(
+      [alert({ lastFiringNoticeAt: AT - 60_000, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+
+    await one.run()
+
+    expect(one.notified).toEqual([{ ruleId: RULE, at: AT }])
+  })
+
+  it('holds back exactly at the boundary and not a millisecond later', async () => {
+    const atBoundary = harness(
+      [alert({ changedAt: AT, lastFiringNoticeAt: AT - 30 * 60_000, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+    const justInside = harness(
+      [alert({ changedAt: AT, lastFiringNoticeAt: AT - 30 * 60_000 + 1, cooldownMinutes: 30 })],
+      [channel(CHANNEL)],
+    )
+
+    expect(await atBoundary.run()).toMatchObject({ sent: 1, heldBack: 0 })
+    expect(await justInside.run()).toMatchObject({ sent: 0, heldBack: 1 })
   })
 
   it('counts a store that cannot list channels as a failure, not as no channel', async () => {

@@ -4,12 +4,17 @@ export type {
   AlertChannelStore,
   AlertLocale,
   AlertNoticeStore,
+  AlertSuppression,
+  NoticeOutcome,
   PendingAlert,
 } from './alert-channel.ts'
 export {
   ALERT_CHANNEL_KINDS,
+  ALERT_HISTORY_DAYS,
   ALERT_LOCALES,
+  ALERT_SUPPRESSIONS,
   MAX_ALERT_CHANNELS_PER_PROJECT,
+  MAX_PRUNED_EVENTS_PER_RUN,
 } from './alert-channel.ts'
 export type {
   AlertCondition,
@@ -57,7 +62,12 @@ export {
   sqlAlertChannelStore,
   sqlAlertNoticeStore,
 } from './alerts/sql-alert-channel-store.ts'
-export { sqlAlertRuleStore, sqlIssueActivity } from './alerts/sql-alert-rule-store.ts'
+export {
+  ALERT_EVENT_ID_PREFIX,
+  newAlertEventId,
+  sqlAlertRuleStore,
+  sqlIssueActivity,
+} from './alerts/sql-alert-rule-store.ts'
 export type { WebhookUrl } from './alerts/webhook-target.ts'
 export {
   ALLOWED_WEBHOOK_PORTS,

@@ -19,22 +19,41 @@ limit $1
 `
 
 const APPLY = `
-update alert_rules as rules
-set
-  state = moved.state::alert_state,
-  state_changed_at = moved.at::timestamptz,
-  last_measured = moved.measured
-from (
+with asked as (
   select
     unnest($1::text[]) as id,
     unnest($2::text[]) as state,
     unnest($3::timestamptz[]) as at,
-    unnest($4::double precision[]) as measured
-) as moved
-where rules.id = moved.id
-  and rules.disabled_at is null
-  and rules.state <> moved.state::alert_state
-returning rules.id
+    unnest($4::double precision[]) as measured,
+    unnest($5::text[]) as event_id
+),
+moved as (
+  update alert_rules as rules
+  set
+    state = asked.state::alert_state,
+    state_changed_at = asked.at,
+    last_measured = asked.measured
+  from asked
+  where rules.id = asked.id
+    and rules.disabled_at is null
+    and rules.state <> asked.state::alert_state
+  returning
+    rules.id, rules.project_id, rules.environment_id,
+    asked.event_id, asked.state, asked.at, asked.measured,
+    (rules.condition ->> 'value')::double precision as threshold
+),
+recorded as (
+  insert into alert_events (
+    id, rule_id, project_id, environment_id, state, measured, threshold, at
+  )
+  select
+    moved.event_id, moved.id, moved.project_id, moved.environment_id,
+    moved.state::alert_state, moved.measured, moved.threshold, moved.at
+  from moved
+  on conflict (rule_id, at) do nothing
+  returning id
+)
+select moved.id from moved
 `
 
 const ISSUE_ACTIVITY = `
@@ -49,6 +68,25 @@ from issues
 join issue_environments on issue_environments.issue_id = issues.id
 where issue_environments.environment_id = $1
 `
+
+export const ALERT_EVENT_ID_PREFIX = 'ale_'
+
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+
+type CryptoLike = { getRandomValues?: (array: Uint8Array) => Uint8Array }
+
+export function newAlertEventId(): string {
+  const source = (globalThis as { crypto?: CryptoLike }).crypto
+  if (!source?.getRandomValues) {
+    throw new Error('This runtime has no crypto.getRandomValues, so it cannot mint an event id')
+  }
+  const bytes = source.getRandomValues(new Uint8Array(26))
+  let suffix = ''
+  for (const byte of bytes) {
+    suffix += CROCKFORD[byte % 32]
+  }
+  return `${ALERT_EVENT_ID_PREFIX}${suffix}`
+}
 
 function moment(value: number): string {
   if (!Number.isFinite(value)) {
@@ -116,6 +154,7 @@ export function sqlAlertRuleStore(run: SqlRunner): AlertRuleStore {
         transitions.map((one) => one.to),
         transitions.map((one) => moment(one.at)),
         transitions.map((one) => one.measured),
+        transitions.map(() => newAlertEventId()),
       ])
 
       return rows.length
