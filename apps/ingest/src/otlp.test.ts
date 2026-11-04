@@ -1,5 +1,4 @@
-import { parseBatch } from '@internal/schema'
-import { uuidv7 } from '@nekolog-io/core'
+﻿import { parseBatch, uuidv7 } from '@internal/schema'
 import { describe, expect, it } from 'vitest'
 import {
   anyValue,

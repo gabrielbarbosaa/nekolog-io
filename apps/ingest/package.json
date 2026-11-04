@@ -19,7 +19,6 @@
     "@internal/spool": "workspace:*",
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/clickhouse": "workspace:*",
-    "@nekolog-io/core": "workspace:*",
     "hono": "^4.10.6"
   },
   "devDependencies": {

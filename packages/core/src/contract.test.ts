@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+﻿import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as schema from '@internal/schema'
@@ -303,5 +303,35 @@ describe('events this logger produces, run through the real ingest parser', () =
     const batch = acceptAll(sink.events, logger)
     expect(batch.rejected).toEqual([])
     expect(batch.accepted[0]?.event.trace).toBeUndefined()
+  })
+})
+
+describe('the two uuidv7 generators, which must not drift', () => {
+  it('both mint an id the real parser accepts, every time', () => {
+    const envelope = (batchId: string) => ({
+      schemaVersion: 1,
+      batchId,
+      sdk: { name: SDK_NAME, version: SDK_VERSION },
+      resource: { service: 'a', runtime: 'node' as const },
+      events: [{ timestamp: '2026-11-04T12:00:00.000Z', level: 'info' as const, message: 'x' }],
+    })
+
+    for (let at = 0; at < 200; at += 1) {
+      expect(schema.parseBatch(envelope(uuidv7())).ok).toBe(true)
+      expect(schema.parseBatch(envelope(schema.uuidv7())).ok).toBe(true)
+    }
+  })
+
+  it('lay the same millisecond out in the same place', () => {
+    const at = Date.UTC(2026, 10, 4, 12, 0, 0)
+    const stamp = (id: string) => id.split('-').join('').slice(0, 12)
+
+    expect(stamp(uuidv7(() => at))).toBe(stamp(schema.uuidv7(() => at)))
+  })
+
+  it('exist in two copies on purpose, because core carries no dependency', () => {
+    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'uuid.ts'), 'utf8')
+
+    expect(source).not.toContain('@internal/schema')
   })
 })

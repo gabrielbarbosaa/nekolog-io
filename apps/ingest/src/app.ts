@@ -1,6 +1,5 @@
-import { type BatchErrorCode, type ParsedBatch, parseBatch } from '@internal/schema'
+﻿import { type BatchErrorCode, type ParsedBatch, parseBatch, uuidv7 } from '@internal/schema'
 import type { RateLimiter, RateLimitResult } from '@nekolog-io/adapters'
-import { uuidv7 } from '@nekolog-io/core'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
 import { corsHeadersFor, preflightHeadersFor, withCors } from './cors.ts'
