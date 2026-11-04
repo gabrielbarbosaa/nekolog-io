@@ -1,6 +1,6 @@
 # The self-host stack
 
-Five containers that run everything in this repository on one machine. The
+Six containers that run everything in this repository on one machine. The
 reader-facing guide is `apps/docs` → **Run it yourself**, in three languages;
 this file is the part an operator needs and a reader does not.
 
@@ -8,6 +8,12 @@ this file is the part an operator needs and a reader does not.
 cd deploy/self-host
 ./up.sh
 ```
+
+Three of them answer on a port: `ingest` on 8787, the **public read API** on
+8789, and the jobs health endpoint on 8788 — that last one bound to the
+loopback, because it is for a monitor and not for the world. Put TLS in front of
+the two that are published: an API key travels in the `Authorization` header and
+both speak plain HTTP.
 
 ## What is deliberately not here
 
@@ -42,6 +48,23 @@ database called `nekolog`. The jobs user may read `system.disks` — without it
 `capacity-watch` reports "I cannot measure", which is an alert and not a
 healthy disk. It has no `WRITE ON S3` and no `CREATE TEMPORARY TABLE`, because
 nothing here exports.
+
+The `api` container runs as `nekolog_reader`, which holds `SELECT` on the one
+database and nothing else — no S3, no `system`, no write of any kind. It mounts
+the state volume read-only and neither the spool nor the KV, because it has no
+business with either. `compose.test.ts` fails if any of that changes.
+
+## The read API
+
+`api` serves `/v1/logs`, `/v1/histogram` and `/v1/issues` against a `sk_` key
+carrying `logs:read`, and publishes its own contract at `/openapi.json`. This is
+the self-host's whole reading surface, since the dashboard is not here: point a
+script, a Grafana datasource or `curl` at it.
+
+It needs Postgres as well as ClickHouse — `issues` lives in Postgres — which is
+also why `DATABASE_URL` is required rather than optional. Starting without it
+would mean an API that answers `404` on a third of its routes and says nothing
+about why.
 
 ## The bootstrap container
 

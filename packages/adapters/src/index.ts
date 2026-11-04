@@ -112,6 +112,19 @@ export { sqlExportScheduleStore } from './exports/sql-export-schedule-store.ts'
 export type { SqlExportStoreOptions } from './exports/sql-export-store.ts'
 export { DEFAULT_STALE_AFTER_MS, sqlExportStore } from './exports/sql-export-store.ts'
 export type {
+  IssuePage,
+  IssueQuery,
+  IssueReader,
+  IssueSummary,
+} from './issue-reader.ts'
+export {
+  DEFAULT_ISSUE_ROWS,
+  decodeIssueCursor,
+  encodeIssueCursor,
+  IssueCursorError,
+  MAX_ISSUE_ROWS,
+} from './issue-reader.ts'
+export type {
   IssueOccurrence,
   IssueRollup,
   IssueStatus,
@@ -120,6 +133,7 @@ export type {
 export { ISSUE_STATUSES } from './issue-store.ts'
 export type { MemoryIssue, MemoryIssueStore } from './issues/memory-issue-store.ts'
 export { memoryIssueStore } from './issues/memory-issue-store.ts'
+export { sqlIssueReader } from './issues/sql-issue-reader.ts'
 export type { SqlIssueStoreOptions, SqlRunner } from './issues/sql-issue-store.ts'
 export { ISSUE_ID_PREFIX, newIssueId, sqlIssueStore } from './issues/sql-issue-store.ts'
 export type { KeyRecord, KeyStore } from './key-store.ts'

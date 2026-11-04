@@ -80,16 +80,17 @@ export async function execute(
   return body
 }
 
+export const QUOTE_64_BIT_INTEGERS = 'output_format_json_quote_64bit_integers'
+
 export async function queryRows<T>(
   config: ClickHouseConfig,
   sql: string,
   options: ExecuteOptions = {},
 ): Promise<T[]> {
-  const body = await execute(
-    config,
-    `${sql.trimEnd().replace(/;$/, '')} FORMAT JSONEachRow`,
-    options,
-  )
+  const body = await execute(config, `${sql.trimEnd().replace(/;$/, '')} FORMAT JSONEachRow`, {
+    ...options,
+    settings: { [QUOTE_64_BIT_INTEGERS]: '1', ...options.settings },
+  })
   return body
     .split('\n')
     .filter((line) => line.trim() !== '')

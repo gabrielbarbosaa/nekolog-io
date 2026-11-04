@@ -15,6 +15,7 @@ terraform {
 
 locals {
   ingest_hostname = var.environment == "prod" ? "ingest.${var.zone_name}" : "ingest-${var.environment}.${var.zone_name}"
+  api_hostname    = var.environment == "prod" ? "api.${var.zone_name}" : "api-${var.environment}.${var.zone_name}"
 }
 
 module "kv" {
@@ -50,6 +51,16 @@ module "ingest_domain" {
   zone_name  = var.zone_name
   hostname   = local.ingest_hostname
   service    = "nekolog-ingest-${var.environment}"
+}
+
+module "api_domain" {
+  source = "../workers-domain"
+
+  account_id = var.account_id
+  zone_id    = var.zone_id
+  zone_name  = var.zone_name
+  hostname   = local.api_hostname
+  service    = "nekolog-api-${var.environment}"
 }
 
 module "access" {
