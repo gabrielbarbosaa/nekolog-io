@@ -50,6 +50,13 @@
       "when": 1793789222768,
       "tag": "0006_export_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793792107895,
+      "tag": "0007_alert_rules",
+      "breakpoints": true
     }
   ]
 }

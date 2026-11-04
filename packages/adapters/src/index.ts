@@ -1,3 +1,33 @@
+export type {
+  AlertCondition,
+  AlertOperator,
+  AlertRule,
+  AlertRuleStore,
+  AlertState,
+  AlertTransition,
+  AlertType,
+  AlertWindow,
+} from './alert-rule.ts'
+export {
+  ALERT_OPERATORS,
+  ALERT_STATES,
+  ALERT_TYPES,
+  ALERT_WINDOWS,
+  AlertRuleError,
+  compare,
+  cooldownMinutes,
+  DEFAULT_COOLDOWN_MINUTES,
+  MAX_ALERT_CHANNELS_PER_RULE,
+  MAX_ALERT_QUERY_CHARS,
+  MAX_ALERT_RULES_PER_PROJECT,
+  MAX_COOLDOWN_MINUTES,
+  needsAQuery,
+  needsAThreshold,
+  parseAlertCondition,
+  WINDOW_MINUTES,
+  windowMinutes,
+} from './alert-rule.ts'
+export { sqlAlertRuleStore, sqlIssueActivity } from './alerts/sql-alert-rule-store.ts'
 export type { BlobStore } from './blob-store.ts'
 export type { MemoryBlobStore } from './blobs/memory-blob-store.ts'
 export { memoryBlobStore } from './blobs/memory-blob-store.ts'

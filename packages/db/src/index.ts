@@ -31,6 +31,8 @@ export const ID_PREFIXES = {
   export: 'exp_',
   exportSchedule: 'exs_',
   issue: 'iss_',
+  alertRule: 'alr_',
+  alertChannel: 'ch_',
 } as const
 
 export const ULID_CHARS = 26
@@ -45,6 +47,17 @@ export const EXPORT_FORMATS = ['json', 'xml', 'csv'] as const
 export const EXPORT_STATUSES = ['pending', 'running', 'ready', 'failed', 'expired'] as const
 export const EXPORT_CADENCES = ['daily', 'weekly'] as const
 export const ISSUE_STATUSES = ['open', 'resolved', 'ignored'] as const
+export const ALERT_TYPES = [
+  'threshold',
+  'error_rate',
+  'new_issue',
+  'issue_regression',
+  'absence',
+] as const
+export const ALERT_STATES = ['ok', 'firing'] as const
+
+export const MAX_ALERT_RULES_PER_PROJECT = 20
+export const MAX_ALERT_RULE_NAME_CHARS = 120
 
 export const MAX_SEARCH_QUERY_CHARS = 2000
 export const MAX_DASHBOARD_WIDGETS = 50
@@ -57,6 +70,8 @@ export const exportFormat = pgEnum('export_format', EXPORT_FORMATS)
 export const exportStatus = pgEnum('export_status', EXPORT_STATUSES)
 export const exportCadence = pgEnum('export_cadence', EXPORT_CADENCES)
 export const issueStatus = pgEnum('issue_status', ISSUE_STATUSES)
+export const alertType = pgEnum('alert_type', ALERT_TYPES)
+export const alertState = pgEnum('alert_state', ALERT_STATES)
 
 export const users = pgTable(
   'users',
@@ -508,6 +523,60 @@ export const issueEnvironments = pgTable(
     check(
       'issue_environments_last_seen_is_not_before_first_seen',
       sql`last_seen_at >= first_seen_at`,
+    ),
+  ],
+)
+
+export const alertRules = pgTable(
+  'alert_rules',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    environmentId: text('environment_id').notNull(),
+    name: text('name').notNull(),
+    type: alertType('type').notNull(),
+    condition: jsonb('condition').notNull(),
+    state: alertState('state').notNull().default('ok'),
+    stateChangedAt: timestamp('state_changed_at', { withTimezone: true }),
+    lastNotifiedAt: timestamp('last_notified_at', { withTimezone: true }),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.environmentId, table.projectId],
+      foreignColumns: [environments.id, environments.projectId],
+      name: 'alert_rules_environment_belongs_to_the_project',
+    }).onDelete('cascade'),
+    index('alert_rules_to_evaluate')
+      .on(table.type, table.environmentId)
+      .where(sql`disabled_at is null`),
+    uniqueIndex('alert_rules_one_name_per_environment')
+      .on(table.environmentId, table.name)
+      .where(sql`disabled_at is null`),
+    check('alert_rules_id_shape', sql`id ~ '^alr_${sql.raw(ULID_PATTERN)}$'`),
+    check('alert_rules_name_is_not_blank', sql`length(btrim(name)) > 0`),
+    check(
+      'alert_rules_name_is_bounded',
+      sql`length(name) <= ${sql.raw(String(MAX_ALERT_RULE_NAME_CHARS))}`,
+    ),
+    check('alert_rules_condition_is_an_object', sql`jsonb_typeof(condition) = 'object'`),
+    check('alert_rules_condition_names_the_same_type', sql`condition ->> 'type' = type::text`),
+    check(
+      'alert_rules_condition_carries_no_environment',
+      sql`condition ? 'environment' is not true`,
+    ),
+    check(
+      'alert_rules_condition_has_channels',
+      sql`jsonb_typeof(condition -> 'channels') = 'array'
+        and jsonb_array_length(condition -> 'channels') between 1 and 10`,
+    ),
+    check(
+      'alert_rules_firing_means_there_is_a_moment',
+      sql`state <> 'firing' or state_changed_at is not null`,
     ),
   ],
 )
