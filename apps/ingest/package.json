@@ -16,6 +16,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.5",
     "@internal/schema": "workspace:*",
+    "@internal/security-headers": "workspace:*",
     "@internal/seed": "workspace:*",
     "@internal/self-host": "workspace:*",
     "@internal/spool": "workspace:*",

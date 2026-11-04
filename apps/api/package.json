@@ -14,11 +14,12 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
+    "@internal/security-headers": "workspace:*",
     "@internal/seed": "workspace:*",
     "@internal/self-host": "workspace:*",
-    "@neondatabase/serverless": "^1.2.0",
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/clickhouse": "workspace:*",
+    "@neondatabase/serverless": "^1.2.0",
     "hono": "^4.10.6",
     "postgres": "^4.0.0"
   },

@@ -1,3 +1,4 @@
+import { apiHeaders } from '@internal/security-headers'
 import type {
   IssueReader,
   IssueStatus,
@@ -29,10 +30,14 @@ import { Hono } from 'hono'
 import type { ApiPrincipal, Authenticator } from './authenticate.ts'
 import { readJsonObject } from './body.ts'
 import { ApiError, type ApiErrorCode, errorBody, statusFor } from './errors.ts'
-import { parseCount, parseMoment, parsePeriod } from './period.ts'
+import { assertKnownParams, parseCount, parseMoment, parsePeriod } from './period.ts'
 
 export const DEFAULT_REQUESTS_PER_MINUTE = 120
 export const RATE_WINDOW_SECONDS = 60
+
+export const LOG_PARAMS: readonly string[] = ['from', 'to', 'limit', 'order', 'q']
+export const HISTOGRAM_PARAMS: readonly string[] = ['from', 'to', 'bucket', 'q']
+export const ISSUE_PARAMS: readonly string[] = ['limit', 'status', 'cursor', 'since', 'until']
 
 export type ClickHouseQuery = (
   sql: string,
@@ -108,9 +113,18 @@ function bucketFrom(params: URLSearchParams): string {
   return wanted
 }
 
+export const API_HEADERS: Readonly<Record<string, string>> = apiHeaders()
+
 export function createApiApp(deps: ApiDeps): Hono {
   const app = new Hono()
   const now = (): number => (deps.now ?? Date.now)()
+
+  app.use('*', async (c, next) => {
+    await next()
+    for (const [name, value] of Object.entries(API_HEADERS)) {
+      c.res.headers.set(name, value)
+    }
+  })
 
   const fail = (code: ApiErrorCode, message: string, retryAfter: number | null = null): Response =>
     Response.json(errorBody(code, message, retryAfter), {
@@ -192,6 +206,7 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
 
     const params = new URL(c.req.raw.url).searchParams
+    assertKnownParams(params, LOG_PARAMS)
     const period = parsePeriod(params, now())
     const limit = parseCount(params, 'limit', DEFAULT_SEARCH_ROWS, MAX_SEARCH_ROWS)
     const order = params.get('order') === 'oldest' ? 'oldest' : 'newest'
@@ -227,6 +242,7 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
 
     const params = new URL(c.req.raw.url).searchParams
+    assertKnownParams(params, HISTOGRAM_PARAMS)
     const period = parsePeriod(params, now())
     const bucket = bucketFrom(params)
 
@@ -279,6 +295,7 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
 
     const params = new URL(c.req.raw.url).searchParams
+    assertKnownParams(params, ISSUE_PARAMS)
     const limit = parseCount(params, 'limit', 50, MAX_ISSUE_ROWS)
     const statuses = statusesFrom(params)
     const rawSince = params.get('since')

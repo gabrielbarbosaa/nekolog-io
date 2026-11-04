@@ -85,6 +85,21 @@ export function securityHeaders(options: PolicyOptions = {}): Record<string, str
   }
 }
 
+export const API_HEADERS: Readonly<Record<string, string>> = {
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'no-store',
+  'Strict-Transport-Security': HSTS,
+}
+
+export const EMBEDDABLE_NOWHERE = 'same-origin'
+
+export function apiHeaders(options: { embeddable?: boolean } = {}): Record<string, string> {
+  return {
+    ...API_HEADERS,
+    ...(options.embeddable === true ? {} : { 'Cross-Origin-Resource-Policy': EMBEDDABLE_NOWHERE }),
+  }
+}
+
 export function nonceSource(nonce: string): string {
   return `'nonce-${nonce}'`
 }

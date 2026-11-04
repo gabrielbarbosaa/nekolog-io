@@ -1,4 +1,5 @@
-﻿import { type BatchErrorCode, type ParsedBatch, parseBatch, uuidv7 } from '@internal/schema'
+import { type BatchErrorCode, type ParsedBatch, parseBatch, uuidv7 } from '@internal/schema'
+import { apiHeaders } from '@internal/security-headers'
 import type { RateLimiter, RateLimitResult } from '@nekolog-io/adapters'
 import { Hono } from 'hono'
 import { type ReadBodyOptions, readBatchBody } from './body.ts'
@@ -119,8 +120,17 @@ async function measure(
   }
 }
 
+export const INGEST_HEADERS: Readonly<Record<string, string>> = apiHeaders({ embeddable: true })
+
 export function createIngestApp(deps: IngestDeps): Hono {
   const app = new Hono()
+
+  app.use('*', async (c, next) => {
+    await next()
+    for (const [name, value] of Object.entries(INGEST_HEADERS)) {
+      c.res.headers.set(name, value)
+    }
+  })
 
   const fail = (
     code: BatchErrorCode,

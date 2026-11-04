@@ -5,6 +5,20 @@ export const MAX_PERIOD_MS: number = 31 * 24 * 60 * 60 * 1000
 
 export type Period = { from: Date; to: Date }
 
+export const KEY_PARAMETER = 'key'
+
+export function assertKnownParams(params: URLSearchParams, allowed: readonly string[]): void {
+  for (const name of new Set(params.keys())) {
+    if (name === KEY_PARAMETER || allowed.includes(name)) {
+      continue
+    }
+    throw new ApiError(
+      'invalid_query',
+      `There is no ${JSON.stringify(name)} parameter on this route. It takes ${allowed.join(', ')}.`,
+    )
+  }
+}
+
 const EPOCH_MILLISECONDS = /^\d{1,15}$/
 
 export function parseMoment(raw: string, what: string): Date {

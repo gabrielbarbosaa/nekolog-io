@@ -54,3 +54,6 @@ backend.hcl
 *.tfvars
 *.auto.tfvars
 internal/load/k6/fixtures/
+docs/security/zap/*.html
+docs/security/zap/*.md
+!docs/security/zap/README.md
