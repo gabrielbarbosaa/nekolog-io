@@ -45,6 +45,9 @@ await log.flush() // importante en serverless, donde el proceso puede terminar a
 
 - [`nekolog init`](/docs/es/guides/cli/) — un comando que detecta el framework,
   instala el SDK correcto y escribe el `.env`.
+- [Plugin de bundler](/docs/es/guides/bundler-plugin/) — registra la release y
+  sube los source maps desde dentro de tu build de Vite, webpack, Rollup o
+  esbuild.
 - La guía de tu stack: [Browser](/docs/es/guides/browser/),
   [React](/docs/es/guides/react/), [Next.js](/docs/es/guides/next/),
   [Node.js](/docs/es/guides/node/), [Express](/docs/es/guides/express/),

@@ -126,6 +126,10 @@ guarda o resto sem ler. Fazer o parse de megabytes de JSON não cabe no orçamen
 de CPU de um Worker, e o mapa é lido onde de fato é usado.
 :::
 
+Se o seu build e o seu deploy são o mesmo job, o
+[plugin de bundler](/docs/pt-br/guides/bundler-plugin/) faz as duas coisas de
+dentro do build, e aí ninguém precisa lembrar de rodar nada.
+
 ## Depois de rodar
 
 Abra o guia do que ele instalou: [Browser](/docs/pt-br/guides/browser/),

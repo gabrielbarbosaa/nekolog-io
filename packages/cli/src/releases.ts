@@ -127,14 +127,19 @@ export function releaseRequest(options: ReleaseOptions): Request {
   })
 }
 
-function reasonFrom(status: number, text: string): string {
+function refusalIn(text: string): { code?: string; message?: string } | null {
   try {
     const parsed = JSON.parse(text) as { error?: { code?: string; message?: string } }
-    if (parsed.error?.message) {
-      return `${parsed.error.code ?? String(status)}: ${parsed.error.message}`
-    }
+    return parsed.error ?? null
   } catch {
-    // the server answered something that is not our error shape
+    return null
+  }
+}
+
+export function reasonFrom(status: number, text: string): string {
+  const refusal = refusalIn(text)
+  if (refusal?.message) {
+    return `${refusal.code ?? String(status)}: ${refusal.message}`
   }
   return `HTTP ${status}`
 }
