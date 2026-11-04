@@ -155,11 +155,10 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 > Os números e os nomes de branch **não mudaram**, pelo mesmo motivo do M2: as
 > issues 3.1 a 3.15 já existem, e o `internal/tracking` nunca renomeia nada.
 >
-> **O M4, o M5 e o M6 ainda não foram separados**, e isso é deliberado. Lá a
-> divisão quase nunca é por etapa inteira: a busca tem o parser aqui e a tela
-> lá, o alerta é avaliado pelos jobs daqui e configurado lá, a exportação é
-> gerada aqui e baixada lá. Decidir agora onde cada metade começa seria desenhar
-> no escuro; cada marco é separado quando começa, como este e como o M2.
+> **O M5 e o M6 ainda não foram separados**, e isso é deliberado. Lá a divisão
+> quase nunca é por etapa inteira: o alerta é avaliado pelos jobs daqui e
+> configurado lá. Decidir agora onde cada metade começa seria desenhar no
+> escuro; cada marco é separado quando começa, como este, como o M2 e como o M4.
 
 - [x] **3.1** `feat/browser-sdk` — `@nekolog-io/browser`: erros globais, sessão, `setUser` e envio no `pagehide`.
 - [x] **3.2** `feat/browser-breadcrumbs` — cliques, navegação e fetch.
@@ -189,22 +188,57 @@ para o passo a passo mostrar.
 
 ## M4 — Investigação
 
-- [ ] **4.1** `feat/search-language` — parser da busca (AST → SQL parametrizado) conforme a especificação 4, com fuzzing.
-- [ ] **4.2** `feat/saved-views` — views salvas e compartilháveis.
-- [ ] **4.3** `feat/live-tail` — tempo real por polling.
-- [ ] **4.4** `feat/log-context` — logs antes e depois de um log escolhido.
-- [ ] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5.
-- [ ] **4.6** `feat/issues` — lista de issues com status, contagem e ocorrências.
-- [ ] **4.7** `feat/releases` — registro de releases.
-- [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome.
-- [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`.
-- [ ] **4.10** `feat/sourcemap-resolve` — stack trace com o código original na tela da issue.
-- [ ] **4.11** `feat/clock-skew` — aviso quando o horário do cliente diverge do servidor.
-- [ ] **4.12** `feat/export-manual` — exportação em JSON, XML e CSV gerada pelo ClickHouse direto no R2; download autenticado; proteção contra injeção de fórmulas no CSV; regra de ciclo de vida de 7 dias.
-- [ ] **4.13** `feat/export-scheduled` — exportação agendada (diária ou semanal) por projeto e ambiente, executada pelos jobs, com e-mail de aviso e link para o dashboard.
-- [ ] **4.14** `feat/dashboards` — dashboards customizáveis com widgets.
+> **Nota (03/11/2026):** este marco foi separado entre os dois repositórios, como
+> o M2 e o M3, e por isso não dá para copiar o formato dos dois. Aqui a divisão
+> quase nunca é por etapa inteira: a busca tem o parser **aqui** e a tela **lá**,
+> a issue é montada pelos jobs daqui e listada lá, a exportação é gerada aqui e
+> baixada lá. Então a maioria das etapas **mantém a caixa**, com a linha dizendo
+> qual metade é daqui; a outra metade está descrita em "O que acontece no
+> nekolog-dashboard", no fim do marco.
+>
+> O critério é o de sempre (plano, seções 1, 2 e 5): SDK, ingestão, jobs,
+> `packages/*` e API pública são daqui; tela, sessão e permissão são de lá. Três
+> consequências que não são óbvias:
+>
+> - **Todo esquema de Postgres é daqui**, inclusive o das telas de lá, porque os
+>   dois repositórios escrevem no mesmo banco e um esquema duplicado é a única
+>   divergência que teste nenhum dos dois lados pega (ADR
+>   [0016](adr/0016-pacotes-compartilhados-no-npm.md)). É o que a **4.15**
+>   entrega — uma etapa nova, no fim da lista, pelo mesmo motivo que os números
+>   nunca mudam.
+> - **O source map é aplicado na hora de exibir, não na ingestão** (plano, seção
+>   9), então a **4.10** é inteira de lá, embora o upload (4.8 e 4.9) seja daqui.
+> - **A API pública de leitura é do M5**, não deste marco. Até lá o dashboard
+>   consulta o ClickHouse com o `@nekolog-io/clickhouse` publicado, que é
+>   exatamente por que o parser da 4.1 mora aqui.
+>
+> Os números e os nomes de branch **não mudaram**, pelo mesmo motivo do M2 e do
+> M3: as issues 4.1 a 4.14 já existem e o `internal/tracking` nunca renomeia nem
+> fecha nada. As três que perderam a caixa continuam abertas aqui, órfãs, e isso
+> é o custo aceito — como as 3.10 e 3.14.
 
-**Pronto quando:** um erro minificado aparece com arquivo e linha originais.
+- [ ] **4.1** `feat/search-language` — parser da busca (AST → SQL parametrizado) conforme a especificação 4, com fuzzing. *(Daqui: o parser e o gerador de SQL em `packages/clickhouse`. A barra de busca é de lá.)*
+- [ ] **4.4** `feat/log-context` — logs antes e depois de um log escolhido. *(Daqui: a consulta de janela no query builder. O "ver contexto" é de lá.)*
+- [ ] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5. *(Inteira daqui: é CPU pura sobre o evento, e o ClickHouse não preenche a coluna depois do insert sem mutation.)*
+- [ ] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá.)*
+- [ ] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá.)*
+- [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui.)*
+- [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui.)*
+- [ ] **4.11** `feat/clock-skew` — a ingestão mede a diferença entre o `timestamp` do cliente e o `received_at` do servidor e marca o evento. *(O aviso na tela é de lá.)*
+- [ ] **4.12** `feat/export-manual` — exportação em JSON, XML e CSV gerada pelo ClickHouse direto no R2, com proteção contra injeção de fórmulas no CSV e regra de ciclo de vida de 7 dias. *(O download autenticado é de lá: ele depende de sessão e de permissão no ambiente.)*
+- [ ] **4.13** `feat/export-scheduled` — exportação agendada (diária ou semanal) por projeto e ambiente, executada pelos jobs, com o e-mail de aviso. *(A tela que agenda é de lá; o e-mail leva ao dashboard, não traz anexo.)*
+- [ ] **4.15** `feat/db-investigation` — as tabelas de Postgres que este marco pede: views salvas, releases, exportações e dashboards, com as *check constraints* no próprio esquema. *(Etapa nova. Ela vem antes da 4.2, da 4.7, da 4.12 e da 4.14.)*
+
+### O que acontece no nekolog-dashboard
+
+O escopo continua valendo; só a branch e o PR mudam de endereço.
+
+- **4.2** `feat/saved-views` — views salvas e compartilháveis (tela; a tabela é a 4.15).
+- **4.3** `feat/live-tail` — tempo real por polling a cada 2–3 s, sobre a mesma busca da 4.1.
+- **4.10** `feat/sourcemap-resolve` — stack trace com o código original na tela da issue. É aqui que o source map enviado pela 4.8 é aplicado, na hora de exibir.
+- **4.14** `feat/dashboards` — dashboards customizáveis com widgets (tela; a tabela é a 4.15).
+
+**Pronto quando:** um erro minificado aparece com arquivo e linha originais. *(Como no M2 e no M3, o critério atravessa os dois repositórios: o upload do source map e o fingerprint são daqui, a resolução na tela é de lá.)*
 
 ## M5 — Alertas e governança
 
