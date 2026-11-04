@@ -295,13 +295,49 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 
 ## M6 — 1.0
 
-- [ ] **6.1** `feat/otlp` — endpoint OTLP/HTTP.
-- [ ] **6.2** `infra/self-host` — docker-compose de produção em um comando e guia de instalação.
-- [ ] **6.3** `docs/complete` — documentação completa e versionada nos três idiomas.
-- [ ] **6.4** `test/load` — teste de carga com k6 e ajustes de desempenho.
-- [ ] **6.5** `security/review` — checklist ASVS nível 2, varredura completa do ZAP e revisão do modelo de ameaças e do `internal/auth`.
-- [ ] **6.6** `a11y/audit` — auditoria WCAG 2.2 AA e correções.
-- [ ] **6.7** `chore/release-1-0` — saída do `0.x`, changelogs, notas da release e SBOM.
-- [ ] **6.8** `docs/launch` — README final, demo pública e post de lançamento (TabNews, dev.to, Show HN).
+> **Nota (04/11/2026):** último marco, separado entre os dois repositórios como o
+> M2, o M3, o M4 e o M5. Aqui a divisão é mais limpa que nos marcos anteriores:
+> metade das etapas é **inteira daqui**, porque o self-host, o teste de carga e
+> o endpoint OTLP só existem neste repositório.
+>
+> Três consequências que não são óbvias:
+>
+> - **O self-host (6.2) não leva o dashboard**, e isso não é uma lacuna: o
+>   dashboard é fechado e só roda na instância hospedada (plano, seção 5). Quem
+>   sobe por conta própria manda logs, consulta pela API pública da 5.9 e recebe
+>   alertas. O guia tem que dizer isso na primeira página, não no rodapé.
+> - **A revisão de segurança (6.5) é dos dois**, mas por motivos diferentes: o
+>   ASVS e a revisão do `internal/auth` são de lá, porque autenticação mora lá;
+>   o modelo de ameaças, a varredura do ZAP sobre a ingestão e a API, e os
+>   itens S, I, T e E que esta base fecha são daqui. A etapa mantém a caixa pela
+>   metade daqui.
+> - **A auditoria de acessibilidade (6.6) perde a caixa**, embora `apps/web` e
+>   `apps/docs` sejam daqui. A varredura WCAG séria é sobre a interface, e a
+>   interface é de lá; o que roda aqui são os testes de `axe` que a 3.12 já
+>   deixou ligados no site e na documentação, e eles continuam no CI sem
+>   precisar de uma etapa própria.
+>
+> **A 6.1, a 6.2 e a 6.4 não dependem da decisão que trava a 4.7, a 4.8, a 4.9
+> e a 5.9.** O endpoint OTLP é ingestão pura, o self-host sobe o que já existe e
+> o teste de carga mede a ingestão. A 6.3 e a 6.7 esperam a 5.9, porque
+> documentar e versionar uma API que ainda não existe é retrabalho garantido.
+>
+> Os números e os nomes de branch **não mudaram**, pelo mesmo motivo dos marcos
+> anteriores. A que perdeu a caixa continua aberta aqui, órfã, como as outras
+> seis.
 
-**Pronto quando:** alguém sobe tudo seguindo só a documentação.
+- [ ] **6.1** `feat/otlp` — endpoint OTLP/HTTP. *(Inteira daqui: é uma rota no `apps/ingest`.)*
+- [ ] **6.2** `infra/self-host` — docker-compose de produção em um comando e guia de instalação. *(Inteira daqui. O dashboard não entra, por ser fechado.)*
+- [ ] **6.3** `docs/complete` — documentação completa e versionada nos três idiomas. *(Daqui: a documentação do `apps/docs`, incluindo a referência da API pública da 5.9. O que é só da tela é de lá.)*
+- [ ] **6.4** `test/load` — teste de carga com k6 e ajustes de desempenho. *(Inteira daqui: mede a ingestão, os jobs e a API pública.)*
+- [ ] **6.5** `security/review` — checklist ASVS nível 2, varredura completa do ZAP e revisão do modelo de ameaças e do `internal/auth`. *(Daqui: o modelo de ameaças, o ZAP sobre a ingestão e a API, e os itens que esta base fecha. O ASVS e o `internal/auth` são de lá.)*
+- [ ] **6.7** `chore/release-1-0` — saída do `0.x`, changelogs, notas da release e SBOM. *(Daqui: os pacotes publicados no npm e o SBOM deste repositório.)*
+- [ ] **6.8** `docs/launch` — README final, demo pública e post de lançamento (TabNews, dev.to, Show HN). *(Daqui: o README, o site e o post. A demo pública é de lá, por ser uma sessão no dashboard.)*
+
+### O que acontece no nekolog-dashboard
+
+O escopo continua valendo; só a branch e o PR mudam de endereço.
+
+- **6.6** `a11y/audit` — auditoria WCAG 2.2 AA e correções (a interface é de lá; o `axe` do site e da documentação já roda aqui desde a 3.12).
+
+**Pronto quando:** alguém sobe tudo seguindo só a documentação. *(Como nos marcos anteriores, o critério atravessa os dois repositórios — mas aqui pende para cá: o self-host é só deste repositório.)*
