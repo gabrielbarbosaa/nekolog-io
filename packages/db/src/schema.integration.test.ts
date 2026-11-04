@@ -143,6 +143,8 @@ describe.skipIf(!reachable)('the migration this package ships', () => {
       'export_schedules',
       'exports',
       'invites',
+      'issue_environments',
+      'issues',
       'memberships',
       'organizations',
       'projects',
@@ -313,6 +315,20 @@ const TABLES: Array<[string, string, Insert]> = [
         environment_id: await environment(tx, projectId),
         cadence: 'daily',
         format: 'csv',
+      })}`
+    },
+  ],
+  [
+    'issues',
+    ID_PREFIXES.issue,
+    async (tx, badId) => {
+      await tx`insert into issues ${tx({
+        id: badId,
+        project_id: await project(tx, await organization(tx)),
+        fingerprint: '42',
+        title: 'boom',
+        first_seen_at: new Date(),
+        last_seen_at: new Date(),
       })}`
     },
   ],
@@ -1109,5 +1125,159 @@ describe.skipIf(!reachable)('two dashboards', () => {
         })}`
       }
     })
+  })
+})
+
+describe.skipIf(!reachable)('an issue', () => {
+  const NOW = new Date('2026-11-03T12:00:00.000Z')
+
+  async function place(tx: postgres.TransactionSql): Promise<[string, string]> {
+    const projectId = await project(tx, await organization(tx))
+    return [projectId, await environment(tx, projectId)]
+  }
+
+  function issue(projectId: string, extra: Record<string, unknown> = {}) {
+    return {
+      id: id(ID_PREFIXES.issue),
+      project_id: projectId,
+      fingerprint: '12345678901234567890',
+      title: 'Cannot read properties of undefined',
+      first_seen_at: NOW,
+      last_seen_at: NOW,
+      ...extra,
+    }
+  }
+
+  it('cannot carry the fingerprint that means there is none', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        await tx`insert into issues ${tx(issue(projectId, { fingerprint: '0' }))}`
+      }),
+    ).rejects.toThrow(/issues_fingerprint_is_not_the_unresolved_one/)
+  })
+
+  it('cannot carry a fingerprint that is not a whole number', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        await tx`insert into issues ${tx(issue(projectId, { fingerprint: '-1' }))}`
+      }),
+    ).rejects.toThrow(/issues_fingerprint_is_an_unsigned_number/)
+  })
+
+  it('takes a fingerprint that fills a UInt64, because it is text here', async () => {
+    await inRollback(async (tx) => {
+      const [projectId] = await place(tx)
+      await tx`insert into issues ${tx(issue(projectId, { fingerprint: '18446744073709551615' }))}`
+    })
+  })
+
+  it('happens once per project and fingerprint', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        for (const _ of [1, 2]) {
+          await tx`insert into issues ${tx(issue(projectId))}`
+        }
+      }),
+    ).rejects.toThrow(/issues_one_per_project_and_fingerprint/)
+  })
+
+  it('may share a fingerprint with another project', async () => {
+    await inRollback(async (tx) => {
+      const organizationId = await organization(tx)
+      for (const _ of [1, 2]) {
+        await tx`insert into issues ${tx(issue(await project(tx, organizationId)))}`
+      }
+    })
+  })
+
+  it('cannot have been last seen before it was first seen', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        await tx`insert into issues ${tx(
+          issue(projectId, { last_seen_at: new Date(NOW.getTime() - 1000) }),
+        )}`
+      }),
+    ).rejects.toThrow(/issues_last_seen_is_not_before_first_seen/)
+  })
+
+  it('cannot be resolved without saying when', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        await tx`insert into issues ${tx(issue(projectId, { status: 'resolved' }))}`
+      }),
+    ).rejects.toThrow(/issues_resolved_means_there_is_a_moment/)
+  })
+
+  it('cannot count a negative number of events', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId] = await place(tx)
+        await tx`insert into issues ${tx(issue(projectId, { events: -1 }))}`
+      }),
+    ).rejects.toThrow(/issues_events_is_not_negative/)
+  })
+
+  it('loses its assignee rather than the record when the person is deleted', async () => {
+    await inRollback(async (tx) => {
+      const [projectId] = await place(tx)
+      const userId = id(ID_PREFIXES.user)
+      await tx`insert into users ${tx({
+        id: userId,
+        name: 'Ada',
+        email: 'ada@example.com',
+        password_hash: 'argon2id$x',
+      })}`
+      await tx`insert into issues ${tx(issue(projectId, { assignee_id: userId }))}`
+
+      await tx`delete from users where id = ${userId}`
+
+      const left = await tx`select assignee_id from issues`
+      expect(left).toHaveLength(1)
+      expect(left[0]?.assignee_id).toBe(null)
+    })
+  })
+
+  it('counts each environment on its own, and goes away with the issue', async () => {
+    await inRollback(async (tx) => {
+      const [projectId, environmentId] = await place(tx)
+      const row = issue(projectId)
+      await tx`insert into issues ${tx(row)}`
+      await tx`insert into issue_environments ${tx({
+        issue_id: row.id,
+        environment_id: environmentId,
+        events: 3,
+        first_seen_at: NOW,
+        last_seen_at: NOW,
+      })}`
+
+      await tx`delete from issues where id = ${row.id}`
+
+      const left = await tx`select count(*)::int as n from issue_environments`
+      expect(left[0]?.n).toBe(0)
+    })
+  })
+
+  it('counts an environment once per issue', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        const [projectId, environmentId] = await place(tx)
+        const row = issue(projectId)
+        await tx`insert into issues ${tx(row)}`
+        for (const _ of [1, 2]) {
+          await tx`insert into issue_environments ${tx({
+            issue_id: row.id,
+            environment_id: environmentId,
+            events: 1,
+            first_seen_at: NOW,
+            last_seen_at: NOW,
+          })}`
+        }
+      }),
+    ).rejects.toThrow(/issue_environments_issue_id_environment_id_pk/)
   })
 })

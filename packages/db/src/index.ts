@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -29,6 +30,7 @@ export const ID_PREFIXES = {
   release: 'rel_',
   export: 'exp_',
   exportSchedule: 'exs_',
+  issue: 'iss_',
 } as const
 
 export const ULID_CHARS = 26
@@ -42,6 +44,7 @@ export const SUPPRESSION_REASONS = ['bounce', 'complaint', 'manual'] as const
 export const EXPORT_FORMATS = ['json', 'xml', 'csv'] as const
 export const EXPORT_STATUSES = ['pending', 'running', 'ready', 'failed', 'expired'] as const
 export const EXPORT_CADENCES = ['daily', 'weekly'] as const
+export const ISSUE_STATUSES = ['open', 'resolved', 'ignored'] as const
 
 export const MAX_SEARCH_QUERY_CHARS = 2000
 export const MAX_DASHBOARD_WIDGETS = 50
@@ -53,6 +56,7 @@ export const apiKeyKind = pgEnum('api_key_kind', API_KEY_KINDS)
 export const exportFormat = pgEnum('export_format', EXPORT_FORMATS)
 export const exportStatus = pgEnum('export_status', EXPORT_STATUSES)
 export const exportCadence = pgEnum('export_cadence', EXPORT_CADENCES)
+export const issueStatus = pgEnum('issue_status', ISSUE_STATUSES)
 
 export const users = pgTable(
   'users',
@@ -436,6 +440,66 @@ export const exports = pgTable(
     check(
       'exports_object_key_has_no_dot_dot',
       sql`object_key is null or object_key not like '%..%'`,
+    ),
+  ],
+)
+
+export const issues = pgTable(
+  'issues',
+  {
+    id: text('id').primaryKey(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    fingerprint: text('fingerprint').notNull(),
+    status: issueStatus('status').notNull().default('open'),
+    title: text('title').notNull(),
+    errorType: text('error_type').notNull().default(''),
+    service: text('service').notNull().default(''),
+    assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+    events: bigint('events', { mode: 'number' }).notNull().default(0),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    regressedAt: timestamp('regressed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('issues_one_per_project_and_fingerprint').on(table.projectId, table.fingerprint),
+    index('issues_by_project_and_last_seen').on(table.projectId, table.lastSeenAt),
+    check('issues_id_shape', sql`id ~ '^iss_[0-9A-HJKMNP-TV-Z]{26}$'`),
+    check('issues_fingerprint_is_an_unsigned_number', sql`fingerprint ~ '^[0-9]{1,20}$'`),
+    check('issues_fingerprint_is_not_the_unresolved_one', sql`fingerprint <> '0'`),
+    check('issues_title_is_not_blank', sql`length(btrim(title)) > 0`),
+    check('issues_events_is_not_negative', sql`events >= 0`),
+    check('issues_last_seen_is_not_before_first_seen', sql`last_seen_at >= first_seen_at`),
+    check(
+      'issues_resolved_means_there_is_a_moment',
+      sql`status <> 'resolved' or resolved_at is not null`,
+    ),
+  ],
+)
+
+export const issueEnvironments = pgTable(
+  'issue_environments',
+  {
+    issueId: text('issue_id')
+      .notNull()
+      .references(() => issues.id, { onDelete: 'cascade' }),
+    environmentId: text('environment_id')
+      .notNull()
+      .references(() => environments.id, { onDelete: 'cascade' }),
+    events: bigint('events', { mode: 'number' }).notNull().default(0),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.issueId, table.environmentId] }),
+    index('issue_environments_by_environment').on(table.environmentId),
+    check('issue_environments_events_is_not_negative', sql`events >= 0`),
+    check(
+      'issue_environments_last_seen_is_not_before_first_seen',
+      sql`last_seen_at >= first_seen_at`,
     ),
   ],
 )

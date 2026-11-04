@@ -3,6 +3,17 @@ export type { MemoryBlobStore } from './blobs/memory-blob-store.ts'
 export { memoryBlobStore } from './blobs/memory-blob-store.ts'
 export type { R2BucketLike, R2ListedLike, R2ObjectBodyLike } from './blobs/r2-blob-store.ts'
 export { R2_LIST_PAGE, r2BlobStore } from './blobs/r2-blob-store.ts'
+export type {
+  IssueOccurrence,
+  IssueRollup,
+  IssueStatus,
+  IssueStore,
+} from './issue-store.ts'
+export { ISSUE_STATUSES } from './issue-store.ts'
+export type { MemoryIssue, MemoryIssueStore } from './issues/memory-issue-store.ts'
+export { memoryIssueStore } from './issues/memory-issue-store.ts'
+export type { SqlIssueStoreOptions, SqlRunner } from './issues/sql-issue-store.ts'
+export { ISSUE_ID_PREFIX, newIssueId, sqlIssueStore } from './issues/sql-issue-store.ts'
 export type { KeyRecord, KeyStore } from './key-store.ts'
 export type { CachedKeyStoreOptions } from './keys/cached-key-store.ts'
 export {

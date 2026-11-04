@@ -220,7 +220,7 @@ para o passo a passo mostrar.
 - [x] **4.1** `feat/search-language` — parser da busca (AST → SQL parametrizado) conforme a especificação 4, com fuzzing. *(Daqui: o parser e o gerador de SQL em `packages/clickhouse`. A barra de busca é de lá.)*
 - [x] **4.4** `feat/log-context` — logs antes e depois de um log escolhido. *(Daqui: a consulta de janela no query builder. O "ver contexto" é de lá.)*
 - [x] **4.5** `feat/fingerprint` — fingerprint dos erros na ingestão, conforme a especificação 5. *(Inteira daqui: é CPU pura sobre o evento, e o ClickHouse não preenche a coluna depois do insert sem mutation.)*
-- [ ] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá.)*
+- [x] **4.6** `feat/issues` — issues montadas e mantidas pelos jobs: agrupamento por fingerprint, contagem, primeira e última ocorrência, status. *(A lista e a tela da issue são de lá. As tabelas `issues` e `issue_environments` vieram com esta etapa, não com a 4.15, porque o job que as escreve é quem define o formato delas.)*
 - [ ] **4.7** `feat/releases` — registro de release pela CLI e a escrita no banco. *(A tela `…/releases` é de lá.)*
 - [ ] **4.8** `feat/cli-sourcemaps` — upload de source maps pela CLI, com validação de tamanho, tipo e nome. *(Inteira daqui.)*
 - [ ] **4.9** `feat/bundler-plugin` — plugin com `unplugin`. *(Inteira daqui.)*

@@ -300,3 +300,31 @@ qualquer nome fora da `LOG_COLUMNS` é recusado — é a única parte da consult
 não dá para parametrizar. O `retention_days` não está na lista: é campo interno,
 não é log de ninguém. O nome do banco e da tabela passam pelo mesmo
 `assertIdentifier` do `LogStore`.
+
+## Agrupamento de erros
+
+```ts
+import { clickHouseIssueSource } from '@nekolog-io/clickhouse/issues'
+
+const source = clickHouseIssueSource(config)
+const occurrences = await source.occurrencesBetween({ from, to })
+```
+
+Agrupa as linhas de erro por projeto, ambiente e fingerprint, e devolve o que o
+`IssueStore` do `@nekolog-io/adapters` espera. Quem chama é a task
+`issue-rollup` do `apps/jobs`, de minuto em minuto.
+
+**A janela é por `received_at`, nunca pelo `timestamp` que o cliente escolheu.**
+É a mesma regra do `usage_per_minute` e da cota (ameaça T7): quem antedata os
+próprios eventos cairia fora de toda janela e nunca seria agrupado. Já o
+`first_seen` e o `last_seen` que voltam vêm do `timestamp`, porque é esse que a
+pessoa lê na tela.
+
+Linha com `fingerprint = 0` fica de fora — é o valor que significa "não foi
+calculado", não uma issue. E o `WHERE` é qualificado (`logs.fingerprint`) porque
+o `SELECT` tem um alias `fingerprint` do tipo `String`: sem a qualificação o
+ClickHouse resolve o alias e recusa a comparação com `0`.
+
+O fingerprint volta como **texto** (`toString`), porque um `UInt64` não cabe num
+`number` do JavaScript e `18446744073709551615` precisa chegar inteiro no
+Postgres.

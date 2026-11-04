@@ -792,6 +792,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: ^0.18.5
         version: 0.18.5
+      '@nekolog-io/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2

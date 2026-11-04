@@ -52,11 +52,12 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
+    "@nekolog-io/adapters": "workspace:*",
     "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.31.11",
+    "postgres": "^4.0.0",
     "publint": "^0.3.25",
     "tsdown": "^0.23.2",
-    "vitest": "^5.0.5",
-    "drizzle-kit": "^0.31.11",
-    "postgres": "^4.0.0"
+    "vitest": "^5.0.5"
   }
 }
