@@ -1,8 +1,70 @@
 {
   "HomePage": {
     "title": "NekoLog",
-    "tagline": "Plataforma de logs para aplicações JavaScript e TypeScript.",
-    "comingSoon": "O dashboard está só começando."
+    "tagline": "Log para aplicações JavaScript e TypeScript, no front e no back.",
+    "lede": "SDKs que juntam em lote e mandam o que a sua aplicação já escreve, uma API de ingestão, ClickHouse para guardar, jobs em segundo plano para alertas e uma API HTTP para ler tudo de volta.",
+    "status": "Versão 1.0. Nada foi publicado no npm ainda e não existe serviço hospedado — o que dá para fazer hoje é rodar por conta própria.",
+    "runIt": "Rodar por conta própria",
+    "readTheDocs": "Ler a documentação",
+    "sourceOnGitHub": "Código no GitHub",
+    "sampleLabel": "Três linhas na sua aplicação",
+    "readLabel": "E ler de volta, sem dashboard nenhum no meio",
+    "features": {
+      "title": "O que ele faz",
+      "sdks": {
+        "title": "12 SDKs sobre um núcleo só",
+        "body": "Navegador, Node, React, Next, Express, Fastify, Hono, NestJS, mais pontes para pino e winston, uma CLI e um plugin de bundler. Uma implementação só por baixo, então eles não têm como divergir."
+      },
+      "privacy": {
+        "title": "Privacidade antes da chamada de rede",
+        "body": "Senha, token, número de cartão e CPF saem de dentro do seu processo, antes de qualquer envio — e de novo no servidor, a partir de uma lista fechada de padrões por ambiente."
+      },
+      "search": {
+        "title": "Uma linguagem de busca, não um \"contém\"",
+        "body": "level:error service:api @status>=500 \"timeout\". Analisada, limitada e compilada em parâmetros, nunca interpolada no SQL."
+      },
+      "issues": {
+        "title": "Erros agrupados na ingestão",
+        "body": "O fingerprint é calculado onde o evento chega, então agrupar nunca precisa de uma segunda passada na tabela. Um erro resolvido que volta a acontecer reabre; um que você ignorou fica quieto."
+      },
+      "alerts": {
+        "title": "Alertas que falham do lado seguro",
+        "body": "Todas as regras de um ambiente são medidas numa query só. Uma medição que falhou nunca resolve um alerta aceso, e o endereço de um webhook é checado contra SSRF quando é salvo e de novo quando é usado."
+      },
+      "otlp": {
+        "title": "OpenTelemetry, se você preferir",
+        "body": "O POST /v1/otlp/logs aceita OTLP/HTTP e converte antes de qualquer outra coisa, então um registro OTLP passa exatamente pela mesma validação e remoção de dado sensível que um nativo."
+      }
+    },
+    "open": {
+      "title": "O que é aberto e o que não é",
+      "body": "Este repositório é MIT: os SDKs, a ingestão, os jobs, a API pública de leitura, esta página e a documentação. O dashboard — as telas — é fechado e só roda no serviço hospedado.",
+      "line": "A linha está onde está de propósito. Tudo que encosta nos seus dados, no seu processo e nos seus logs é aberto e auditável. O self-host te dá ingestão, armazenamento, busca, agrupamento de erros e alertas por uma API HTTP; o que ele não te dá é uma tela para olhar para isso.",
+      "selfHostTitle": "No self-host",
+      "selfHostBody": "Ingestão, OTLP, remoção de dado sensível, amostragem, nível mínimo, cotas, agrupamento de erros, alertas para webhook e a API de leitura.",
+      "hostedTitle": "Só no serviço hospedado",
+      "hostedBody": "O dashboard: o explorador, os gráficos, as telas de erro, as views salvas, a resolução de source map e o download da exportação."
+    },
+    "data": {
+      "title": "O que ele faz com os seus dados",
+      "ip": "O endereço IP nunca é gravado. Nem com hash, nem truncado — a linha carrega o país, e um teste falha se um cabeçalho de endereço chegar ao armazenamento.",
+      "client": "Dado sensível sai de dentro do seu processo, depois do seu próprio beforeSend, então o hook não tem como desfazer.",
+      "server": "E de novo no servidor, a partir de uma lista fechada de padrões nomeados. Você não pode mandar uma expressão regular, porque a regex de terceiro num Worker com 10 ms de CPU é uma negação de serviço que você escreve sozinho.",
+      "url": "Um breadcrumb de clique registra o seletor, nunca o texto do elemento. A page.url perde a query string, porque é lá que mora token de recuperação de senha.",
+      "link": "O que fica guardado"
+    },
+    "numbers": {
+      "title": "Medido, não prometido",
+      "deps": "O @nekolog-io/core tem zero dependências de runtime, por contrato — e todo pacote publicado sai com um inventário CycloneDX construído do lockfile, então uma dependência chegando ali falha a release.",
+      "size": "O SDK de navegador não cumpre o próprio orçamento de tamanho. A meta era 5 kB com gzip; o init está em 12,05 kB. A maior parte disso é o filtro de privacidade, que não é opcional. A meta não cumprida está escrita, em vez de arredondada para longe.",
+      "cpu": "O maior lote que o protocolo permite não cabia num Worker gratuito: 500 eventos custavam 10,8 ms de CPU contra um limite de 10 ms. O lote padrão do cliente agora é de 200 eventos, e um teste vigia o orçamento no CI.",
+      "runtimes": "Node 22, 24 e 26, Bun, Deno, Chromium, Firefox e WebKit rodam a suíte em cada pull request — contra o pacote construído, não contra o fonte."
+    },
+    "footer": {
+      "docs": "Documentação",
+      "github": "GitHub",
+      "license": "Licença MIT"
+    }
   },
   "ThemeToggle": {
     "label": "Tema",
@@ -14,8 +76,8 @@
     "label": "Idioma"
   },
   "Legal": {
-    "terms": "Termos de uso",
-    "privacy": "Política de privacidade",
+    "terms": "Termos de Uso",
+    "privacy": "Política de Privacidade",
     "updated": "Atualizado em {date}",
     "backHome": "Voltar para a página inicial"
   }

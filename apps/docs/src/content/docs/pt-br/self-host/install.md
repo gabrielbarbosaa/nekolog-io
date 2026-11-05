@@ -50,7 +50,7 @@ NEKOLOG_ENDPOINT=http://localhost:8787
 ```ts
 import { createLogger } from '@nekolog-io/node'
 
-const log = createLogger({ key: process.env.NEKOLOG_KEY, endpoint: process.env.NEKOLOG_ENDPOINT })
+const log = createLogger({ service: 'checkout-api' })
 log.error('quebrou', new Error('cannot read properties of undefined'))
 ```
 
