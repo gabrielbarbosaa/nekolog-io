@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseSeedDocument } from '@internal/seed'
+import { parseSeedDocument, type SeedDocument } from '@internal/seed'
 import { ping } from '@nekolog-io/clickhouse/client'
 import { startLocalIngest } from './local.ts'
 import { selfHostIngestConfigFrom, selfHostIngestWiring } from './self-host.ts'
@@ -15,6 +15,18 @@ function report(line: string): void {
 
 function reportToConsole(error: unknown): void {
   process.stderr.write(`[nekolog/ingest] ${error instanceof Error ? error.stack : String(error)}\n`)
+}
+
+function reportReload(document: SeedDocument): void {
+  report(
+    `seed file re-read: ${document.environments
+      .map(
+        (environment) =>
+          `${environment.name} min=${environment.minLevel} sample=${environment.sampleRate} ` +
+          `redaction=${environment.redaction.patterns.length + environment.redaction.attributes.length}`,
+      )
+      .join('  ')}`,
+  )
 }
 
 function reportSpooled(spooled: SpooledBatch): void {
@@ -40,7 +52,9 @@ async function main(): Promise<void> {
     selfHostIngestWiring({
       config,
       document,
+      seedFile,
       onError: reportToConsole,
+      onReload: reportReload,
       onSpooled: reportSpooled,
     }),
   )
@@ -55,6 +69,7 @@ async function main(): Promise<void> {
   report(`ClickHouse ${config.clickhouse.url} database ${config.clickhouse.database}`)
   report(`spool ${config.spoolDir}  kv ${config.kvDir}`)
   report(`project ${document.project.name}  ${document.project.id}`)
+  reportReload(document)
 }
 
 try {

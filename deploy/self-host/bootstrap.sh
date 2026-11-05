@@ -15,10 +15,22 @@ fi
 
 echo "minting the first project, its environments and their keys"
 umask 077
-pnpm seed init \
-  --file "$SEED_FILE" \
+set -- --file "$SEED_FILE" \
   --environments "$SEED_ENVIRONMENTS" \
-  --retention-days "$SEED_RETENTION_DAYS" >"$KEYS_FILE"
+  --retention-days "$SEED_RETENTION_DAYS"
+if [ -n "${SEED_MIN_LEVEL:-}" ]; then
+  set -- "$@" --min-level "$SEED_MIN_LEVEL"
+fi
+if [ -n "${SEED_SAMPLE_RATE:-}" ]; then
+  set -- "$@" --sample-rate "$SEED_SAMPLE_RATE"
+fi
+if [ -n "${SEED_REDACT:-}" ]; then
+  set -- "$@" --redact "$SEED_REDACT"
+fi
+if [ -n "${SEED_REDACT_ATTRIBUTES:-}" ]; then
+  set -- "$@" --redact-attributes "$SEED_REDACT_ATTRIBUTES"
+fi
+pnpm seed init "$@" >"$KEYS_FILE"
 
 echo "writing the project into Postgres, so the alerts and the issues have one"
 pnpm seed sync-db --file "$SEED_FILE"

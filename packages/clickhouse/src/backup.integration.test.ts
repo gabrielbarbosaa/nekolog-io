@@ -99,17 +99,20 @@ async function history(): Promise<Attempt[]> {
   return await queryRows<Attempt>(config, backupHistoryQuery(), { database: null })
 }
 
-async function settled(url: string, within = 60_000): Promise<Attempt> {
+async function settled(url: string, howMany = 1, within = 60_000): Promise<Attempt[]> {
   const deadline = Date.now() + within
+  let mine: Attempt[] = []
   while (Date.now() < deadline) {
-    const mine = (await history()).filter((one) => one.name.includes(url))
-    const finished = mine.find((one) => one.status !== BACKUP_RUNNING)
-    if (finished !== undefined) {
-      return finished
+    mine = (await history()).filter((one) => one.name.includes(url))
+    if (mine.length >= howMany && mine.every((one) => one.status !== BACKUP_RUNNING)) {
+      return mine
     }
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
-  throw new Error(`The backup at ${url} never left ${BACKUP_RUNNING}`)
+  throw new Error(
+    `Waited for ${howMany} settled backups at ${url} and got ` +
+      JSON.stringify(mine.map((one) => one.status)),
+  )
 }
 
 describe.skipIf(!storeReachable)('backing a real database up and restoring it', () => {
@@ -138,10 +141,10 @@ describe.skipIf(!storeReachable)('backing a real database up and restoring it', 
   }, 60_000)
 
   it('finishes, and says how much it wrote', async () => {
-    const attempt = await settled(compiled.url)
+    const [attempt] = await settled(compiled.url)
 
-    expect(attempt.status, attempt.error).toBe(BACKUP_CREATED)
-    expect(attempt.error).toBe('')
+    expect(attempt?.status, attempt?.error).toBe(BACKUP_CREATED)
+    expect(attempt?.error).toBe('')
   }, 120_000)
 
   it('never shows the secret back, in the history or in what we log', async () => {
@@ -157,10 +160,10 @@ describe.skipIf(!storeReachable)('backing a real database up and restoring it', 
 
   it('refuses to write a second backup over the first, which is why the name carries the time', async () => {
     await execute(config, compiled.sql, { database: null })
-    const again = await settled(compiled.url)
+    const both = await settled(compiled.url, 2)
 
-    expect(again.status).toBe(BACKUP_FAILED)
-    expect(again.error).toMatch(/already exists/i)
+    expect(both.map((one) => one.status).sort()).toEqual([BACKUP_CREATED, BACKUP_FAILED].sort())
+    expect(both.find((one) => one.status === BACKUP_FAILED)?.error).toMatch(/already exists/i)
   }, 120_000)
 
   it('restores every row and the usage rollup into an empty database', async () => {

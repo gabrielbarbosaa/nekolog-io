@@ -7,3 +7,5 @@ export {
   MAX_BLOB_KEY_CHARS,
   UnsafeKey,
 } from './keys.ts'
+export type { SeedKeyStoreOptions } from './seed-key-store.ts'
+export { DEFAULT_RELOAD_MS, fileSeedKeyStore, ReadOnlyKeyStore } from './seed-key-store.ts'

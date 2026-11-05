@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@internal/seed": "workspace:*",
     "@nekolog-io/adapters": "workspace:*"
   },
   "devDependencies": {

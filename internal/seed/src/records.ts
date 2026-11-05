@@ -18,6 +18,9 @@ export function keyRecordsFor(document: SeedDocument): SeedKeyRecord[] {
           environment.originAllowlist === null ? null : [...environment.originAllowlist],
         blocked: false,
         retentionDays: environment.retentionDays,
+        minLevel: environment.minLevel,
+        sampleRate: environment.sampleRate,
+        redaction: environment.redaction,
       },
     })),
   )

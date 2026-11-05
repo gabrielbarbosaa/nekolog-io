@@ -12,6 +12,7 @@
     "seed": "node src/cli.ts"
   },
   "dependencies": {
+    "@internal/schema": "workspace:*",
     "@nekolog-io/adapters": "workspace:*",
     "postgres": "^4.0.0"
   },

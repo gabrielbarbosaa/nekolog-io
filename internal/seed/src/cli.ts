@@ -1,16 +1,30 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import type { ApiKeyKind } from '@nekolog-io/adapters'
+import {
+  type ApiKeyKind,
+  parseRedactionRules,
+  REDACTION_PATTERNS,
+  type RedactionRules,
+} from '@nekolog-io/adapters'
 import {
   keyHint,
   parseSeedDocument,
   type SeedDocument,
+  type SeedEnvironmentEntry,
   serialiseSeedDocument,
   toDocument,
 } from './document.ts'
-import { buildSeed, DEFAULT_ENVIRONMENTS, DEFAULT_RETENTION_DAYS, mintKey } from './model.ts'
+import {
+  buildSeed,
+  DEFAULT_ENVIRONMENTS,
+  DEFAULT_RETENTION_DAYS,
+  type EnvironmentSettings,
+  mintKey,
+  NEW_PROJECT_REDACTION,
+  settingsFrom,
+} from './model.ts'
 import { seedStatements } from './postgres.ts'
 import { keyRecordsFor } from './records.ts'
 
@@ -21,19 +35,27 @@ export const DEFAULT_SEED_FILE = '.nekolog-seed.json'
 const USAGE = `
 pnpm seed init     cria organização, projeto, ambientes e keys
 pnpm seed add-key  gera mais uma key para um ambiente que já existe
+pnpm seed set      muda nível mínimo, amostragem e redação de um ambiente
 pnpm seed show     mostra o que existe, sem segredo nenhum
 pnpm seed sync-db  escreve a organização, o projeto, os ambientes e os hashes
                    das keys no Postgres de DATABASE_URL, sem segredo nenhum
 
-  --organization <nome>   padrão: NekoLog
-  --project <nome>        padrão: nekolog
-  --environments <lista>  padrão: ${DEFAULT_ENVIRONMENTS.join(',')}
-  --retention-days <n>    padrão: ${DEFAULT_RETENTION_DAYS}
-  --origins <lista>       origens permitidas das keys públicas; padrão: qualquer uma
-  --environment <nome>    para o add-key
-  --kind <public|secret>  para o add-key; padrão: secret
-  --file <caminho>        padrão: ${DEFAULT_SEED_FILE}
-  --force                 deixa o init sobrescrever um arquivo que já existe
+  --organization <nome>      padrão: NekoLog
+  --project <nome>           padrão: nekolog
+  --environments <lista>     padrão: ${DEFAULT_ENVIRONMENTS.join(',')}
+  --retention-days <n>       padrão: ${DEFAULT_RETENTION_DAYS}
+  --origins <lista>          origens permitidas das keys públicas; padrão: qualquer uma
+  --min-level <nível>        descarta o que for mais baixo; padrão: trace
+  --sample-rate <0..1>       fração guardada; error e fatal nunca são sorteados
+  --redact <lista|all|none>  padrões a apagar no servidor; padrão de projeto novo:
+                             ${NEW_PROJECT_REDACTION.patterns.join(', ')}
+                             todos: ${REDACTION_PATTERNS.join(', ')}
+  --redact-attributes <l>    atributos a apagar pelo nome, ou por prefixo com *
+  --replacement <texto>      o que entra no lugar; padrão: [redacted]
+  --environment <nome>       para o add-key e o set; sem ele, o set vale para todos
+  --kind <public|secret>     para o add-key; padrão: secret
+  --file <caminho>           padrão: ${DEFAULT_SEED_FILE}
+  --force                    deixa o init sobrescrever um arquivo que já existe
 `.trimStart()
 
 function write(line = ''): void {
@@ -58,7 +80,56 @@ function readDocument(file: string): SeedDocument {
 }
 
 function save(file: string, document: SeedDocument): void {
-  writeFileSync(file, serialiseSeedDocument(document), 'utf8')
+  const scratch = `${file}.writing-${Math.random().toString(36).slice(2)}`
+  writeFileSync(scratch, serialiseSeedDocument(document), 'utf8')
+  renameSync(scratch, file)
+}
+
+type Values = Record<string, string | boolean | undefined>
+
+function patternsFrom(value: string): string[] {
+  const named = list(value) ?? []
+  if (named.length === 1 && named[0] === 'none') {
+    return []
+  }
+  if (named.length === 1 && named[0] === 'all') {
+    return [...REDACTION_PATTERNS]
+  }
+  return named
+}
+
+function redactionFrom(values: Values, current: RedactionRules): RedactionRules | undefined {
+  const patterns = values.redact
+  const attributes = values['redact-attributes']
+  const replacement = values.replacement
+  if (patterns === undefined && attributes === undefined && replacement === undefined) {
+    return undefined
+  }
+  return parseRedactionRules({
+    patterns: patterns === undefined ? [...current.patterns] : patternsFrom(String(patterns)),
+    attributes:
+      attributes === undefined ? [...current.attributes] : (list(String(attributes)) ?? []),
+    replacement: replacement === undefined ? current.replacement : String(replacement),
+  })
+}
+
+function settingsFromFlags(values: Values, fallback: EnvironmentSettings): EnvironmentSettings {
+  const minLevel = values['min-level']
+  const sampleRate = values['sample-rate']
+  const redaction = redactionFrom(values, fallback.redaction)
+  return settingsFrom({
+    ...(minLevel === undefined ? {} : { minLevel: String(minLevel) }),
+    ...(sampleRate === undefined ? {} : { sampleRate: Number(sampleRate) }),
+    ...(redaction === undefined ? {} : { redaction }),
+    fallback,
+  })
+}
+
+function describeRedaction(rules: RedactionRules): string {
+  const patterns = rules.patterns.length === 0 ? 'nenhum padrão' : rules.patterns.join(', ')
+  const attributes =
+    rules.attributes.length === 0 ? '' : `, atributos ${rules.attributes.join(', ')}`
+  return `${patterns}${attributes} → ${rules.replacement}`
 }
 
 function announceSecret(environment: string, kind: ApiKeyKind, value: string): void {
@@ -76,6 +147,10 @@ function summarise(document: SeedDocument): void {
         : environment.originAllowlist.join(', ') || 'nenhuma origem'
     write(`${environment.name}  ${environment.id}`)
     write(`  retenção ${environment.retentionDays} dias, ${origins}`)
+    write(
+      `  nível mínimo ${environment.minLevel}, amostragem ${environment.sampleRate}, ` +
+        `redação ${describeRedaction(environment.redaction)}`,
+    )
     for (const key of environment.keys) {
       write(`  ${key.kind.padEnd(7)} ${key.hint}  ${key.id}`)
     }
@@ -87,6 +162,21 @@ function warnAboutOrigins(document: SeedDocument): void {
   if (document.environments.some((environment) => environment.originAllowlist === null)) {
     write(
       'Atenção: as keys públicas aceitam qualquer origem. Defina --origins antes de usar em produção.',
+    )
+  }
+}
+
+function warnAboutRedaction(document: SeedDocument): void {
+  const bare = document.environments.filter(
+    (environment) =>
+      environment.redaction.patterns.length === 0 && environment.redaction.attributes.length === 0,
+  )
+  if (bare.length > 0) {
+    write(
+      'Atenção: sem redação no servidor em ' +
+        `${bare.map((environment) => environment.name).join(', ')} — ` +
+        'o log é gravado como chega. ' +
+        'Ligue com "pnpm seed set --redact all" se algum log puder carregar dado pessoal.',
     )
   }
 }
@@ -103,6 +193,11 @@ async function init(values: Record<string, string | boolean | undefined>): Promi
   const environments = list(values.environments as string | undefined)
   const origins = list(values.origins as string | undefined)
   const retentionDays = values['retention-days']
+  const settings = settingsFromFlags(values, {
+    minLevel: 'trace',
+    sampleRate: 1,
+    redaction: NEW_PROJECT_REDACTION,
+  })
 
   const seed = await buildSeed({
     organization: String(values.organization ?? 'NekoLog'),
@@ -110,6 +205,9 @@ async function init(values: Record<string, string | boolean | undefined>): Promi
     ...(environments === undefined ? {} : { environments }),
     ...(origins === undefined ? {} : { originAllowlist: origins }),
     ...(retentionDays === undefined ? {} : { retentionDays: Number(retentionDays) }),
+    minLevel: settings.minLevel,
+    sampleRate: settings.sampleRate,
+    redaction: settings.redaction,
   })
 
   const document = toDocument(seed)
@@ -125,7 +223,59 @@ async function init(values: Record<string, string | boolean | undefined>): Promi
   }
   write('')
   warnAboutOrigins(document)
+  warnAboutRedaction(document)
   write(`${keyRecordsFor(document).length} registros de key escritos em ${file}`)
+}
+
+function environmentsToChange(document: SeedDocument, name: unknown): SeedEnvironmentEntry[] {
+  if (name === undefined) {
+    return document.environments
+  }
+  const found = document.environments.find((entry) => entry.name === name)
+  if (found === undefined) {
+    const known = document.environments.map((entry) => entry.name).join(', ')
+    throw new Error(`Não existe o ambiente "${String(name)}". Existem: ${known}`)
+  }
+  return [found]
+}
+
+async function set(values: Values): Promise<void> {
+  const file = resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE))
+  const document = readDocument(file)
+  const chosen = environmentsToChange(document, values.environment)
+
+  if (
+    values['min-level'] === undefined &&
+    values['sample-rate'] === undefined &&
+    values.redact === undefined &&
+    values['redact-attributes'] === undefined &&
+    values.replacement === undefined
+  ) {
+    throw new Error(
+      'Diga o que mudar: --min-level, --sample-rate, --redact, --redact-attributes ou --replacement.',
+    )
+  }
+
+  for (const environment of chosen) {
+    const settings = settingsFromFlags(values, {
+      minLevel: environment.minLevel,
+      sampleRate: environment.sampleRate,
+      redaction: environment.redaction,
+    })
+    environment.minLevel = settings.minLevel
+    environment.sampleRate = settings.sampleRate
+    environment.redaction = settings.redaction
+  }
+  save(file, document)
+
+  for (const environment of chosen) {
+    write(
+      `${environment.name}: nível mínimo ${environment.minLevel}, ` +
+        `amostragem ${environment.sampleRate}, redação ${describeRedaction(environment.redaction)}`,
+    )
+  }
+  write('')
+  write('A ingestão relê o arquivo sozinha. Rode "pnpm seed sync-db" para o Postgres saber também.')
 }
 
 async function addKey(values: Record<string, string | boolean | undefined>): Promise<void> {
@@ -184,6 +334,7 @@ async function syncDb(values: Record<string, string | boolean | undefined>): Pro
     `${document.environments.length} ambientes e ${keys} hashes de key escritos no Postgres. ` +
       'Nenhuma key em claro saiu daqui.',
   )
+  warnAboutRedaction(document)
 }
 
 async function main(): Promise<void> {
@@ -195,6 +346,11 @@ async function main(): Promise<void> {
       environments: { type: 'string' },
       'retention-days': { type: 'string' },
       origins: { type: 'string' },
+      'min-level': { type: 'string' },
+      'sample-rate': { type: 'string' },
+      redact: { type: 'string' },
+      'redact-attributes': { type: 'string' },
+      replacement: { type: 'string' },
       environment: { type: 'string' },
       kind: { type: 'string' },
       file: { type: 'string' },
@@ -217,8 +373,14 @@ async function main(): Promise<void> {
     await addKey(values)
     return
   }
+  if (command === 'set') {
+    await set(values)
+    return
+  }
   if (command === 'show') {
-    summarise(readDocument(resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE))))
+    const document = readDocument(resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE)))
+    summarise(document)
+    warnAboutRedaction(document)
     return
   }
   if (command === 'sync-db') {

@@ -684,6 +684,9 @@ importers:
 
   internal/seed:
     dependencies:
+      '@internal/schema':
+        specifier: workspace:*
+        version: link:../schema
       '@nekolog-io/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
@@ -700,6 +703,9 @@ importers:
 
   internal/self-host:
     dependencies:
+      '@internal/seed':
+        specifier: workspace:*
+        version: link:../seed
       '@nekolog-io/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters

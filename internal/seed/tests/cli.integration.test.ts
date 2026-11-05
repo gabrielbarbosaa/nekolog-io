@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -111,6 +111,80 @@ describe('the seed command, run the way a person runs it', () => {
 
   it('asks for an environment instead of guessing one', () => {
     expect(seed('add-key', '--file', file).status).toBe(1)
+  })
+
+  it('mints a new project with the personal-data patterns already on', () => {
+    const document = JSON.parse(readFileSync(file, 'utf8'))
+
+    expect(document.seedVersion).toBe(2)
+    expect(document.environments[0].redaction.patterns).toContain('cpf')
+    expect(document.environments[0].minLevel).toBe('trace')
+    expect(document.environments[0].sampleRate).toBe(1)
+  })
+
+  it('turns redaction off for every environment when asked to, and says so', () => {
+    const run = seed('set', '--file', file, '--redact', 'none')
+    const document = JSON.parse(readFileSync(file, 'utf8'))
+
+    expect(run.status).toBe(0)
+    expect(
+      document.environments.every(
+        (one: { redaction: { patterns: [] } }) => one.redaction.patterns.length === 0,
+      ),
+    ).toBe(true)
+    expect(seed('show', '--file', file).stdout).toContain('sem redação no servidor')
+  })
+
+  it('changes one environment without touching the others', () => {
+    const run = seed(
+      'set',
+      '--file',
+      file,
+      '--environment',
+      'production',
+      '--redact',
+      'cpf,credit_card',
+      '--redact-attributes',
+      'card.*',
+      '--min-level',
+      'info',
+      '--sample-rate',
+      '0.5',
+    )
+    const document = JSON.parse(readFileSync(file, 'utf8'))
+
+    expect(run.status).toBe(0)
+    expect(document.environments[0].redaction).toEqual({
+      attributes: ['card.*'],
+      patterns: ['cpf', 'credit_card'],
+      replacement: '[redacted]',
+    })
+    expect(document.environments[0].minLevel).toBe('info')
+    expect(document.environments[0].sampleRate).toBe(0.5)
+    expect(document.environments[1].minLevel).toBe('trace')
+    expect(document.environments[1].redaction.patterns).toEqual([])
+  })
+
+  it('refuses a pattern the ingestion does not know, and changes nothing', () => {
+    const before = readFileSync(file, 'utf8')
+    const run = seed('set', '--file', file, '--redact', 'passport')
+
+    expect(run.status).toBe(1)
+    expect(run.stderr).toContain('passport')
+    expect(readFileSync(file, 'utf8')).toBe(before)
+  })
+
+  it('refuses a set that says nothing, instead of rewriting the file for nothing', () => {
+    const run = seed('set', '--file', file)
+
+    expect(run.status).toBe(1)
+    expect(run.stderr).toMatch(/--redact/)
+  })
+
+  it('leaves no half-written file behind, because the ingestion is reading it', () => {
+    seed('set', '--file', file, '--redact', 'all')
+
+    expect(readdirSync(workspace).filter((name) => name.includes('.writing-'))).toEqual([])
   })
 
   it('refuses a command it does not know', () => {

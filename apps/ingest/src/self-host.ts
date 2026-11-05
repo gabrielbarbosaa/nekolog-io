@@ -1,5 +1,5 @@
 import type { SeedDocument } from '@internal/seed'
-import { fileBlobStore, fileKvNamespace } from '@internal/self-host'
+import { fileBlobStore, fileKvNamespace, fileSeedKeyStore } from '@internal/self-host'
 import { cachedBlockedEnvironments, kvQuotaStore } from '@nekolog-io/adapters'
 import type { LocalIngestOptions } from './local.ts'
 import { type LocalIngestConfig, type LocalIngestEnv, localIngestConfigFrom } from './local.ts'
@@ -49,7 +49,9 @@ export function selfHostIngestConfigFrom(env: SelfHostIngestEnv): SelfHostIngest
 export type SelfHostIngestOptions = {
   config: SelfHostIngestConfig
   document: SeedDocument
+  seedFile: string
   onError?: (error: unknown) => void
+  onReload?: (document: SeedDocument) => void
   onSpooled?: (spooled: SpooledBatch) => void
 }
 
@@ -57,6 +59,10 @@ export function selfHostIngestWiring(options: SelfHostIngestOptions): LocalInges
   return {
     config: options.config,
     document: options.document,
+    keyStore: fileSeedKeyStore(options.seedFile, {
+      ...(options.onReload === undefined ? {} : { onReload: options.onReload }),
+      ...(options.onError === undefined ? {} : { onError: options.onError }),
+    }),
     spool: fileBlobStore(options.config.spoolDir),
     blocks: cachedBlockedEnvironments(kvQuotaStore(fileKvNamespace(options.config.kvDir)), {
       ...(options.onError === undefined ? {} : { onError: options.onError }),
