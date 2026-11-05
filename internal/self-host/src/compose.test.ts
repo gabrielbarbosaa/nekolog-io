@@ -282,6 +282,61 @@ describe('the image and the scripts around it', () => {
   })
 })
 
+describe('the two sites', () => {
+  const CADDY = readFileSync(join(HERE, 'Caddyfile'), 'utf8')
+  const DOCS_CADDY = readFileSync(join(HERE, 'Caddyfile.docs'), 'utf8')
+  const WEB_IMAGE = readFileSync(join(HERE, 'Dockerfile.web'), 'utf8')
+  const DOCS_IMAGE = readFileSync(join(HERE, 'Dockerfile.docs'), 'utf8')
+
+  it('are reachable only through the proxy, like everything else', () => {
+    for (const service of ['web', 'docs']) {
+      expect(serviceBlock(service), service).not.toContain('ports:')
+      expect(serviceBlock(service), service).toMatch(/\n {4}mem_limit: /)
+    }
+  })
+
+  it('routes the documentation to its own container, not through Next', () => {
+    expect(CADDY).toContain('@docs path /docs /docs/*')
+    expect(CADDY).toContain('reverse_proxy docs:8080')
+    expect(CADDY).toContain('reverse_proxy web:3000')
+    expect(CADDY.indexOf('handle @docs')).toBeLessThan(CADDY.lastIndexOf('handle {'))
+  })
+
+  it('serves the documentation with the policy its own build generated', () => {
+    expect(DOCS_CADDY).toContain('import /etc/caddy/headers.caddy')
+    expect(DOCS_IMAGE).toContain('--caddy --out /caddy-headers')
+    expect(DOCS_IMAGE).toContain('COPY --from=build /caddy-headers /etc/caddy/headers.caddy')
+  })
+
+  it('ships Next as a standalone server, running as somebody other than root', () => {
+    expect(WEB_IMAGE).toContain('NEXT_STANDALONE=1')
+    expect(WEB_IMAGE).toContain('.next/standalone')
+    expect(WEB_IMAGE).toMatch(/\nUSER node\n/)
+    expect(WEB_IMAGE).toContain('NEXT_TELEMETRY_DISABLED=1')
+  })
+
+  it('leaves the server apps out of their build context, or every deploy rebuilds them', () => {
+    for (const name of ['Dockerfile.web.dockerignore', 'Dockerfile.docs.dockerignore']) {
+      const ignored = readFileSync(join(HERE, name), 'utf8').split('\n')
+      for (const excluded of ['apps/ingest', 'apps/api', 'apps/jobs', 'packages', 'infra']) {
+        expect(ignored, `${name} keeps ${excluded}`).toContain(excluded)
+      }
+    }
+  })
+
+  it('keeps each site out of the other one, and both out of the server image', () => {
+    const web = readFileSync(join(HERE, 'Dockerfile.web.dockerignore'), 'utf8').split('\n')
+    const docs = readFileSync(join(HERE, 'Dockerfile.docs.dockerignore'), 'utf8').split('\n')
+
+    expect(web).toContain('apps/docs')
+    expect(web).not.toContain('apps/web')
+    expect(docs).toContain('apps/web')
+    expect(docs).not.toContain('apps/docs')
+    expect(IGNORED.split('\n')).toContain('apps/web')
+    expect(IGNORED.split('\n')).toContain('apps/docs')
+  })
+})
+
 describe('the scripts the operator types', () => {
   const listed = ((): string => {
     try {

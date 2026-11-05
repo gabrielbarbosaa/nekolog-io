@@ -1,0 +1,40 @@
+FROM node:24-alpine AS build
+
+ENV COREPACK_HOME=/opt/corepack
+ENV CI=1
+ENV NEXT_STANDALONE=1
+ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG DOCS_ORIGIN=http://docs:8080
+ENV DOCS_ORIGIN=$DOCS_ORIGIN
+
+RUN corepack enable
+
+WORKDIR /app
+COPY . .
+
+RUN node -e "const f='package.json';const p=JSON.parse(require('fs').readFileSync(f,'utf8'));delete p.scripts.prepare;require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+
+RUN corepack install \
+  && pnpm install --frozen-lockfile --filter "@apps/web..." \
+  && pnpm --filter @apps/web build
+
+FROM node:24-alpine
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN apk add --no-cache tini
+
+WORKDIR /app
+
+COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
+COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+
+USER node
+
+EXPOSE 3000
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "apps/web/server.js"]

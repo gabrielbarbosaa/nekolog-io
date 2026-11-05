@@ -1,0 +1,24 @@
+FROM node:24-alpine AS build
+
+ENV COREPACK_HOME=/opt/corepack
+ENV CI=1
+
+RUN corepack enable
+
+WORKDIR /app
+COPY . .
+
+RUN node -e "const f='package.json';const p=JSON.parse(require('fs').readFileSync(f,'utf8'));delete p.scripts.prepare;require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+
+RUN corepack install \
+  && pnpm install --frozen-lockfile --filter "@apps/docs..." \
+  && pnpm --filter @apps/docs build \
+  && node apps/docs/scripts/headers-cli.ts --caddy --out /caddy-headers
+
+FROM caddy:2.10-alpine
+
+COPY --from=build /app/apps/docs/dist /srv/docs
+COPY --from=build /caddy-headers /etc/caddy/headers.caddy
+COPY deploy/self-host/Caddyfile.docs /etc/caddy/Caddyfile
+
+EXPOSE 8080

@@ -97,7 +97,7 @@ trabalho real está em A5, A6 e A7.
 | B3 | Docker e compose na máquina | — | P |
 | B4 | **Proxy reverso com TLS** (Caddy) na frente da ingestão e da API | hoje as duas falam HTTP puro, com a key no header | P |
 | B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P |
-| B6 | Containers para `apps/web` e `apps/docs` no compose | **não existem**; o self-host não tem nenhum dos dois | M |
+| B6 | Containers para `apps/web` e `apps/docs` no compose | **feito** — Next em standalone (299 MB) e a documentação estática num Caddy próprio (89 MB); o proxy roteia `/docs` direto, sem passar pelo Next | M |
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
 | B9 | Mover o backup do Postgres do Actions para a máquina | **feito** — container `backup`, `pg_dump \| gzip \| age \| rclone` num cano só; o workflow ficou só com o teste de restauração | P |
@@ -159,6 +159,22 @@ O que se aceita está no [ADR 0018](adr/0018-deploy-por-git-pull-na-maquina.md),
 e o principal é: **o rollback é manual.** Um build que falha não derruba nada;
 um build que dá certo com código ruim derruba, e o script imprime o comando de
 volta.
+
+### O B6 achou uma política de segurança que ia sumir no caminho
+
+A documentação é estática e sai do Astro com uma CSP de **hashes** — um por
+script inline que o build emitiu. Na Vercel isso vive num `vercel.json`, que o
+build regenera e confere. **Num container, esse arquivo não significa nada**: a
+documentação teria ido para a VPS sem CSP nenhuma e ninguém perceberia, porque
+nenhum teste olha para isso.
+
+Agora o mesmo gerador escreve também um bloco de header do Caddy, **dentro da
+imagem**, a partir do `dist/` que acabou de ser construído — não dá para
+divergir. Um teste compara as duas saídas.
+
+E o proxy roteia `/docs` direto para o container da documentação em vez de pelo
+`rewrite` do Next. Além de economizar um salto, é o que faz cada um responder
+com a sua própria política: a landing com nonce, a documentação com hashes.
 
 ### Sobre começar no KVM 1
 

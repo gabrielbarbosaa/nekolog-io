@@ -3,8 +3,10 @@ import { HSTS, PERMISSIONS_POLICY, REFERRER_POLICY } from '@internal/security-he
 import { describe, expect, it } from 'vitest'
 import {
   CONFIG,
+  caddyHeaders,
   configFor,
   DIST,
+  headersFor,
   headerValue,
   InlineStyleElement,
   inlineInDist,
@@ -94,5 +96,40 @@ describe.skipIf(!built)('against the site the build just produced', () => {
     expect(() =>
       configFor([...inline, { kind: 'style', digest: 'x', sample: 'p{color:red}' }]),
     ).toThrow(InlineStyleElement)
+  })
+})
+
+describe('the same policy, for the Caddy that serves the container', () => {
+  const sample = [
+    { kind: 'script' as const, digest: 'abc+/=', sample: 'console.log(1)' },
+    { kind: 'script' as const, digest: 'def', sample: 'console.log(2)' },
+  ]
+
+  it('writes one header block with every header the Vercel config carries', () => {
+    const block = caddyHeaders(headersFor(sample))
+
+    expect(block.startsWith('header {\n')).toBe(true)
+    expect(block.trimEnd().endsWith('}')).toBe(true)
+    for (const name of Object.keys(headersFor(sample))) {
+      expect(block).toContain(`\t${name} "`)
+    }
+  })
+
+  it('carries the same policy as the Vercel config, so the two cannot drift', () => {
+    const fromCaddy = /Content-Security-Policy "([^"]+)"/.exec(caddyHeaders(headersFor(sample)))
+    expect(fromCaddy?.[1]).toBe(headerValue(configFor(sample), 'content-security-policy'))
+  })
+
+  it('quotes the value, because a policy is full of spaces and semicolons', () => {
+    const block = caddyHeaders({ 'X-Test': 'a; b c', 'X-Quote': 'say "hi"' })
+
+    expect(block).toContain('\tX-Test "a; b c"')
+    expect(block).toContain('\tX-Quote "say \\"hi\\""')
+  })
+
+  it('refuses a style hash here too', () => {
+    expect(() => headersFor([{ kind: 'style', digest: 'x', sample: 'p{}' }])).toThrow(
+      InlineStyleElement,
+    )
   })
 })
