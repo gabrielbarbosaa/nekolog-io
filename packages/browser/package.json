@@ -2,7 +2,7 @@
   "name": "@nekolog-io/browser",
   "version": "1.0.0",
   "description": "NekoLog SDK for the browser: global errors, session, setUser and a beacon flush on pagehide.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

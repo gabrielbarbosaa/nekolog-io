@@ -2,7 +2,7 @@
   "name": "@nekolog-io/react",
   "version": "1.0.0",
   "description": "NekoLog SDK for React: a provider, an error boundary and useLogger.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

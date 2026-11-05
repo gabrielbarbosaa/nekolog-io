@@ -2,7 +2,7 @@
   "name": "@nekolog-io/cli",
   "version": "1.0.0",
   "description": "NekoLog command line: nekolog init detects the framework, installs the SDK and writes the .env.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

@@ -1,21 +1,143 @@
-MIT License
+NekoLog — Proprietary Licence
 
-Copyright (c) 2026 Gabriel Barbosa
+Copyright (c) 2026 Gabriel Barbosa. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is proprietary. It is not open source and it is not free
+software. Except for the narrow grant in section 3, no rights of any kind are
+granted to anyone.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+--------------------------------------------------------------------------
+1. DEFINITIONS
+--------------------------------------------------------------------------
+
+"Licensor" means Gabriel Barbosa, the sole copyright holder of the Software.
+
+"Software" means the contents of this repository, in source or compiled form,
+including the ingestion service, the read API, the background jobs, the
+database schemas and migrations, the website, the documentation site, the
+shared libraries, the build and infrastructure code, and any package published
+from it.
+
+"SDK Packages" means the packages published to the npm registry under the
+@nekolog-io scope whose purpose is to be embedded in an application written by
+someone else, namely: core, browser, node, react, next, express, fastify,
+hono, nestjs, pino, winston, cli and bundler-plugin.
+
+"Service" means the NekoLog service operated by the Licensor.
+
+"Your Application" means software that You develop and operate, or distribute
+to Your own end users, which is not itself a logging, observability or
+telemetry product or service.
+
+--------------------------------------------------------------------------
+2. RESERVATION OF RIGHTS
+--------------------------------------------------------------------------
+
+All rights in the Software are reserved by the Licensor. No licence, right or
+interest in the Software is granted, by implication, estoppel or otherwise,
+except as expressly set out in section 3.
+
+--------------------------------------------------------------------------
+3. GRANT FOR THE SDK PACKAGES
+--------------------------------------------------------------------------
+
+Subject to Your compliance with this Licence, the Licensor grants You a
+non-exclusive, non-transferable, non-sublicensable, royalty-free, worldwide
+licence to:
+
+  (a) install and use the SDK Packages as published on the npm registry; and
+
+  (b) reproduce and distribute the SDK Packages, unmodified, solely as an
+      incorporated component of Your Application, including within a compiled
+      or bundled artefact of Your Application;
+
+in each case solely for the purpose of sending telemetry to the Service, or to
+an instance of the Software that You are permitted to operate under a separate
+written agreement with the Licensor.
+
+This grant does not extend to any part of the Software other than the SDK
+Packages, and it does not permit You to modify the SDK Packages, to publish
+them, or to distribute them other than as a component of Your Application.
+
+--------------------------------------------------------------------------
+4. RESTRICTIONS
+--------------------------------------------------------------------------
+
+Except as expressly permitted by section 3, or by law notwithstanding this
+Licence, You may not:
+
+  (a) use, run, copy or store the Software;
+  (b) modify the Software or create derivative works of it;
+  (c) distribute, publish, sublicense, sell, rent, lease or lend the Software;
+  (d) host the Software, or make its functionality available to any third
+      party, whether or not for a fee;
+  (e) reverse engineer, decompile or disassemble any compiled part of the
+      Software;
+  (f) remove, alter or obscure any copyright, licence or attribution notice.
+
+--------------------------------------------------------------------------
+5. SOURCE VISIBILITY IS NOT A LICENCE
+--------------------------------------------------------------------------
+
+The Licensor may make the source of the Software visible for inspection, and
+may publish source maps alongside the SDK Packages for debugging purposes.
+Being able to read, download or fork the Software on a code hosting platform
+does not grant You any licence beyond section 3, and does not place the
+Software in the public domain.
+
+--------------------------------------------------------------------------
+6. PRIOR MIT LICENCE
+--------------------------------------------------------------------------
+
+Until commit 966f509c0c756ac6aa9761a7dc095ac1c59ed3b9, dated 2026-11-04, this
+repository was published under the MIT Licence. That grant is irrevocable for
+the material it covered, and anyone who obtained the Software under it keeps
+the rights it gave for that material. It does not extend to anything added or
+changed after that commit. The text of the MIT Licence as it applied is kept
+in LICENSES/MIT-historical.txt.
+
+--------------------------------------------------------------------------
+7. THIRD-PARTY COMPONENTS
+--------------------------------------------------------------------------
+
+The Software depends on third-party components distributed under their own
+licences. This Licence does not change those terms, and nothing here grants
+rights over them. A bill of materials listing the dependencies of each
+published package is produced for every release.
+
+--------------------------------------------------------------------------
+8. TERMINATION
+--------------------------------------------------------------------------
+
+The grant in section 3 terminates automatically if You breach this Licence.
+On termination You must stop distributing the SDK Packages in new releases of
+Your Application. Copies already distributed to Your end users are not
+affected.
+
+--------------------------------------------------------------------------
+9. NO WARRANTY
+--------------------------------------------------------------------------
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. TO THE MAXIMUM EXTENT
+PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+Nothing in this Licence limits any right You have under consumer protection
+law that cannot be limited by agreement.
+
+--------------------------------------------------------------------------
+10. GOVERNING LAW
+--------------------------------------------------------------------------
+
+This Licence is governed by the laws of the Federative Republic of Brazil.
+
+--------------------------------------------------------------------------
+
+For any use not permitted here, including operating the Software yourself,
+contact contato@nekolog.io.
+
+NOTE: this text has not been reviewed by a lawyer. It states the Licensor's
+intent and must be reviewed before the Software is offered commercially.

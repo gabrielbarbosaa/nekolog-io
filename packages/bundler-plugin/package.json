@@ -2,7 +2,7 @@
   "name": "@nekolog-io/bundler-plugin",
   "version": "1.0.0",
   "description": "NekoLog bundler plugin: record the release and upload the source maps at the end of a production build, on Vite, webpack, Rollup and esbuild.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

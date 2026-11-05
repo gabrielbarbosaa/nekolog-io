@@ -2,7 +2,7 @@
   "name": "@nekolog-io/adapters",
   "version": "1.0.0",
   "description": "Vendor-neutral interfaces NekoLog runs on: KeyStore, RateLimiter, BlobStore, QuotaStore and Mailer, with the memory, Workers KV and R2 implementations.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

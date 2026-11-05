@@ -66,7 +66,7 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
       summary: 'Search logs, read their histogram and list issues with a secret key.',
       description:
         'Every route is scoped on the server to the project and the environment the key belongs to. A key carries the `logs:read` scope or it reads nothing, and it travels in `Authorization: Bearer`, never in the URL.',
-      license: { name: 'MIT', identifier: 'MIT' },
+      license: { name: 'Proprietary' },
     },
     servers: servers.map((server) => ({ ...server })),
     security: [{ bearerAuth: [] }],
