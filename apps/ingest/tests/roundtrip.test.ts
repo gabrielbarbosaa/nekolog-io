@@ -113,7 +113,7 @@ describe('the sdk talking to the ingest app over real http', () => {
     const response = await fetch(`${endpoint}/health`)
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'ok' })
+    expect(await response.json()).toMatchObject({ status: 'ok', service: 'ingest' })
   })
 
   it('carries a batch from the node sdk all the way to the sink', async () => {

@@ -189,7 +189,16 @@ segredo:
 
 ```bash
 git pull
-docker compose up -d --build
+./up.sh
+```
+
+O `up.sh` numa instalação que já existe mantém o `.env` que encontrar e
+reconstrói. Rode ele em vez do `docker compose up` direto: é ele que diz a cada
+container qual versão ele é, que é a primeira coisa que um relato de bug pede.
+
+```bash
+curl -s localhost:8787/health   # {"status":"ok","service":"ingest","version":"1.0.0"}
+curl -s localhost:8789/health   # {"status":"ok","service":"api","version":"1.0.0"}
 ```
 
 O container de bootstrap roda de novo e aplica qualquer migração nova antes de

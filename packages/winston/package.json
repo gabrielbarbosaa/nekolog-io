@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/winston",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog transport for winston.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

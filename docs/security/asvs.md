@@ -70,7 +70,8 @@ que não está fechada, e está marcada como tal.
 | Sem script de instalação por padrão | Sim, `allowBuilds` explícito no pnpm | ameaça T4 |
 | Janela mínima antes de aceitar versão nova | Sim, `minimumReleaseAge` de 3 dias | ameaça T4 |
 | Action fixada por SHA | Sim | ameaça T5 |
-| Publicação sem token guardado | **Não ainda** — trusted publishing é a etapa 6.7 | ameaça S7 |
+| Publicação sem token guardado | Sim — trusted publishing (OIDC), nenhum token no repositório | ameaça S7 |
+| Inventário do que cada pacote traz | Sim — um SBOM CycloneDX por pacote, anexado à Release dele | ameaça S9 |
 
 ## V12 — Arquivo
 
@@ -107,7 +108,10 @@ que não está fechada, e está marcada como tal.
 
 1. **Padrões próprios de secret scanning** para `nekolog_sk_`/`nekolog_pk_` no
    GitHub (ameaça I9).
-2. **Trusted publishing (OIDC)** no npm, etapa 6.7 (ameaça S7).
+2. **O *trusted publisher* de cada pacote no npmjs.com.** O lado do
+   repositório saiu na etapa 6.7 — o workflow pede o token OIDC e não carrega
+   credencial nenhuma — mas o lado do npm é uma configuração por pacote, que
+   só existe depois da conta (ameaça S7).
 3. **Varredura do ZAP a cada promoção**, que depende de `qa` existir.
 4. **Uma pessoa só revisa os PRs.** Não dá para fechar sozinho.
 5. **Tudo de autenticação, sessão e controle de acesso por papel**, que é do

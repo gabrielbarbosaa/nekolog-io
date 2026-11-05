@@ -81,6 +81,8 @@ jobs:
           SOURCEMAPS_BUCKET: nekolog-sourcemaps-dry-run
           CLICKHOUSE_URL: https://clickhouse.invalid
           JOBS_VERSION: ${{ github.sha }}
+          INGEST_VERSION: ${{ github.sha }}
+          API_VERSION: ${{ github.sha }}
 
   deploy:
     name: Deploy ${{ matrix.app }} (${{ github.ref_name }})
@@ -142,6 +144,8 @@ jobs:
           SOURCEMAPS_BUCKET: ${{ vars.R2_SOURCEMAPS_BUCKET }}
           CLICKHOUSE_URL: ${{ vars.CLICKHOUSE_URL }}
           JOBS_VERSION: ${{ github.sha }}
+          INGEST_VERSION: ${{ github.sha }}
+          API_VERSION: ${{ github.sha }}
 
       - name: Deploy
         run: |

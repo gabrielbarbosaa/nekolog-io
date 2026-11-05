@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/core",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Core logger for NekoLog: levels, child loggers and context. Zero dependencies.",
   "license": "MIT",
   "repository": {
@@ -19,7 +19,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

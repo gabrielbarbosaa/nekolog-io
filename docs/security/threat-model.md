@@ -2,6 +2,9 @@
 
 - **Versão:** 2 (revisão de M6, etapa 6.5)
 - **Data:** 04/11/2026 (versão 1 em 30/10/2026)
+- **Acrescentado depois da revisão:** S9, e S7 saiu de "planejada" para
+  "implementada", na etapa 6.7 (04/11/2026). Não é uma revisão nova: é a
+  pendência que a própria versão 2 registrou, fechada.
 - **Método:** STRIDE por fronteira de confiança
 - **Revisão:** a cada marco (M1…M6), e sempre que a arquitetura mudar
 
@@ -85,8 +88,9 @@ A varredura do ZAP está na seção [Varredura do ZAP](#varredura-do-zap).
 | S4 | Alguém derruba a sessão alheia só conhecendo o `sid` | 3 | Token **desconhecido** é só recusado; só token **já usado** encerra a sessão | Planejada (M2) |
 | S5 | Quem recebe um webhook não sabe se veio mesmo do NekoLog | 5 | `X-NekoLog-Signature`: `sha256=` mais o HMAC-SHA256 do corpo com um segredo por canal, de 32 bytes, gerado pelo servidor. O segredo que assina **não é** a chave que abre o cofre: um teste confere que a assinatura feita com a `ENCRYPTION_KEY` não bate com a que sai | **Implementada** (etapa 5.2) |
 | S6 | E-mail falsificado se passando por `nekolog.io` | — | SPF, DKIM e DMARC (`p=none` → `quarantine` → `reject`); subdomínio próprio de envio | Planejada (M2) |
-| S7 | Pacote npm publicado por alguém que não é o projeto | 6 | Trusted publishing (OIDC), sem token guardado; provenance | Planejada (etapa 6.7) |
+| S7 | Pacote npm publicado por alguém que não é o projeto | 6 | Trusted publishing: a autenticação é um token OIDC que o GitHub emite para **este** workflow deste repositório, válido por minutos. Não existe token do npm no repositório nem nos secrets, então não há o que vazar, e `internal/release` tem um teste que falha se `NPM_TOKEN`, `NODE_AUTH_TOKEN` ou um `.npmrc` aparecerem no `release.yml`. Sob trusted publishing o pnpm anexa proveniência por conta própria, nomeando o commit e o workflow que construíram cada tarball | **Implementada** (etapa 6.7; falta configurar o *trusted publisher* de cada pacote no npmjs.com, que só existe depois da conta) |
 | **S8** | **Key pública reescreve o histórico de releases** — ela vai no bundle de todo navegador | 7 | `POST /v1/releases` exige o escopo `logs:write`, que **não basta sozinho**: a rota recusa uma key pública **pelo prefixo**, antes de qualquer consulta. A *check constraint* do banco obriga uma key pública a ser exatamente `['logs:write']`, então o escopo não distingue — o prefixo distingue. A CLI espelha a recusa antes de abrir o socket | **Implementada** (etapa 4.7) |
+| **S9** | **Dependência nova entrando sem ninguém ver num pacote que promete não ter nenhuma** | 6 | Cada pacote publicado sai com um SBOM CycloneDX escrito do lockfile e anexado à Release dele. `core`, `cli` e `adapters` prometem zero dependências de runtime, e a promessa era só prosa: agora o SBOM responde por ela, e uma dependência transitiva chegando por um pacote que eles já usam **falha a release**. A conferência também recusa um SBOM que falta, que sobrou da versão anterior, ou que descreve algo que esta release não publica | **Implementada** (etapa 6.7) |
 
 ## T — Tampering (adulteração)
 
@@ -288,5 +292,6 @@ Também nessa revisão, ou antes dela se o deploy for ligado: as linhas marcadas
 "Código escrito" (I10, E9, E10, E11, E13, E14) só valem a partir do primeiro
 `apply`, e precisam ser confirmadas contra a infraestrutura de verdade.
 
-Pendências desta revisão que não viraram código: os padrões próprios de secret
-scanning (I9) e o trusted publishing (S7, etapa 6.7).
+Pendência desta revisão que não virou código: os padrões próprios de secret
+scanning (I9). O trusted publishing (S7) saiu na etapa 6.7, junto com o SBOM
+por pacote (S9).

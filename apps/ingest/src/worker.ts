@@ -25,6 +25,7 @@ export type IngestEnv = {
   CLICKHOUSE_INSERT_USER: string
   CLICKHOUSE_INSERT_PASSWORD: string
   INGEST_EVENTS_PER_MINUTE?: string
+  INGEST_VERSION?: string
   CF_ACCESS_CLIENT_ID?: string
   CF_ACCESS_CLIENT_SECRET?: string
 }
@@ -119,6 +120,7 @@ export function buildIngestApp(env: IngestEnv): Hono {
       eventsPerWindow: eventsPerMinuteFrom(env.INGEST_EVENTS_PER_MINUTE),
     },
     onError: reportToConsole,
+    ...(env.INGEST_VERSION ? { version: env.INGEST_VERSION } : {}),
   })
 }
 

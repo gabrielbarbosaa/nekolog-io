@@ -30,7 +30,8 @@
       ],
       "vars": {
         "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
-        "CLICKHOUSE_DB": "nekolog_dev"
+        "CLICKHOUSE_DB": "nekolog_dev",
+        "INGEST_VERSION": "${INGEST_VERSION}"
       }
     },
     "qa": {
@@ -54,7 +55,8 @@
       ],
       "vars": {
         "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
-        "CLICKHOUSE_DB": "nekolog_qa"
+        "CLICKHOUSE_DB": "nekolog_qa",
+        "INGEST_VERSION": "${INGEST_VERSION}"
       }
     },
     "prod": {
@@ -78,7 +80,8 @@
       ],
       "vars": {
         "CLICKHOUSE_URL": "${CLICKHOUSE_URL}",
-        "CLICKHOUSE_DB": "nekolog_prod"
+        "CLICKHOUSE_DB": "nekolog_prod",
+        "INGEST_VERSION": "${INGEST_VERSION}"
       }
     }
   }

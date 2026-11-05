@@ -2,7 +2,7 @@ import type { AttributeInput, Logger, LogLevel } from '@nekolog-io/core'
 import TransportStream from 'winston-transport'
 
 export const SDK_NAME = '@nekolog-io/winston'
-export const SDK_VERSION = '0.0.0'
+export const SDK_VERSION = '1.0.0'
 
 export const LEVEL_SYMBOL: symbol = Symbol.for('level')
 export const MESSAGE_SYMBOL: symbol = Symbol.for('message')

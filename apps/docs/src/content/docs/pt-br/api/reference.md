@@ -49,7 +49,7 @@ erro de método.
 
 | Rota | O que faz |
 |---|---|
-| `GET /health` | Se este deployment está de pé. Não precisa de key. |
+| `GET /health` | Se este deployment está de pé, e que versão ele é. Não precisa de key. |
 | `GET /openapi.json` | Esta API, descrita. Não precisa de key. |
 | `GET /v1/logs` | Busca. |
 | `GET /v1/histogram` | Contagem por balde e por nível, para um gráfico. |

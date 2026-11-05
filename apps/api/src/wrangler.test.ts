@@ -29,6 +29,7 @@ const VALUES: Record<string, string> = {
   KV_NAMESPACE_ID: '1dc8e2b0f9a64c0e9f3a1b2c3d4e5f60',
   SOURCEMAPS_BUCKET: 'nekolog-sourcemaps',
   CLICKHOUSE_URL: 'https://clickhouse.example.invalid',
+  API_VERSION: '1022769',
 }
 
 function blockOf(environment: string): JsonObject {
@@ -61,6 +62,10 @@ describe('the environments the public API deploys to', () => {
 
   it.each(ENVIRONMENTS)('points %s at its own ClickHouse database', (environment) => {
     expect((blockOf(environment).vars as JsonObject).CLICKHOUSE_DB).toBe(`nekolog_${environment}`)
+  })
+
+  it.each(ENVIRONMENTS)('tells the %s Worker which version it is', (environment) => {
+    expect((blockOf(environment).vars as JsonObject).API_VERSION).toBe(VALUES.API_VERSION as string)
   })
 
   it.each(ENVIRONMENTS)('binds KEYS and SOURCEMAPS in %s, and nothing else', (environment) => {

@@ -16,7 +16,7 @@ import {
   memoryRateLimiter,
 } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
-import { type ApiDeps, createApiApp } from './app.ts'
+import { type ApiDeps, createApiApp, UNKNOWN_VERSION } from './app.ts'
 import type { ApiPrincipal } from './authenticate.ts'
 import { MAX_BODY_BYTES } from './body.ts'
 import { openApiDocument } from './openapi.ts'
@@ -95,7 +95,14 @@ describe('the public read API', () => {
     const response = await app.request('http://api.test/health')
 
     expect(response.status).toBe(200)
-    expect(await body(response)).toEqual({ status: 'ok' })
+    expect(await body(response)).toEqual({ status: 'ok', service: 'api', version: UNKNOWN_VERSION })
+  })
+
+  it('reports the version it was deployed with, so a report can name one', async () => {
+    const { app } = build({ version: '1.0.0' })
+    const response = await app.request('http://api.test/health')
+
+    expect(await body(response)).toEqual({ status: 'ok', service: 'api', version: '1.0.0' })
   })
 
   it('scopes every search to the key, never to anything in the query string', async () => {

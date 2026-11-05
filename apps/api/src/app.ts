@@ -62,7 +62,10 @@ export type ApiDeps = {
   limits?: ApiLimits
   onError?: (error: unknown) => void
   now?: () => number
+  version?: string
 }
+
+export const UNKNOWN_VERSION = 'unknown'
 
 function report(deps: ApiDeps, error: unknown): void {
   try {
@@ -189,7 +192,9 @@ export function createApiApp(deps: ApiDeps): Hono {
     }
   }
 
-  app.get('/health', (c) => c.json({ status: 'ok' }))
+  app.get('/health', (c) =>
+    c.json({ status: 'ok', service: 'api', version: deps.version ?? UNKNOWN_VERSION }),
+  )
 
   app.get('/openapi.json', (c) => {
     const document = deps.openapi

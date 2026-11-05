@@ -2,7 +2,7 @@ import { Writable } from 'node:stream'
 import type { AttributeInput, Logger, LogLevel } from '@nekolog-io/core'
 
 export const SDK_NAME = '@nekolog-io/pino'
-export const SDK_VERSION = '0.0.0'
+export const SDK_VERSION = '1.0.0'
 
 export const MAX_LINE_BYTES: number = 1024 * 1024
 

@@ -188,7 +188,16 @@ Two volumes hold data you cannot regenerate, and one holds a secret:
 
 ```bash
 git pull
-docker compose up -d --build
+./up.sh
+```
+
+`up.sh` on an existing install keeps the `.env` it finds and rebuilds. Run it
+rather than `docker compose up` directly: it is what tells each container which
+version it is, which is the first thing a bug report needs.
+
+```bash
+curl -s localhost:8787/health   # {"status":"ok","service":"ingest","version":"1.0.0"}
+curl -s localhost:8789/health   # {"status":"ok","service":"api","version":"1.0.0"}
 ```
 
 The bootstrap container runs again and applies any new migration before the

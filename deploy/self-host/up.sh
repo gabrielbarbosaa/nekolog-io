@@ -31,6 +31,15 @@ else
   echo "back .env up somewhere safe: ENCRYPTION_KEY cannot be recovered from the database"
 fi
 
+version_of() {
+  sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "../../apps/$1/package.json" | head -n 1
+}
+
+INGEST_VERSION=$(version_of ingest)
+API_VERSION=$(version_of api)
+JOBS_VERSION=$(version_of jobs)
+export INGEST_VERSION API_VERSION JOBS_VERSION
+
 docker compose up -d --build
 
 echo ""

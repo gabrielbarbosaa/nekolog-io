@@ -50,7 +50,7 @@ a method error.
 
 | Route | What it does |
 |---|---|
-| `GET /health` | Whether this deployment is up. No key needed. |
+| `GET /health` | Whether this deployment is up, and which version it is. No key needed. |
 | `GET /openapi.json` | This API, described. No key needed. |
 | `GET /v1/logs` | Search. |
 | `GET /v1/histogram` | Counts per bucket and level, for a chart. |

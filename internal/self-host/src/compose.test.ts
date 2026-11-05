@@ -129,6 +129,24 @@ describe('the self-host compose', () => {
     expect(serviceBlock('jobs')).toContain('command: ["node", "apps/jobs/src/serve.ts"]')
     expect(serviceBlock('api')).toContain('command: ["node", "apps/api/src/serve-self-host.ts"]')
   })
+
+  it('tells each service which version it is, so a bug report can name one', () => {
+    for (const [service, name] of [
+      ['ingest', 'INGEST_VERSION'],
+      ['api', 'API_VERSION'],
+      ['jobs', 'JOBS_VERSION'],
+    ]) {
+      expect(serviceBlock(service as string)).toContain(`${name}: \${${name}:-unknown}`)
+      expect(UP, `up.sh never exports ${name}`).toContain(name)
+    }
+  })
+
+  it('reads each version from that app, never from one number kept by hand', () => {
+    expect(UP).toContain('version_of ingest')
+    expect(UP).toContain('version_of api')
+    expect(UP).toContain('version_of jobs')
+    expect(UP).not.toMatch(/version_of \.\.\/\.\.\/package\.json/)
+  })
 })
 
 describe('the image and the scripts around it', () => {

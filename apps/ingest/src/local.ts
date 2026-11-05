@@ -20,6 +20,7 @@ export type LocalIngestConfig = {
   seedFile: string
   clickhouse: ClickHouseConfig
   eventsPerMinute: number
+  version?: string
 }
 
 export type LocalIngestEnv = {
@@ -31,6 +32,7 @@ export type LocalIngestEnv = {
   CLICKHOUSE_INSERT_USER?: string
   CLICKHOUSE_INSERT_PASSWORD?: string
   INGEST_EVENTS_PER_MINUTE?: string
+  INGEST_VERSION?: string
 }
 
 function required(env: LocalIngestEnv, name: keyof LocalIngestEnv): string {
@@ -69,6 +71,7 @@ export function localIngestConfigFrom(env: LocalIngestEnv): LocalIngestConfig {
       password: required(env, 'CLICKHOUSE_INSERT_PASSWORD'),
     },
     eventsPerMinute: eventsPerMinuteFrom(env.INGEST_EVENTS_PER_MINUTE),
+    ...(env.INGEST_VERSION ? { version: env.INGEST_VERSION } : {}),
   }
 }
 
@@ -98,6 +101,7 @@ export async function localIngestApp(options: LocalIngestOptions): Promise<Hono>
       eventsPerWindow: options.config.eventsPerMinute,
     },
     ...(options.onError === undefined ? {} : { onError: options.onError }),
+    ...(options.config.version === undefined ? {} : { version: options.config.version }),
   })
 }
 

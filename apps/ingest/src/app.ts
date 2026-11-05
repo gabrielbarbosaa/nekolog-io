@@ -62,6 +62,7 @@ export type IngestDeps = {
   now?: () => number
   body?: ReadBodyOptions
   newBatchId?: () => string
+  version?: string
 }
 
 export const DENIED_WITHOUT_A_KEY_STORE: AuthOutcome = {
@@ -122,6 +123,8 @@ async function measure(
 
 export const INGEST_HEADERS: Readonly<Record<string, string>> = apiHeaders({ embeddable: true })
 
+export const UNKNOWN_VERSION = 'unknown'
+
 export function createIngestApp(deps: IngestDeps): Hono {
   const app = new Hono()
 
@@ -147,7 +150,9 @@ export function createIngestApp(deps: IngestDeps): Hono {
     })
   }
 
-  app.get('/health', (c) => c.json({ status: 'ok' }))
+  app.get('/health', (c) =>
+    c.json({ status: 'ok', service: 'ingest', version: deps.version ?? UNKNOWN_VERSION }),
+  )
 
   app.options('/v1/logs', (c) =>
     c.body(null, 204, preflightHeadersFor(c.req.header('origin') ?? null)),

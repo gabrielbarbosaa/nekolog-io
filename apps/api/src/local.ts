@@ -26,6 +26,7 @@ export type LocalApiConfig = {
   databaseUrl: string
   requestsPerMinute: number
   sourceMapsDir?: string
+  version?: string
 }
 
 export type LocalApiEnv = {
@@ -38,6 +39,7 @@ export type LocalApiEnv = {
   CLICKHOUSE_READ_PASSWORD?: string
   DATABASE_URL?: string
   API_REQUESTS_PER_MINUTE?: string
+  API_VERSION?: string
   SOURCEMAPS_DIR?: string
 }
 
@@ -84,6 +86,7 @@ export function localApiConfigFrom(env: LocalApiEnv): LocalApiConfig {
     },
     databaseUrl: env.DATABASE_URL as string,
     requestsPerMinute: requestsPerMinuteFrom(env.API_REQUESTS_PER_MINUTE),
+    ...(env.API_VERSION ? { version: env.API_VERSION } : {}),
     ...(env.SOURCEMAPS_DIR === undefined || env.SOURCEMAPS_DIR === ''
       ? {}
       : { sourceMapsDir: env.SOURCEMAPS_DIR }),
@@ -110,6 +113,7 @@ export async function localApiApp(options: LocalApiOptions): Promise<Hono> {
       rateLimiter: memoryRateLimiter(),
       requestsPerWindow: options.config.requestsPerMinute,
     },
+    ...(options.config.version === undefined ? {} : { version: options.config.version }),
   })
 
   return createApiApp({

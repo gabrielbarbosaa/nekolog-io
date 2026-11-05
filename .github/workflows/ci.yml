@@ -97,6 +97,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Bill of materials
+        run: pnpm run release:sbom
+
       - name: Test
         run: pnpm run test
         env:

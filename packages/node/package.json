@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/node",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog SDK for Node: per-request context with AsyncLocalStorage, process hooks and flush on SIGTERM.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

@@ -3,9 +3,10 @@ title: Versioning and support
 description: What carries a version, what a change to it promises, and how long an old one keeps working.
 ---
 
-:::caution[Nothing is 1.0 yet]
-Every package is at `0.x` and none has been published. Until 1.0, treat anything
-here as able to change — the promises below are what will hold from 1.0 on.
+:::caution[1.0 is cut, nothing is published yet]
+Every package is at `1.0.0` in the repository and none has been published to npm
+yet — there is no npm organization. The promises below are the ones that hold
+from 1.0 on, and they hold from the first published version.
 :::
 
 ## What carries a version
