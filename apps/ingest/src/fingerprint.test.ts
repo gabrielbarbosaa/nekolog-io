@@ -286,7 +286,7 @@ describe('text that arrives from outside', () => {
     expect(normaliseMessage(long)).not.toContain('tail')
   })
 
-  it('normalises seven hostile messages of sixteen kilobytes in a few milliseconds', () => {
+  it('normalises seven hostile messages of sixteen kilobytes without backtracking', () => {
     const hostile = [
       `${'a'.repeat(16_000)}!`,
       `${'1'.repeat(8_000)}.${'2'.repeat(8_000)}`,
@@ -297,13 +297,25 @@ describe('text that arrives from outside', () => {
       ' '.repeat(16_000),
     ]
 
-    const began = performance.now()
-    for (const message of hostile) {
-      normaliseMessage(message)
-    }
-    const took = performance.now() - began
+    const benign = hostile.map((_, index) => `ordinary line ${index} `.repeat(700))
 
-    expect(took).toBeLessThan(20)
+    const cost = (messages: readonly string[]): number => {
+      const began = performance.now()
+      for (const message of messages) {
+        normaliseMessage(message)
+      }
+      return performance.now() - began
+    }
+
+    cost(benign)
+    const baseline = Math.max(cost(benign), 0.1)
+    const took = cost(hostile)
+
+    expect(
+      took / baseline,
+      `${took.toFixed(1)} ms for hostile input against ${baseline.toFixed(1)} ms for benign input of the same size`,
+    ).toBeLessThan(15)
+    expect(took).toBeLessThan(120)
   })
 
   it('reads a stack of nothing but noise without falling over', () => {
