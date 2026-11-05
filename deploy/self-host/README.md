@@ -15,6 +15,45 @@ cd deploy/self-host
 `.env.example` to `.env`, fill in the passwords yourself, and run
 `docker compose up -d --build`.
 
+## How a new version gets here
+
+The machine holds a clone and builds the image itself. There is no registry
+([ADR 0018](../../docs/adr/0018-deploy-por-git-pull-na-maquina.md) says why, and
+what it would take to change).
+
+```bash
+deploy/self-host/deploy.sh
+```
+
+It refuses to run outside a clone, on a branch other than `main`
+(`NEKOLOG_DEPLOY_BRANCH` to change that), or with anything uncommitted — a
+deploy has to be reproducible from a commit. It fast-forwards, never merges,
+prints the commits it is about to apply, builds, and waits for every container
+to come up before it says it worked. **It prints the rollback command before and
+after**, because rolling back is by hand:
+
+```
+deploy: roll back with: git -C /srv/nekolog checkout 408e8c6 && …/deploy.sh
+```
+
+`docker compose up -d --build` only replaces containers once the build has
+succeeded, so a build that fails leaves what is running untouched. A build that
+succeeds with bad code does not — that is what the rollback line is for.
+
+## The image is 1 GB, and it was 2
+
+Building on a 1 vCPU box next to a running ClickHouse only works because the
+image installs the **production graph of four entry points** rather than the
+whole monorepo: `node_modules` went from 1.3 GB to 12.6 MB, and the image from
+2.09 GB to 1.05 GB. `@nekolog-io/db`'s dev dependencies come back in a second
+install because `bootstrap` migrates Postgres with drizzle-kit, and the pnpm
+store is deleted afterwards — it is a second copy of everything already linked
+into `node_modules`.
+
+`.github/workflows/self-host.yml` builds this image on every PR that touches it
+and starts all four entry points, checking each refuses for the right reason. A
+broken dependency install is invisible to every other check in CI.
+
 ## One way in
 
 Only `proxy` is reachable from outside the machine. It is Caddy, it answers on

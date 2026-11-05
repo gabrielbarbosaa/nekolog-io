@@ -26,6 +26,7 @@ consequências que se aceitou conviver.
 | [0015](0015-fingerprint-calculado-na-ingestao.md) | Fingerprint de erro calculado na ingestão | Aceita |
 | [0016](0016-pacotes-compartilhados-no-npm.md) | Pacotes compartilhados publicados no npm | Aceita |
 | [0017](0017-licenca-proprietaria-e-repositorio-privado.md) | Licença proprietária e repositório privado | Aceita |
+| [0018](0018-deploy-por-git-pull-na-maquina.md) | Deploy por `git pull` e build na máquina | Aceita |
 
 ## O que vira ADR e o que não vira
 
