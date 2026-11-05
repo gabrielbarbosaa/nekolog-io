@@ -79,6 +79,14 @@ pull` de alguns MB, e o commit que está rodando é sempre legível na máquina
 - **Não há artefato imutável.** Dois deploys do mesmo commit podem produzir
   imagens diferentes se uma dependência de sistema mudar no Alpine. O
   `pnpm-lock.yaml` prende o lado do Node; o `apk add` não está preso.
+- **Sobraram ~385 MB de ferramenta de teste na imagem.** O `bootstrap` migra o
+  Postgres com o `drizzle-kit`, que é *dev dependency* do `@nekolog-io/db`, e um
+  `pnpm install --filter` traz as dev dependencies daquele pacote inteiras —
+  `vitest`, `tsdown`, `publint`, `attw` junto. Dá para apagar isso do *virtual
+  store* à mão depois do install; não vale, porque é o tipo de limpeza que
+  quebra em silêncio quando uma versão muda de nome de diretório. A alternativa
+  real é a imagem do `bootstrap` ser outra, e isso é mais complexidade do que
+  350 MB justificam hoje.
 - **O CI não produz o que a produção roda.** Em troca,
   `.github/workflows/self-host.yml` constrói a mesma imagem em todo PR que toca
   nela e exige que os quatro pontos de entrada subam e recusem pelo motivo

@@ -71,6 +71,8 @@ jobs:
       - name: The migration runners are installed
         run: |
           set -euo pipefail
-          docker run --rm nekolog/self-host:ci sh -c 'test -d /app/packages/db/node_modules/drizzle-kit'
-          docker run --rm nekolog/self-host:ci node /app/packages/clickhouse/src/cli.ts status 2>&1 |
-            grep -q CLICKHOUSE_URL
+          docker run --rm nekolog/self-host:ci sh -c 'test -x /app/packages/db/node_modules/.bin/drizzle-kit'
+          out="$(docker run --rm nekolog/self-host:ci \
+            node /app/packages/clickhouse/src/cli.ts status 2>&1 || true)"
+          echo "$out"
+          echo "$out" | grep -q CLICKHOUSE_URL
