@@ -47,18 +47,7 @@ export class InlineStyleElement extends Error {
 }
 
 export function configFor(inline: readonly Inline[]): unknown {
-  const sourcesOf = (kind: Inline['kind']) =>
-    inline.filter((asset) => asset.kind === kind).map((asset) => hashSource(asset.digest))
-
-  const style = inline.find((asset) => asset.kind === 'style')
-  if (style !== undefined) {
-    throw new InlineStyleElement(style.sample)
-  }
-
-  const headers = securityHeaders({
-    scriptSources: sourcesOf('script'),
-    styleSources: [UNSAFE_INLINE],
-  })
+  const headers = headersFor(inline)
 
   return {
     $schema: 'https://openapi.vercel.sh/vercel.json',
@@ -69,6 +58,29 @@ export function configFor(inline: readonly Inline[]): unknown {
       },
     ],
   }
+}
+
+export function headersFor(inline: readonly Inline[]): Record<string, string> {
+  const style = inline.find((asset) => asset.kind === 'style')
+  if (style !== undefined) {
+    throw new InlineStyleElement(style.sample)
+  }
+
+  return securityHeaders({
+    scriptSources: inline
+      .filter((asset) => asset.kind === 'script')
+      .map((asset) => hashSource(asset.digest)),
+    styleSources: [UNSAFE_INLINE],
+  })
+}
+
+export function caddyHeaders(headers: Record<string, string>): string {
+  const quoted = (value: string): string =>
+    `"${value.split('\\').join('\\\\').split('"').join('\\"')}"`
+
+  return `header {\n${Object.entries(headers)
+    .map(([name, value]) => `\t${name} ${quoted(value)}`)
+    .join('\n')}\n}\n`
 }
 
 export function readConfig(path: string): unknown {

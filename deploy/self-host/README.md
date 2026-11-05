@@ -1,6 +1,6 @@
 # The stack
 
-Eight containers that run everything in this repository on one machine. This is
+Nine containers that run everything in this repository on one machine. This is
 the composition the hosted service runs, not a demonstration of it.
 
 **Nothing is backed up until you say where to.** See
@@ -50,15 +50,41 @@ install because `bootstrap` migrates Postgres with drizzle-kit, and the pnpm
 store is deleted afterwards — it is a second copy of everything already linked
 into `node_modules`.
 
-`.github/workflows/self-host.yml` builds this image on every PR that touches it
-and starts all four entry points, checking each refuses for the right reason. A
-broken dependency install is invisible to every other check in CI.
+`.github/workflows/self-host.yml` builds all three images on every PR that
+touches them: it starts the four server entry points and checks each refuses for
+the right reason, then serves the documentation and the landing page and checks
+each answers with the policy it is supposed to. A broken dependency install, or
+a documentation build whose script hashes stopped matching, is invisible to
+every other check in CI.
+
+## The landing page and the documentation
+
+`web` is `apps/web` as a Next **standalone** server; `docs` is `apps/docs` built
+to static files and served by a Caddy of its own. Neither publishes a port: the
+proxy reaches them over the private network.
+
+**Caddy routes `/docs` and `/docs/*` to the documentation container**, not
+through Next. On Vercel those are two projects and `next.config.ts` rewrites
+between them; here one proxy can route by path, which saves a Node hop and —
+more importantly — lets the documentation answer with **its own** Content
+Security Policy, the one built from the hash of every inline script Astro
+emitted. `apps/web` answers with a nonce-based policy instead, and its `proxy.ts`
+matcher already excludes `docs` so the two never overwrite each other.
+
+That policy is generated **inside the image**, by the same code that writes
+`vercel.json`, so it cannot drift from what the build produced. The two outputs
+are compared in `apps/docs/tests/headers.test.ts`.
+
+Each site has its own `.dockerignore` next to its Dockerfile, excluding the
+server apps and `packages/`. Without that, a one-line change to `apps/jobs`
+would invalidate the `COPY` layer and make every deploy rebuild Next and Astro
+from scratch — which on a 1 vCPU box is minutes.
 
 ## One way in
 
 Only `proxy` is reachable from outside the machine. It is Caddy, it answers on
-80 and 443, it gets a certificate for `ingest.$NEKOLOG_DOMAIN` and
-`api.$NEKOLOG_DOMAIN` from Let's Encrypt, and it forwards to the two
+80 and 443, it gets a certificate for `$NEKOLOG_DOMAIN`, `ingest.$NEKOLOG_DOMAIN`
+and `api.$NEKOLOG_DOMAIN` from Let's Encrypt, and it forwards to the
 applications over the private network.
 
 `ingest`, `api` and the jobs health endpoint bind to **127.0.0.1** only, so they
@@ -73,9 +99,11 @@ was verified.
 
 ## Sized for the smallest machine worth using
 
-Every container has a `mem_limit`, and the defaults add up to about 3 GB so they
-fit a 4 GB box with room for the operating system. ClickHouse takes the bulk of
-it.
+Every container has a `mem_limit`. **Measured idle, the nine of them use
+585 MiB**, of which ClickHouse is 348 — the two sites cost 64 MiB between them.
+The limits add up to 3.9 GB, which is more than a 4 GB box has: they are
+ceilings, not reservations, and nothing here gets near its own. Turn swap on
+anyway, and lower `CLICKHOUSE_MEM_LIMIT` first if the box is smaller.
 
 **ClickHouse's own ceiling is deliberately lower than its container limit.**
 `max_server_memory_usage` is 1.2 GiB against a 1800 MB container, so a query

@@ -68,6 +68,41 @@ jobs:
           set -euo pipefail
           docker run --rm nekolog/self-host:ci sh -c 'pg_dump --version && age --version && rclone version | head -n 1'
 
+      - name: Build the two sites
+        run: |
+          set -euo pipefail
+          docker build -f deploy/self-host/Dockerfile.docs -t nekolog/docs:ci .
+          docker build -f deploy/self-host/Dockerfile.web -t nekolog/web:ci .
+          docker image ls nekolog/docs:ci nekolog/web:ci --format '{{.Repository}} {{.Size}}' || true
+
+      - name: The documentation serves itself, with the policy its build generated
+        run: |
+          set -euo pipefail
+          docker run -d --name docs-ci -p 8099:8080 nekolog/docs:ci
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://127.0.0.1:8099/docs/ && break
+            sleep 1
+          done
+          curl -sf -o /dev/null -w 'docs %{http_code}\n' http://127.0.0.1:8099/docs/
+          csp="$(curl -sfI http://127.0.0.1:8099/docs/ | tr -d '\r' |
+            grep -i '^content-security-policy:')"
+          echo "$csp" | grep -q "sha256-"
+          echo "$csp" | grep -qv "unsafe-eval"
+          docker rm -f docs-ci
+
+      - name: The landing page serves itself, with a nonce of its own
+        run: |
+          set -euo pipefail
+          docker run -d --name web-ci -p 3099:3000 nekolog/web:ci
+          for _ in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:3099/ && break
+            sleep 1
+          done
+          curl -sf -o /dev/null -w 'web %{http_code}\n' http://127.0.0.1:3099/
+          curl -sfI http://127.0.0.1:3099/ | tr -d '\r' |
+            grep -i '^content-security-policy:' | grep -q "'nonce-"
+          docker rm -f web-ci
+
       - name: The migration runners are installed
         run: |
           set -euo pipefail

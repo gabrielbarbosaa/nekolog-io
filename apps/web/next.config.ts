@@ -6,6 +6,7 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 export const DOCS_ORIGIN = process.env.DOCS_ORIGIN ?? 'https://docs.nekolog.io'
 
 const nextConfig: NextConfig = {
+  ...(process.env.NEXT_STANDALONE === '1' ? { output: 'standalone' as const } : {}),
   transpilePackages: ['@internal/security-headers'],
   async rewrites() {
     return [{ source: '/docs/:path*', destination: `${DOCS_ORIGIN}/docs/:path*` }]

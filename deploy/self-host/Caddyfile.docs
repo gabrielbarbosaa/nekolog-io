@@ -1,0 +1,12 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	root * /srv
+	encode gzip
+	import /etc/caddy/headers.caddy
+	try_files {path} {path}/ {path}/index.html
+	file_server
+}

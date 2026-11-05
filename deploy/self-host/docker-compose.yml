@@ -192,12 +192,35 @@ services:
     command: ["node", "apps/jobs/src/backup.ts"]
     logging: *logging
 
+  docs:
+    build:
+      context: ../..
+      dockerfile: deploy/self-host/Dockerfile.docs
+    image: nekolog/docs:local
+    restart: unless-stopped
+    mem_limit: ${DOCS_MEM_LIMIT:-64m}
+    logging: *logging
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/self-host/Dockerfile.web
+    image: nekolog/web:local
+    restart: unless-stopped
+    depends_on:
+      - docs
+    environment:
+      DOCS_ORIGIN: http://docs:8080
+    mem_limit: ${WEB_MEM_LIMIT:-384m}
+    logging: *logging
+
   proxy:
     image: caddy:2.10-alpine
     restart: unless-stopped
     depends_on:
       - ingest
       - api
+      - web
     environment:
       NEKOLOG_DOMAIN: ${NEKOLOG_DOMAIN:?set NEKOLOG_DOMAIN in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}

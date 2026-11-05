@@ -18,3 +18,16 @@ api.{$NEKOLOG_DOMAIN} {
 	encode gzip
 	reverse_proxy api:8789
 }
+
+{$NEKOLOG_DOMAIN} {
+	encode gzip
+
+	@docs path /docs /docs/*
+	handle @docs {
+		reverse_proxy docs:8080
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
