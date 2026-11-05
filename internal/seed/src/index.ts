@@ -7,6 +7,7 @@ export {
   HINT_CHARS,
   keyHint,
   parseSeedDocument,
+  READABLE_SEED_VERSIONS,
   SEED_VERSION,
   SeedFormatError,
   serialiseSeedDocument,
@@ -29,6 +30,7 @@ export {
 } from './ids.ts'
 export type {
   BuildSeedOptions,
+  EnvironmentSettings,
   MintedKey,
   MintOptions,
   Scope,
@@ -37,14 +39,22 @@ export type {
 } from './model.ts'
 export {
   assertEnvironmentNames,
+  assertMinLevel,
   assertName,
   assertRetentionDays,
+  assertSampleRate,
   buildSeed,
   DEFAULT_ENVIRONMENTS,
+  DEFAULT_MIN_LEVEL,
   DEFAULT_RETENTION_DAYS,
+  DEFAULT_SAMPLE_RATE,
+  HISTORICAL_SETTINGS,
   MAX_NAME_CHARS,
   mintKey,
+  NEW_PROJECT_PATTERNS,
+  NEW_PROJECT_REDACTION,
   SCOPES_FOR,
+  settingsFrom,
 } from './model.ts'
 export type { SeedStatement } from './postgres.ts'
 export { seedStatements } from './postgres.ts'

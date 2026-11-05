@@ -8,6 +8,7 @@ tem key, e quem cria key é o dashboard — que ainda não existe.
 pnpm seed init                          # organização, projeto, 3 ambientes, 6 keys
 pnpm seed init --origins https://app.exemplo.com
 pnpm seed add-key --environment production --kind secret
+pnpm seed set --environment production --redact all --min-level info
 pnpm seed show                          # o que existe, sem segredo nenhum
 ```
 
@@ -55,11 +56,33 @@ símbolo sai 8 vezes.
 | Escopos da `pk` | `logs:write` | key pública fica visível no site; ler log com ela seria vazamento |
 | Escopos da `sk` | `logs:write`, `logs:read` | é a key de servidor |
 | Origens | qualquer uma | não dá para adivinhar o domínio de quem está semeando |
+| Nível mínimo | `trace` | cortar log por padrão é esconder o que a pessoa foi buscar |
+| Amostragem | `1` | idem; e `error` e `fatal` nunca são sorteados, qualquer que seja a taxa |
+| Redação | cartão, CPF, CNPJ, e-mail, telefone, JWT, `Bearer` | o contrário é um cartão em claro esperando alguém reparar |
 
-O último é o incômodo: uma key pública que aceita qualquer origem é uma key que
-qualquer pessoa copia do seu site e usa por `curl`. O `init` avisa isso em voz
-alta e o `--origins` resolve. Recusar tudo por padrão seria pior — a key nasceria
-inútil e a pessoa só descobriria no primeiro `403`.
+As origens são o incômodo: uma key pública que aceita qualquer origem é uma key
+que qualquer pessoa copia do seu site e usa por `curl`. O `init` avisa isso em
+voz alta e o `--origins` resolve. Recusar tudo por padrão seria pior — a key
+nasceria inútil e a pessoa só descobriria no primeiro `403`.
+
+A redação vai no outro sentido, e de propósito: ela **nasce ligada**. UUID, IPv4
+e IPv6 ficam de fora porque costumam ser exatamente o que se está investigando;
+o resto é dado pessoal e não tem por que estar num log. Um documento da versão 1
+— escrito antes deste comando existir — continua sendo lido, e continua sem
+redação nenhuma: ligar sozinho numa instalação que já roda mudaria o que ela
+grava sem ninguém pedir. O `show` e o `sync-db` avisam quando um ambiente está
+assim.
+
+## Mudar o que a ingestão faz antes de gravar
+
+O `set` muda nível mínimo, amostragem e redação de um ambiente, ou de todos
+quando não vem `--environment`. O arquivo é escrito num nome temporário e
+renomeado por cima, porque a ingestão está lendo: ela relê o documento quando o
+`mtime` muda, no máximo uma vez a cada 15 segundos, e segura as keys que já tem
+se o arquivo ficar ilegível por um instante. Nada reinicia.
+
+O `sync-db` depois disso é o que faz o Postgres concordar — é de lá que o
+dashboard vai ler, quando existir.
 
 ## Onde as keys vão parar
 

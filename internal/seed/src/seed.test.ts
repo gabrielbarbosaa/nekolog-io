@@ -4,6 +4,7 @@ import {
   HINT_CHARS,
   keyHint,
   parseSeedDocument,
+  READABLE_SEED_VERSIONS,
   SEED_VERSION,
   SeedFormatError,
   serialiseSeedDocument,
@@ -12,12 +13,16 @@ import {
 import { encodeTime, MAX_ULID_TIME, RANDOM_CHARS, TIME_CHARS, ULID_CHARS, ulid } from './ids.ts'
 import {
   assertEnvironmentNames,
+  assertMinLevel,
   assertName,
   assertRetentionDays,
+  assertSampleRate,
   buildSeed,
   DEFAULT_ENVIRONMENTS,
   DEFAULT_RETENTION_DAYS,
+  HISTORICAL_SETTINGS,
   MAX_NAME_CHARS,
+  NEW_PROJECT_REDACTION,
   SCOPES_FOR,
   type Seed,
 } from './model.ts'
@@ -333,6 +338,83 @@ describe('the key records it hands the ingestion', () => {
     const store = await keyStoreFromDocument(toDocument(await seed()))
 
     expect(await store.get(await hashApiKey('nekolog_sk_somethingelseentirely'))).toBeNull()
+  })
+})
+
+describe('what the ingestion is told to do with an event before it writes it', () => {
+  it('turns the personal-data patterns on for a project nobody configured', async () => {
+    const records = keyRecordsFor(toDocument(await seed()))
+
+    expect(records.every((entry) => entry.record.redaction === NEW_PROJECT_REDACTION)).toBe(true)
+    expect(NEW_PROJECT_REDACTION.patterns).toContain('credit_card')
+    expect(NEW_PROJECT_REDACTION.patterns).toContain('cpf')
+  })
+
+  it('leaves out the three patterns that are usually what you are debugging', () => {
+    expect(NEW_PROJECT_REDACTION.patterns).not.toContain('uuid')
+    expect(NEW_PROJECT_REDACTION.patterns).not.toContain('ipv4')
+    expect(NEW_PROJECT_REDACTION.patterns).not.toContain('ipv6')
+  })
+
+  it('carries the minimum level and the sample rate onto every key record', async () => {
+    const records = keyRecordsFor(
+      toDocument(await seed({ minLevel: 'warn', sampleRate: 0.25, redaction: null })),
+    )
+
+    expect(records.every((entry) => entry.record.minLevel === 'warn')).toBe(true)
+    expect(records.every((entry) => entry.record.sampleRate === 0.25)).toBe(true)
+    expect(records.map((entry) => entry.record.redaction)).toEqual(
+      records.map(() => HISTORICAL_SETTINGS.redaction),
+    )
+  })
+
+  it('refuses a level that is not a level, and a rate that is not a share', async () => {
+    await expect(seed({ minLevel: 'verbose' })).rejects.toThrow(/is not a level/)
+    await expect(seed({ sampleRate: 0 })).rejects.toThrow(/above 0 and at most 1/)
+    await expect(seed({ sampleRate: 1.5 })).rejects.toThrow(/above 0 and at most 1/)
+    expect(assertMinLevel('fatal')).toBe('fatal')
+    expect(assertSampleRate(1)).toBe(1)
+  })
+
+  it('refuses a redaction rule the ingestion would not understand', async () => {
+    await expect(seed({ redaction: { patterns: ['passport'] } })).rejects.toThrow(/passport/)
+  })
+
+  it('reads a version 1 document as the behaviour that version had', async () => {
+    const document = toDocument(await seed())
+    const old = JSON.parse(serialiseSeedDocument(document)) as Record<string, unknown>
+    old.seedVersion = 1
+    for (const environment of old.environments as Record<string, unknown>[]) {
+      delete environment.minLevel
+      delete environment.sampleRate
+      delete environment.redaction
+    }
+
+    const read = parseSeedDocument(JSON.stringify(old))
+
+    expect(READABLE_SEED_VERSIONS).toContain(1)
+    expect(read.seedVersion).toBe(SEED_VERSION)
+    expect(read.environments[0]?.minLevel).toBe(HISTORICAL_SETTINGS.minLevel)
+    expect(read.environments[0]?.sampleRate).toBe(HISTORICAL_SETTINGS.sampleRate)
+    expect(read.environments[0]?.redaction).toEqual(HISTORICAL_SETTINGS.redaction)
+  })
+
+  it('refuses a document from a build that knows more than this one', async () => {
+    const document = toDocument(await seed())
+    const ahead = { ...JSON.parse(serialiseSeedDocument(document)), seedVersion: SEED_VERSION + 1 }
+
+    expect(() => parseSeedDocument(JSON.stringify(ahead))).toThrow(SeedFormatError)
+  })
+
+  it('refuses a stored setting that no longer makes sense', async () => {
+    const document = toDocument(await seed())
+    const broken = JSON.parse(serialiseSeedDocument(document)) as {
+      environments: Record<string, unknown>[]
+    }
+    const first = broken.environments[0] as Record<string, unknown>
+    first.minLevel = 'verbose'
+
+    expect(() => parseSeedDocument(JSON.stringify(broken))).toThrow(/is not a level/)
   })
 })
 

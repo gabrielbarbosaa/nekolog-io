@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,7 +8,7 @@ import {
   selfHostIngestConfigFrom,
   selfHostIngestWiring,
 } from '@apps/ingest'
-import { buildSeed, toDocument } from '@internal/seed'
+import { buildSeed, serialiseSeedDocument, toDocument } from '@internal/seed'
 import type { SqlRunner } from '@nekolog-io/adapters'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
@@ -226,8 +227,12 @@ describe('the handoff between the two containers, over one directory', () => {
     const environment = seed.environments[0]
     const key = environment?.keys.find((entry) => entry.kind === 'secret')?.value as string
 
+    const document = toDocument(seed)
+    const seedFile = join(folder, '.nekolog-seed.json')
+    writeFileSync(seedFile, serialiseSeedDocument(document), 'utf8')
+
     const app = await localIngestApp(
-      selfHostIngestWiring({ config: ingestConfig, document: toDocument(seed) }),
+      selfHostIngestWiring({ config: ingestConfig, document, seedFile }),
     )
     const parked = await app.request('http://127.0.0.1/v1/logs', {
       method: 'POST',

@@ -76,6 +76,10 @@ services:
       KEYS_FILE: /var/lib/nekolog/state/first-run-keys.txt
       SEED_ENVIRONMENTS: ${SEED_ENVIRONMENTS:-production}
       SEED_RETENTION_DAYS: ${SEED_RETENTION_DAYS:-30}
+      SEED_MIN_LEVEL: ${SEED_MIN_LEVEL:-}
+      SEED_SAMPLE_RATE: ${SEED_SAMPLE_RATE:-}
+      SEED_REDACT: ${SEED_REDACT:-}
+      SEED_REDACT_ATTRIBUTES: ${SEED_REDACT_ATTRIBUTES:-}
     volumes:
       - ./bootstrap.sh:/bootstrap.sh:ro
       - nekolog_state:/var/lib/nekolog/state

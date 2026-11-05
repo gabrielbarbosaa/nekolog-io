@@ -32,17 +32,25 @@ export function seedStatements(document: SeedDocument): SeedStatement[] {
 
   for (const environment of document.environments) {
     statements.push({
-      text: `insert into environments (id, project_id, name, retention_days, origin_allowlist, created_at)
-             values ($1, $2, $3, $4, $5::text[], $6)
+      text: `insert into environments
+               (id, project_id, name, retention_days, origin_allowlist,
+                min_level, sample_rate, redaction_rules, created_at)
+             values ($1, $2, $3, $4, $5::text[], $6, $7, $8::jsonb, $9)
              on conflict (id) do update set
                retention_days = excluded.retention_days,
-               origin_allowlist = excluded.origin_allowlist`,
+               origin_allowlist = excluded.origin_allowlist,
+               min_level = excluded.min_level,
+               sample_rate = excluded.sample_rate,
+               redaction_rules = excluded.redaction_rules`,
       params: [
         environment.id,
         document.project.id,
         environment.name,
         environment.retentionDays,
         environment.originAllowlist === null ? null : [...environment.originAllowlist],
+        environment.minLevel,
+        environment.sampleRate,
+        environment.redaction,
         at(document.createdAt),
       ],
     })

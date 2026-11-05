@@ -1,7 +1,15 @@
-import type { ApiKeyKind } from '@nekolog-io/adapters'
-import type { Scope, Seed } from './model.ts'
+import { type ApiKeyKind, parseRedactionRules, type RedactionRules } from '@nekolog-io/adapters'
+import {
+  assertMinLevel,
+  assertSampleRate,
+  type EnvironmentSettings,
+  HISTORICAL_SETTINGS,
+  type Scope,
+  type Seed,
+} from './model.ts'
 
-export const SEED_VERSION = 1
+export const SEED_VERSION = 2
+export const READABLE_SEED_VERSIONS: ReadonlyArray<number> = [1, 2]
 export const HINT_CHARS = 4
 
 export class SeedFormatError extends Error {
@@ -20,7 +28,7 @@ export type SeedKeyEntry = {
   createdAt: number
 }
 
-export type SeedEnvironmentEntry = {
+export type SeedEnvironmentEntry = EnvironmentSettings & {
   id: string
   name: string
   retentionDays: number
@@ -54,6 +62,9 @@ export function toDocument(seed: Seed): SeedDocument {
       retentionDays: environment.retentionDays,
       originAllowlist:
         environment.originAllowlist === null ? null : [...environment.originAllowlist],
+      minLevel: environment.minLevel,
+      sampleRate: environment.sampleRate,
+      redaction: environment.redaction,
       keys: environment.keys.map((key) => ({
         id: key.id,
         kind: key.kind,
@@ -128,6 +139,43 @@ function keyOf(raw: unknown): SeedKeyEntry {
   }
 }
 
+function redactionOf(value: unknown): RedactionRules {
+  try {
+    return parseRedactionRules(value)
+  } catch (error) {
+    throw new SeedFormatError(
+      `redaction — ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
+
+function settingsOf(body: Record<string, unknown>): EnvironmentSettings {
+  const minLevel = body.minLevel
+  if (minLevel !== undefined) {
+    try {
+      assertMinLevel(minLevel as string)
+    } catch (error) {
+      throw new SeedFormatError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const sampleRate = body.sampleRate
+  if (sampleRate !== undefined) {
+    try {
+      assertSampleRate(sampleRate as number)
+    } catch (error) {
+      throw new SeedFormatError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return {
+    minLevel: minLevel === undefined ? HISTORICAL_SETTINGS.minLevel : (minLevel as string),
+    sampleRate: sampleRate === undefined ? HISTORICAL_SETTINGS.sampleRate : (sampleRate as number),
+    redaction:
+      body.redaction === undefined ? HISTORICAL_SETTINGS.redaction : redactionOf(body.redaction),
+  }
+}
+
 function environmentOf(raw: unknown): SeedEnvironmentEntry {
   const body = object(raw, 'an environment')
   const keys = body.keys
@@ -139,6 +187,7 @@ function environmentOf(raw: unknown): SeedEnvironmentEntry {
     name: text(body.name, 'an environment name'),
     retentionDays: count(body.retentionDays, 'retentionDays'),
     originAllowlist: allowlistOf(body.originAllowlist),
+    ...settingsOf(body),
     keys: keys.map(keyOf),
   }
 }
@@ -152,9 +201,9 @@ export function parseSeedDocument(raw: string): SeedDocument {
   }
 
   const body = object(parsed, 'The seed document')
-  if (body.seedVersion !== SEED_VERSION) {
+  if (typeof body.seedVersion !== 'number' || !READABLE_SEED_VERSIONS.includes(body.seedVersion)) {
     throw new SeedFormatError(
-      `This seed document is version ${String(body.seedVersion)}, and this build reads ${SEED_VERSION}`,
+      `This seed document is version ${String(body.seedVersion)}, and this build reads ${READABLE_SEED_VERSIONS.join(' and ')}`,
     )
   }
 

@@ -133,6 +133,47 @@ describe.skipIf(!reachable)('a seed written into a real Postgres', () => {
     expect(rows.map((row) => row.retention_days)).toEqual([14, 14])
   })
 
+  it('lands the redaction as a jsonb object, not as a jsonb string of one', async () => {
+    await apply()
+    const rows = await sql`
+      select min_level, sample_rate, redaction_rules, jsonb_typeof(redaction_rules) as shape
+      from environments order by name`
+
+    for (const row of rows) {
+      expect(row.shape).toBe('object')
+      expect(row.min_level).toBe('trace')
+      expect(Number(row.sample_rate)).toBe(1)
+      expect(row.redaction_rules).toEqual(document.environments[0]?.redaction)
+    }
+  })
+
+  it('changes a setting on a seed that already exists, which is what seed set is for', async () => {
+    await apply()
+    const changed: SeedDocument = {
+      ...document,
+      environments: document.environments.map((environment) => ({
+        ...environment,
+        minLevel: 'warn',
+        sampleRate: 0.25,
+        redaction: { attributes: ['card.*'], patterns: ['cpf'], replacement: '[redacted]' },
+      })),
+    }
+    for (const statement of seedStatements(changed)) {
+      await sql.unsafe(statement.text, statement.params as never[])
+    }
+
+    const rows = await sql`select min_level, sample_rate, redaction_rules from environments`
+    for (const row of rows) {
+      expect(row.min_level).toBe('warn')
+      expect(Number(row.sample_rate)).toBe(0.25)
+      expect(row.redaction_rules).toEqual({
+        attributes: ['card.*'],
+        patterns: ['cpf'],
+        replacement: '[redacted]',
+      })
+    }
+  })
+
   it('satisfies the foreign key the issue rollup needs, which is why it exists', async () => {
     await apply()
 

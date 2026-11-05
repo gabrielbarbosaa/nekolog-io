@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server'
 import { keyStoreFromDocument, type SeedDocument } from '@internal/seed'
-import type { BlobStore, BlockedEnvironments } from '@nekolog-io/adapters'
+import type { BlobStore, BlockedEnvironments, KeyStore } from '@nekolog-io/adapters'
 import { memoryRateLimiter } from '@nekolog-io/adapters'
 import type { ClickHouseConfig } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
@@ -78,6 +78,7 @@ export function localIngestConfigFrom(env: LocalIngestEnv): LocalIngestConfig {
 export type LocalIngestOptions = {
   config: LocalIngestConfig
   document: SeedDocument
+  keyStore?: KeyStore
   onError?: (error: unknown) => void
   spool?: BlobStore
   blocks?: BlockedEnvironments
@@ -87,7 +88,7 @@ export type LocalIngestOptions = {
 export async function localIngestApp(options: LocalIngestOptions): Promise<Hono> {
   return createIngestApp({
     authenticate: createKeyAuthenticator({
-      keyStore: await keyStoreFromDocument(options.document),
+      keyStore: options.keyStore ?? (await keyStoreFromDocument(options.document)),
       ...(options.blocks === undefined ? {} : { blocks: options.blocks }),
     }),
     sink: createLogStoreSink({
