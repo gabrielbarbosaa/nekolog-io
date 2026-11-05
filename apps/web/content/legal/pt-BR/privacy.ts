@@ -5,7 +5,7 @@ export const privacy: LegalDocument = {
   title: 'Política de privacidade',
   summary:
     'O que coletamos, o que de propósito nunca guardamos, quem processa junto com a gente e como nos obrigar a apagar.',
-  updated: '2026-11-03',
+  updated: '2026-11-05',
   sections: [
     {
       id: 'who-is-responsible',
@@ -73,11 +73,8 @@ export const privacy: LegalDocument = {
         'Usamos infraestrutura de terceiros, cada uma para uma finalidade só, e nenhuma delas recebe os seus dados para finalidade própria:',
       ],
       items: [
-        'Cloudflare — recebe e roteia as requisições, guarda os hashes das keys e os arquivos de exportação',
-        'Oracle Cloud — a máquina virtual onde roda o banco de logs',
-        'Neon — o banco com contas, organizações, projetos e keys',
-        'Upstash — o armazenamento temporário de sessões e códigos de login',
-        'Vercel — serve este site e o dashboard',
+        'Hostinger — o servidor onde tudo roda: os logs, as contas, os projetos, as keys e as sessões',
+        'Cloudflare — recebe e roteia as requisições antes do servidor, e guarda as cópias de segurança',
         'Resend — entrega os nossos e-mails',
       ],
     },
@@ -85,7 +82,7 @@ export const privacy: LegalDocument = {
       id: 'international-transfer',
       heading: 'Dados fora do Brasil',
       paragraphs: [
-        'Esses fornecedores operam servidores fora do Brasil, então rodar o serviço envolve transferência internacional de dados (LGPD, artigo 33). Escolhemos fornecedores que se comprometem contratualmente com proteção equivalente à que a LGPD exige, e mandamos para cada um só o que a finalidade dele precisa.',
+        'Parte desses fornecedores opera servidores fora do Brasil, então rodar o serviço envolve transferência internacional de dados (LGPD, artigo 33). Escolhemos fornecedores que se comprometem contratualmente com proteção equivalente à que a LGPD exige, e mandamos para cada um só o que a finalidade dele precisa.',
       ],
     },
     {

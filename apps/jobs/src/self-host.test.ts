@@ -23,7 +23,6 @@ import {
   selfHostTaskDeps,
 } from './self-host.ts'
 import { spoolResendTask } from './tasks/spool-resend.ts'
-import { buildJobTasks, type JobsEnv } from './worker.ts'
 
 let folder: string
 
@@ -99,37 +98,9 @@ describe('the configuration the self-host jobs container reads', () => {
 })
 
 describe('what the self-host jobs container actually runs', () => {
-  it('runs the Postgres tasks the Cloudflare worker cannot, and all of the worker’s', () => {
-    const workerEnv: JobsEnv = {
-      KEYS: {
-        async get() {
-          return null
-        },
-        async put() {},
-        async delete() {},
-      },
-      SPOOL: {
-        async put() {
-          return undefined
-        },
-        async get() {
-          return null
-        },
-        async delete() {},
-        async list() {
-          return { objects: [], truncated: false }
-        },
-      },
-      CLICKHOUSE_URL: 'http://127.0.0.1:1',
-      CLICKHOUSE_DB: 'nekolog',
-      CLICKHOUSE_JOBS_USER: 'nekolog_jobs',
-      CLICKHOUSE_JOBS_PASSWORD: 'nekolog',
-    }
-
-    const onCloudflare = names(buildJobTasks(workerEnv))
+  it('registers every task, the Postgres ones included', () => {
     const here = names(selfHostJobTasks({ config: selfHostJobsConfigFrom(envFor()), sql: NOTHING }))
 
-    expect(onCloudflare).toEqual(['capacity-watch', 'quota-block', 'spool-resend'])
     expect(here).toEqual([
       'alert-evaluate',
       'alert-notify',
@@ -138,9 +109,39 @@ describe('what the self-host jobs container actually runs', () => {
       'quota-block',
       'spool-resend',
     ])
-    for (const task of onCloudflare) {
-      expect(here).toContain(task)
+  })
+
+  it('tells the operator when the capacity task cannot read a disk', async () => {
+    const sent: string[] = []
+    const original = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: { body: string }) => {
+      if (url.includes('discord.com')) {
+        sent.push(init.body)
+        return { ok: true, status: 204, text: async () => '' }
+      }
+      throw new Error('ClickHouse is unreachable')
+    }) as never
+
+    try {
+      const config = selfHostJobsConfigFrom({
+        ...envFor(),
+        OPS_DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1/abc',
+      })
+      const capacity = selfHostJobTasks({ config, sql: NOTHING }).find(
+        (task) => task.name === 'capacity-watch',
+      )
+
+      await capacity?.run({
+        scheduledAt: Date.now(),
+        signal: new AbortController().signal,
+      } as never)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    } finally {
+      globalThis.fetch = original
     }
+
+    expect(sent.length).toBeGreaterThan(0)
+    expect(JSON.parse(sent[0] ?? '{}').content).toContain('CRITICAL')
   })
 
   it('hands the delivery the key that opens a channel secret, and the console link', () => {

@@ -14,12 +14,8 @@ out/
 # Framework caches
 .next/
 .vercel/
-.wrangler/
 .astro/
 next-env.d.ts
-
-# Wrangler configuration with the account's values filled in, written at deploy time
-wrangler.generated.json
 
 # Env files
 .env

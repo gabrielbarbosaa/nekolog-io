@@ -15,16 +15,12 @@ As etapas 1.7 a 1.12 entregam a **camada HTTP**, as **keys**, a **gravação no
 ClickHouse**, a **contingência** e os **limites**. O caminho completo existe:
 `log.info()` no SDK vira linha na tabela.
 
-A 1.18 fechou o deploy: `wrangler.json` com um ambiente para `dev`, `qa` e
-`prod`, publicado pelo workflow `Workers` no merge de cada branch. Ver
-["Deploy"](#deploy) no fim.
+A ingestão roda como processo Node, num container. Ver ["Deploy"](#deploy) no
+fim.
 
 ```ts
-export default {
-  fetch(request, env, ctx) {
-    return buildIngestApp(assertEnv(env)).fetch(request, env, ctx)
-  },
-}
+const wiring = selfHostIngestWiring(selfHostIngestConfigFrom(process.env))
+serve({ fetch: (await localIngestApp(wiring)).fetch, port })
 ```
 
 `createIngestApp` exige um autenticador e um destino. Não dá para montar um app
@@ -338,33 +334,31 @@ key.
 
 ## Deploy
 
-Um Worker por ambiente — `nekolog-ingest-dev`, `-qa` e `-prod` — publicados pelo
-workflow `Workers` quando a branch correspondente recebe merge. O `wrangler.json`
-versionado traz os bindings com marcadores; o `@internal/deploy` preenche com os
-valores daquele ambiente e apaga os outros blocos antes de publicar
-([como e por quê](../../internal/deploy/README.md)).
+Um container no compose de
+[`deploy/self-host/`](../../deploy/self-host/README.md), atrás de um Caddy que
+termina o TLS e atende em `ingest.<domínio>`. O `src/serve-self-host.ts` é a
+entrada; a configuração vem toda do ambiente, e
+`selfHostIngestConfigFrom` recusa subir sem o que é obrigatório, nomeando o
+que falta.
 
 ```
-KEYS                 KV, as keys do ambiente
-SPOOL                R2, a contingência
-CLICKHOUSE_URL       o túnel daquele ambiente
-CLICKHOUSE_DB        nekolog_<ambiente>
+INGEST_SEED_FILE      o documento do seed, de onde saem as keys
+SPOOL_DIR             o volume da contingência
+KV_DIR                o volume da lista de ambientes bloqueados
+CLICKHOUSE_URL        o ClickHouse na rede dos containers
+CLICKHOUSE_DB         nekolog
 ```
 
-As senhas não estão aí. `CLICKHOUSE_INSERT_USER`, `CLICKHOUSE_INSERT_PASSWORD`,
-`CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` sobem com
-`wrangler secret bulk`, a partir dos segredos do *environment* do GitHub. A
-lista fica em [`deploy/workers/secrets.json`](../../deploy/workers/secrets.json),
-e `src/wrangler.test.ts` falha se ela deixar de cobrir o que o `assertEnv` exige.
+As senhas não estão aí: `CLICKHOUSE_INSERT_USER` e
+`CLICKHOUSE_INSERT_PASSWORD` vêm do `.env` da máquina, que o `up.sh` gera com
+valores novos e que nunca entra no repositório.
 
-**Nenhum dos três tem endereço em `workers.dev`.** O único caminho é
-`ingest-dev.nekolog.io`, `ingest-qa.nekolog.io` e `ingest.nekolog.io`, que são
-domínios criados pelo OpenTofu. Um endereço `workers.dev` seria uma segunda porta
-de entrada para a mesma ingestão, fora de qualquer regra da zona.
+**A ingestão não publica porta.** Quem publica é o Caddy, em 80 e 443, e o
+nome `ingest.<domínio>` é um registro A que o
+[`infra/vps`](../../infra/README.md) cria, *proxied* pelo Cloudflare.
 
-Depois de publicar, o workflow pergunta `/health` no hostname do ambiente. Se o
-Worker subiu sem algum binding ou sem algum segredo, o `assertEnv` derruba o
-primeiro request e a resposta não vem — é essa a verificação.
+Até 05/11/2026 isto era um Cloudflare Worker por ambiente, com `wrangler.json`
+e bindings de KV e R2. Saiu no item D4: tudo roda numa máquina só.
 
 ## O fingerprint
 

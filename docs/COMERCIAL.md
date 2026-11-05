@@ -96,7 +96,7 @@ trabalho real está em A5, A6 e A7.
 | B2 | Hardening: SSH só por chave, firewall, atualização automática | a máquina passa a ser sua responsabilidade | P |
 | B3 | Docker e compose na máquina | — | P |
 | B4 | **Proxy reverso com TLS** (Caddy) na frente da ingestão e da API | hoje as duas falam HTTP puro, com a key no header | P |
-| B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P |
+| B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P — **declarado** em `infra/vps`; falta a conta |
 | B6 | Containers para `apps/web` e `apps/docs` no compose | **feito** — Next em standalone (299 MB) e a documentação estática num Caddy próprio (89 MB); o proxy roteia `/docs` direto, sem passar pelo Next | M |
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
@@ -111,15 +111,16 @@ A tarefa `clickhouse-backup` manda o `BACKUP DATABASE` direto do ClickHouse para
 um bucket S3, uma vez por dia. Verificado de ponta a ponta: o stack local fez
 backup, restaurou noutro banco e as contagens bateram.
 
-Três coisas continuam sendo decisão sua, e sem elas o backup não existe:
+Eram três coisas; o D4 declarou duas, e uma continua aberta:
 
-1. **Um bucket fora da máquina.** Backup no mesmo disco morre com o disco. O R2
-   tem camada gratuita de 10 GB e serve para começar; qualquer S3 serve.
-2. **Regra de ciclo de vida nesse bucket.** Nada no código apaga backup velho,
-   porque o ClickHouse não apaga objeto em S3. Sem a regra, o bucket cresce até
-   a conta doer.
+1. ~~**Um bucket fora da máquina.**~~ `infra/vps` cria `nekolog-backups` no R2,
+   com `prevent_destroy`. Falta a conta para aplicar.
+2. ~~**Regra de ciclo de vida nesse bucket.**~~ Também no D4, e ela expira **só
+   o prefixo `clickhouse/`** — o backup do Postgres apaga os próprios arquivos
+   pelo `BACKUP_KEEP_DAYS`, e duas retenções sobre o mesmo objeto seriam duas
+   verdades. Um teste compara o prefixo da regra com o que o código escreve.
 3. **Um teste de restauração de verdade**, depois que a VPS existir. Backup que
-   ninguém restaurou é esperança.
+   ninguém restaurou é esperança. **Este continua sendo seu.**
 
 ### O B9 veio logo depois, e achou um bug que nunca tinha aparecido
 
@@ -224,12 +225,45 @@ retenção já é coluna. Já existe audit log, matriz de papéis e chave com es
 |---|---|---|---|
 | D1 | As 7 telas abertas | repositório fechado | G |
 | D2 | Multi-tenant: criar organização, projeto e ambiente pela interface — hoje o self-host semeia **uma** de cada | repositório fechado | G |
-| D3 | A fiação que falta: nível mínimo, amostragem e redação no servidor não chegam ao `KeyRecord` do self-host | aqui | M |
-| D4 | Destino de `infra/vercel`, `infra/envs` e `infra/vm` | aqui | M |
+| D3 | A fiação que falta: nível mínimo, amostragem e redação no servidor não chegam ao `KeyRecord` do self-host | **feito** — documento do seed na versão 2, `seed set`, e a ingestão relendo o arquivo sem reiniciar | M |
+| D4 | Destino de `infra/vercel`, `infra/envs` e `infra/vm` | **feito** — removidas, junto com os Workers que as consumiam; entrou `infra/vps` no lugar | M |
+| D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | aqui | M |
 
 O D3 é o achado de hoje, e piora com "privado e pago": um cliente pagante cujo
 log guarda número de cartão em claro, sem jeito de ligar a redação, não é um
 detalhe de configuração.
+
+### O que o D4 removeu, e o que colocou no lugar
+
+Saíram três raízes de OpenTofu (`envs/{dev,qa,prod}`, `vercel`, `vm`), nove
+módulos, o `deploy/vm/` que rodava dentro da máquina da Oracle, e — porque sem
+`infra/envs` eles ficariam sem infraestrutura nenhuma — os três Workers: os
+`wrangler.json`, os `worker.ts`, o `@internal/deploy`, o
+`deploy/workers/secrets.json` e o workflow `Workers`. São 84 arquivos.
+**Nenhuma daquelas raízes foi aplicada uma única vez**, então não há estado
+órfão em conta nenhuma; o que elas diziam continua no histórico do git.
+
+Entrou `infra/vps`, que faz as duas coisas que a máquina realmente precisa da
+Cloudflare: os registros A de cada nome que o Caddy atende, *proxied* (é o item
+**B5**), e o bucket de backup com regra de ciclo de vida — que fecha dois dos
+três pendentes do **B8**. O terceiro, restaurar de verdade, continua esperando
+a máquina.
+
+Três consequências que não eram óbvias:
+
+1. **O `worker.ts` de cada app não era só a entrada do Worker.** Ele carregava
+   também a fiação que as entradas Node usam, então os três viraram arquivos
+   próprios (`rate.ts` na ingestão, `deps.ts` na API, o `wiring.ts` dos jobs) em
+   vez de sumirem.
+2. **A política de privacidade nomeia os processadores, e metade deles deixou
+   de existir.** Oracle, Neon, Upstash e Vercel saíram; entrou a Hostinger. Nos
+   três idiomas, porque é isso que o teste de paridade exige.
+3. **O `docs/PLANO.md` e os runbooks descrevem a plataforma antiga inteira** e
+   não dá para consertar junto: a seção 4 do plano é lida por teste
+   (`internal/load`), o documento ainda fala em open-core e MIT — que a tabela
+   A já derrubou —, e um runbook escrito antes de a máquina existir é o
+   rascunho que o próprio `docs/runbooks/README.md` adverte não seguir. Os dois
+   viraram o **D5**, que faz sentido junto com o B2 e o B3.
 
 ---
 

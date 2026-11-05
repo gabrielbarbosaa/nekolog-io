@@ -8,7 +8,7 @@ import {
   localIngestConfigFrom,
   portFrom,
 } from './local.ts'
-import { DEFAULT_EVENTS_PER_MINUTE } from './worker.ts'
+import { DEFAULT_EVENTS_PER_MINUTE } from './rate.ts'
 
 const ENV: LocalIngestEnv = {
   CLICKHOUSE_URL: 'http://localhost:8123',

@@ -10,10 +10,10 @@ import {
 } from '@nekolog-io/adapters'
 import type { ClickHouseConfig } from '@nekolog-io/clickhouse/client'
 import type { Hono } from 'hono'
-import { createApiApp } from './app.ts'
+import { createApiApp, requestsPerMinuteFrom } from './app.ts'
 import { createReadAuthenticator, createWriteAuthenticator } from './authenticate.ts'
+import { coreApiDeps } from './deps.ts'
 import { openApiDocument } from './openapi.ts'
-import { coreApiDeps, requestsPerMinuteFrom } from './worker.ts'
 
 export const DEFAULT_LOCAL_PORT = 8789
 export const DEFAULT_LOCAL_HOST = '127.0.0.1'

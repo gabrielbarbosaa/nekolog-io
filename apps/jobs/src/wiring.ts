@@ -35,6 +35,19 @@ export function write(level: 'log' | 'warn', ...args: unknown[]): void {
   }
 }
 
+export function dailyQuotaFrom(value: string | undefined): number | undefined {
+  if (value === undefined || value === '') {
+    return undefined
+  }
+  const quota = Number(value)
+  if (!Number.isInteger(quota) || quota <= 0) {
+    throw new Error(
+      `DAILY_EVENT_QUOTA must be a positive whole number, got ${JSON.stringify(value)}`,
+    )
+  }
+  return quota
+}
+
 export function writeSummary(summary: RunSummary): void {
   write('log', JSON.stringify({ app: 'nekolog/jobs', ...summary }))
 }
@@ -184,15 +197,4 @@ export function coreTaskDeps(wiring: CoreWiring): TaskDeps {
       raise(tellOperator, capacityAlert(alert))
     },
   }
-}
-
-export function assertNoFailures(summary: RunSummary): RunSummary {
-  if (summary.failed === 0) {
-    return summary
-  }
-  const broken = summary.ran
-    .filter((outcome) => outcome.status !== 'ok')
-    .map((outcome) => `${outcome.name} (${outcome.status})`)
-    .join(', ')
-  throw new Error(`Scheduled tasks did not finish: ${broken}`)
 }

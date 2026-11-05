@@ -12,8 +12,7 @@ import { clickHouseIssueSource } from '@nekolog-io/clickhouse/issues'
 import { operatorNotifier } from './alerts/operator.ts'
 import type { Task } from './task.ts'
 import { buildTasks, type TaskDeps } from './tasks.ts'
-import { type BackupWiring, coreTaskDeps, write } from './wiring.ts'
-import { dailyQuotaFrom } from './worker.ts'
+import { type BackupWiring, coreTaskDeps, dailyQuotaFrom, write } from './wiring.ts'
 
 export const DEFAULT_JOBS_PORT = 8788
 

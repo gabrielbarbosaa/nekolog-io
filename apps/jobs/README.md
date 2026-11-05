@@ -234,16 +234,17 @@ CI, `CLICKHOUSE_TEST_REQUIRED=1` transforma o skip em erro.
 
 ## Deploy
 
-Um Worker por ambiente — `nekolog-jobs-dev`, `-qa` e `-prod` — publicados pelo
-workflow `Workers` no merge da branch correspondente. Os bindings vêm do
-`wrangler.json`, com os valores da conta preenchidos na hora pelo
-[`@internal/deploy`](../../internal/deploy/README.md); as senhas sobem separadas,
-com `wrangler secret bulk`.
+Um container no compose de
+[`deploy/self-host/`](../../deploy/self-host/README.md). O `src/serve.ts` sobe o
+`/health` e o `startScheduler`, que acorda na virada de cada minuto — a mesma
+cadência que o despachante assume. O container de backup é outro, com os
+binários que o `pg_dump` precisa, e `src/serve-graph.test.ts` falha se o grafo
+de importação do `serve.ts` alcançar o `@internal/backup`.
 
-**Este Worker não tem endereço.** Nenhuma rota, nenhum `workers.dev`, nenhuma
-URL de preview. Ele só é acordado pelo cron `* * * * *`, que é a cadência que o
-despachante assume. O `/health` existe para o self-host, onde o app roda como um
-processo comum; na Cloudflare ele é inalcançável de propósito, e
-`src/wrangler.test.ts` falha se alguém der um hostname a ele — é a mesma
-preocupação da ameaça E12, um degrau antes: lá o app não expõe rota que rode
-tarefa, aqui ele não expõe rota nenhuma.
+**Este container não publica porta para fora.** O `/health` responde numa porta
+de loopback, para o monitor externo e para quem estiver na máquina; o Caddy não
+tem bloco para ele. Nenhuma rota executa tarefa, e `src/app.test.ts` falha se
+alguém adicionar uma — é a ameaça E12.
+
+Até 05/11/2026 isto era um Cloudflare Worker por ambiente, acordado por Cron
+Trigger. Saiu no item D4, junto com o `wrangler.json` e o `@internal/deploy`.

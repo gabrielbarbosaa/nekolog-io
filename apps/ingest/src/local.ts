@@ -8,8 +8,8 @@ import type { Hono } from 'hono'
 import { createIngestApp } from './app.ts'
 import { createAttributeBudget } from './attributes.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
+import { eventsPerMinuteFrom } from './rate.ts'
 import { createLogStoreSink, type SpooledBatch } from './sink.ts'
-import { eventsPerMinuteFrom } from './worker.ts'
 
 export const DEFAULT_LOCAL_PORT = 8787
 export const DEFAULT_LOCAL_HOST = '127.0.0.1'

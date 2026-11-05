@@ -6,11 +6,9 @@ node_modules
 **/.turbo
 **/.next
 **/.astro
-**/.wrangler
 **/.vercel
 **/coverage
 **/*.tgz
-**/wrangler.generated.json
 .nekolog-seed.json
 .env
 .env.*
@@ -25,7 +23,7 @@ apps/jobs
 packages
 internal/backup
 internal/compat
-internal/deploy
+internal/infra
 internal/load
 internal/release
 internal/schema
