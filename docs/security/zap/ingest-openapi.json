@@ -4,7 +4,7 @@
     "title": "NekoLog ingestion, described for the scanner",
     "version": "1.0.0",
     "summary": "Not a published contract. This file exists so OWASP ZAP can attack every route the ingestion answers; apps/ingest/src/scan-surface.test.ts fails if it stops matching the real app.",
-    "license": { "name": "MIT", "identifier": "MIT" }
+    "license": { "name": "Proprietary" }
   },
   "servers": [{ "url": "http://host.docker.internal:8787" }],
   "paths": {

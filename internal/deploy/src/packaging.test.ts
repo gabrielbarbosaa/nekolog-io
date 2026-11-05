@@ -40,7 +40,7 @@ function exportTargets(value: unknown): string[] {
 
 describe('every package this repository publishes', () => {
   it.each(published())('%s carries what npm needs', (folder, manifest) => {
-    expect(manifest.license).toBe('MIT')
+    expect(manifest.license).toBe('SEE LICENSE IN LICENSE')
     expect(manifest.files).toBeDefined()
     expect((manifest.repository as JsonObject).directory).toBe(`packages/${folder}`)
   })
