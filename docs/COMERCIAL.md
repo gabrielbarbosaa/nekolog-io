@@ -227,7 +227,7 @@ retenção já é coluna. Já existe audit log, matriz de papéis e chave com es
 | D2 | Multi-tenant: criar organização, projeto e ambiente pela interface — hoje o self-host semeia **uma** de cada | repositório fechado | G |
 | D3 | A fiação que falta: nível mínimo, amostragem e redação no servidor não chegam ao `KeyRecord` do self-host | **feito** — documento do seed na versão 2, `seed set`, e a ingestão relendo o arquivo sem reiniciar | M |
 | D4 | Destino de `infra/vercel`, `infra/envs` e `infra/vm` | **feito** — removidas, junto com os Workers que as consumiam; entrou `infra/vps` no lugar | M |
-| D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | aqui | M |
+| D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | aqui | M — **o plano está feito**; os runbooks ficam para junto do B2/B3 |
 
 O D3 é o achado de hoje, e piora com "privado e pago": um cliente pagante cujo
 log guarda número de cartão em claro, sem jeito de ligar a redação, não é um
@@ -259,11 +259,29 @@ Três consequências que não eram óbvias:
    de existir.** Oracle, Neon, Upstash e Vercel saíram; entrou a Hostinger. Nos
    três idiomas, porque é isso que o teste de paridade exige.
 3. **O `docs/PLANO.md` e os runbooks descrevem a plataforma antiga inteira** e
-   não dá para consertar junto: a seção 4 do plano é lida por teste
-   (`internal/load`), o documento ainda fala em open-core e MIT — que a tabela
-   A já derrubou —, e um runbook escrito antes de a máquina existir é o
-   rascunho que o próprio `docs/runbooks/README.md` adverte não seguir. Os dois
-   viraram o **D5**, que faz sentido junto com o B2 e o B3.
+   não deu para consertar junto. Viraram o **D5**.
+
+### O D5 reescreveu o plano, e um número mudou de dono
+
+O `docs/PLANO.md` já descreve a máquina que existe: a arquitetura, o que roda
+onde, a segurança da infraestrutura, a operação, a infraestrutura como código,
+o fluxo de branches, a estrutura do repositório e a tabela de riscos. A licença
+proprietária também entrou na tabela de decisões, que ainda dizia MIT.
+
+**Os 10 ms de CPU por request mudaram de dono sem mudar de valor.** Eles eram o
+teto do Cloudflare Workers no plano gratuito — um limite de plataforma. A VPS
+não impõe nenhum, mas é **1 vCPU dividido** com o ClickHouse, o Postgres, quatro
+processos Node e o proxy: CPU gasta na ingestão é CPU tirada do banco que ela
+mesma vai consultar. O número ficou, como teto auto-imposto, e a constante
+deixou de se chamar `WORKER_CPU_BUDGET_MS`. O que ele obrigou a fazer —
+memoizar o fingerprint por lote, baixar o lote padrão de 500 para 200 —
+continua valendo, e a landing page continua contando essa história, agora sem
+mencionar Worker, nos três idiomas.
+
+**Os runbooks ficaram de fora, de propósito.** Eles mandam abrir o painel do
+Cloudflare Zero Trust e criar branch no Neon, e reescrevê-los antes de existir a
+máquina produziria exatamente o rascunho que o `docs/runbooks/README.md` adverte
+não seguir. Vão junto com o **B2** e o **B3**.
 
 ---
 

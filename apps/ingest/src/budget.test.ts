@@ -1,4 +1,4 @@
-import { logBatch, WORKER_CPU_BUDGET_MS } from '@internal/load'
+import { CPU_BUDGET_MS, logBatch } from '@internal/load'
 import { MAX_EVENTS_PER_BATCH } from '@internal/schema'
 import { memoryBlobStore, REDACTION_PATTERNS } from '@nekolog-io/adapters'
 import { describe, expect, it, vi } from 'vitest'
@@ -71,17 +71,17 @@ describe('the CPU one ingestion request costs', () => {
   it('keeps its own ceiling a smoke alarm, not a number anybody can raise away', () => {
     const wholeBatchMs = (MAX_US_PER_EVENT * MAX_EVENTS_PER_BATCH) / 1000
 
-    expect(wholeBatchMs).toBeLessThanOrEqual(WORKER_CPU_BUDGET_MS * 15)
+    expect(wholeBatchMs).toBeLessThanOrEqual(CPU_BUDGET_MS * 15)
   })
 
-  it('stays far enough under the Worker budget to notice a regression', async () => {
+  it('stays far enough under the budget to notice a regression', async () => {
     const body = await worstBatch(MAX_EVENTS_PER_BATCH)
     const ms = await msPerRequest(body, 40)
     const usPerEvent = (ms / MAX_EVENTS_PER_BATCH) * 1000
 
     process.stderr.write(
       `  worst legal batch: ${ms.toFixed(2)} ms for ${MAX_EVENTS_PER_BATCH} events ` +
-        `(${usPerEvent.toFixed(1)} us/event, budget ${WORKER_CPU_BUDGET_MS} ms)\n`,
+        `(${usPerEvent.toFixed(1)} us/event, budget ${CPU_BUDGET_MS} ms)\n`,
     )
 
     expect(usPerEvent).toBeLessThan(MAX_US_PER_EVENT)

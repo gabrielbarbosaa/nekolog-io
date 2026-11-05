@@ -1,31 +1,22 @@
 # NekoLog — plano do projeto
 
-> Plataforma de logs open-core · site `nekolog.io` · npm `@nekolog-io` · GitHub `nekolog-io` · Atualizado em 30/10/2026
+> Plataforma de logs proprietária · site `nekolog.io` · GitHub `nekolog-io` (privado) · Atualizado em 05/11/2026
 >
-> Documentos: [ETAPAS.md](ETAPAS.md) (ordem de execução) · [ESPECIFICACOES.md](ESPECIFICACOES.md) (contratos técnicos)
+> Documentos: [ETAPAS.md](ETAPAS.md) (ordem de execução) · [ESPECIFICACOES.md](ESPECIFICACOES.md) (contratos técnicos) · [COMERCIAL.md](COMERCIAL.md) (o que falta para cobrar)
 
-Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e no back-end: SDKs publicados no npm, uma API que recebe os logs, armazenamento analítico e um dashboard com filtros, gráficos e projetos, com keys separadas por ambiente.
+Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e no back-end: SDKs em npm, uma API que recebe os logs, armazenamento analítico e um dashboard com filtros, gráficos e projetos, com keys separadas por ambiente.
 
-É um projeto pessoal e de estudo, **open-core**: SDKs, ingestão, jobs e API de leitura são open source (MIT) e rodam só em serviços gratuitos na nuvem, com self-host completo via Docker. **O dashboard é fechado**, vive no repositório privado [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) e só roda na instância hospedada na nuvem — não faz parte do self-host. Veja a decisão completa na seção 1 e o detalhe em `docs/adr/` quando o ADR for escrito.
+É um produto **proprietário**, de um autor só, com todos os direitos reservados — ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md). O repositório `nekolog-io` é privado e guarda os SDKs, a ingestão, os jobs, a API pública de leitura, o site e a documentação; o dashboard vive no repositório privado separado [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard). **Tudo roda numa máquina só**, uma VPS, e a instância é por convite.
 
-> **Este documento está atrasado em relação às decisões de 05/11/2026, e não é
-> pouco.** O produto deixou de ser open-core: a licença é proprietária e o
-> repositório é privado (tabela A de [COMERCIAL.md](COMERCIAL.md), ADR
-> [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)). E a
-> plataforma descrita abaixo — Cloudflare Workers, Workers KV, R2, Tunnel,
-> Access, VM da Oracle, Neon, Upstash e Vercel — **foi substituída por uma VPS
-> só**, onde tudo roda em containers atrás de um Caddy, com o Cloudflare Free
-> na frente apenas como DNS e proxy. O item D4 removeu o código daquela
-> infraestrutura em 05/11/2026; ele não chegou a ser aplicado nenhuma vez.
->
-> As seções 3, 4, 5, 14, 15, 17, 18 e 19 descrevem o desenho antigo e ainda
-> precisam ser reescritas — é o item **D5**. O que vale hoje está em
-> [COMERCIAL.md](COMERCIAL.md), em [`infra/README.md`](../infra/README.md) e em
-> [`deploy/self-host/README.md`](../deploy/self-host/README.md). O que continua
-> valendo deste documento são os contratos e os princípios: o formato do
-> payload, a linguagem de busca, o fingerprint, os alertas, a privacidade por
-> padrão, e a regra de que todo comportamento de fornecedor fica atrás de uma
-> interface — foi ela que tornou esta troca possível.
+> **Duas revisões recentes, para quem leu este documento antes.** Em 04/11/2026 o
+> produto deixou de ser open-core (tabela A de [COMERCIAL.md](COMERCIAL.md)), e
+> em 05/11/2026 a plataforma deixou de ser Cloudflare Workers, Workers KV, R2,
+> Tunnel, Access, VM da Oracle, Neon, Upstash e Vercel — tudo isso foi removido
+> pelo item D4 sem nunca ter sido aplicado. As seções 4, 5, 14, 15, 17, 18 e 19
+> já descrevem a máquina que existe. **Os `docs/runbooks/` ainda não**: eles
+> mandam abrir painel do Cloudflare e criar branch no Neon, e serão reescritos
+> junto com a compra da máquina (itens B2 e B3), porque runbook escrito antes de
+> existir o que ele descreve é rascunho.
 
 ---
 
@@ -38,18 +29,18 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 | Tema | Decisão | Motivo |
 |---|---|---|
 | Nome | NekoLog: site `nekolog.io`, escopo `@nekolog-io` no npm, org `nekolog-io` no GitHub | `@nekolog` e `nekolog` já estavam ocupados; o mesmo nome nos três lugares |
-| Modelo | Open-core, projeto pessoal de estudo | Liberdade de escolhas, portfólio público e um produto hospedado que não expõe o código do dashboard a terceiros |
-| Repositórios | Dois: `nekolog-io` (público, MIT — SDKs, ingestão, jobs, API de leitura, site, docs) e `nekolog-dashboard` (privado — dashboard Next.js, só roda na instância hospedada) | Dashboard fechado para terceiros não terem acesso ao código; o resto continua aberto e self-hostável |
-| Código comum aos dois | `adapters`, `clickhouse`, `config` e `db` ficam em `packages/` e são publicados no npm como `@nekolog-io/*` | O dashboard escreve no mesmo Postgres; duplicar essa definição é a única divergência que nenhum teste dos dois lados consegue pegar (ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md)) |
+| Modelo | Produto proprietário, de um autor só | Decidido em 04/11/2026: o que dá o produto não é a visibilidade do repositório, é a licença — ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md) |
+| Repositórios | Dois, os dois privados: `nekolog-io` (SDKs, ingestão, jobs, API de leitura, site, docs) e `nekolog-dashboard` (dashboard Next.js) | Separação de produto, não de licença: os dois têm a mesma |
+| Código comum aos dois | `adapters`, `clickhouse`, `config` e `db` ficam em `packages/` como `@nekolog-io/*` | O dashboard escreve no mesmo Postgres; duplicar essa definição é a única divergência que nenhum teste dos dois lados consegue pegar (ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md)) |
 | Escopo | Plano completo até a 1.0, executado em marcos | Evita retrabalho de arquitetura depois do MVP |
-| Hospedagem | Só serviços gratuitos; o único gasto é o domínio `nekolog.io` (~US$ 50/ano no Cloudflare) | Projeto de estudo; o domínio é exigido pela Resend e pelo Cloudflare Tunnel |
-| Logs | ClickHouse numa VM Oracle Always Free | Banco colunar, rápido em agregações; o ClickHouse Cloud só tem trial |
-| Metadados | Neon Postgres | Gratuito, gerenciado, com backups |
-| Ingestão | Hono no Cloudflare Workers (e em Node no self-host) | Mesmo código nos dois ambientes |
+| Hospedagem | Uma VPS, mais o domínio e um bucket de backup | Decidido em 05/11/2026: a camada gratuita da nuvem não sustenta um produto pago, e espalhar por cinco fornecedores custava mais operação do que uma máquina |
+| Logs | ClickHouse na própria máquina | Banco colunar, rápido em agregações; o ClickHouse Cloud só tem trial |
+| Metadados | Postgres na própria máquina | — |
+| Ingestão | Hono em Node, num container | Um único jeito de rodar, e é o que é testado |
 | Keys | Por ambiente, públicas (`pk`) e secretas (`sk`) | A key define o ambiente; o SDK não precisa informar |
 | Autenticação | Módulo próprio (`internal/auth`), sem Better Auth | O Better Auth não tem refresh token com rotação e não gera código alfanumérico no 2FA |
 | Login | E-mail + senha + código alfanumérico de 6 caracteres por e-mail, em todo login | Segundo fator obrigatório |
-| Códigos e sessões | Redis (Upstash na nuvem, Redis/Valkey no self-host) | Dados temporários; o TTL faz a limpeza |
+| Códigos e sessões | Redis (Valkey na própria máquina) | Dados temporários; o TTL faz a limpeza |
 | Sessão | Access token JWT de 10 min + refresh token que muda a cada uso, com detecção de reuso | Pedido explícito; detecta token copiado |
 | Tema visual | Paleta Grafite, com tema claro e escuro | Interface neutra deixa a cor para os níveis de log |
 | Instância hospedada | Só por convite, com Turnstile, cotas e área do operador | Protege as cotas gratuitas e evita responder por dados de qualquer pessoa |
@@ -57,18 +48,18 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 | Segurança | Prioridade máxima em todas as camadas (seção 14) | A plataforma recebe dados de terceiros e publica pacotes que rodam em outras aplicações |
 | Versionamento | Tudo versionado: pacotes, apps, API, payload, migrations e docs (seção 16) | Atualizações previsíveis para quem usa e para quem hospeda |
 | Branches | `main` (produção), `qa` (homologação) e `dev` (desenvolvimento), com uma branch por etapa (seção 17) | Histórico organizado e promoção controlada entre ambientes |
-| Licença | MIT no repositório público `nekolog-io` (SDKs, ingestão, jobs, site, docs); `nekolog-dashboard` é privado, sem licença de redistribuição | Simples e permissiva para a parte aberta; o dashboard fica fora do open source por decisão de produto |
-| Infraestrutura | Como código, com OpenTofu, a partir do M1 (seção 15.5) | Tudo recriável, versionado e revisado em PR |
+| Licença | Proprietária, todos os direitos reservados, nos dois repositórios, com uma concessão estreita para usar os SDKs dentro da aplicação do cliente | Sem a concessão o produto não é vendável; sem a licença, qualquer um sobe uma cópia e cobra por ela (ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)) |
+| Infraestrutura | Como código, com OpenTofu, no que é de fornecedor: o repositório, o domínio de e-mail e os nomes da máquina (seção 15.5) | Tudo recriável, versionado e revisado em PR; o que roda dentro da máquina é compose, não OpenTofu |
 | Acompanhamento | Cada etapa é uma issue no GitHub, dentro do milestone do seu marco | Cada PR fecha uma issue; o histórico fica rastreável |
 | Cotas da instância hospedada | 10 mil eventos por dia por organização e retenção de 7 dias, ajustáveis pelo operador; projetos e membros sem limite | Cabe nas cotas gratuitas e pode crescer depois |
 | Exportação de logs | JSON, XML e CSV, manual ou agendada, avisada por e-mail com link autenticado | Guardar logs além da retenção sem expor dados por e-mail |
 | Papéis | 4 papéis fixos por organização: owner, admin, member e viewer (seção 10.2) | Simples de entender, de implementar e de testar |
 | Telas | Mapa de telas no plano (seção 10.1); mockups HTML aprovados antes do M2 | Decidir navegação e fluxo antes de programar |
-| Ferramentas | Gráficos com ECharts, validação com Valibot, migrations do ClickHouse com runner próprio e monitor externo Better Stack | Desempenho com muitos pontos, leveza no Worker, simplicidade e heartbeat com página de status |
+| Ferramentas | Gráficos com ECharts, validação com Valibot, migrations do ClickHouse com runner próprio e monitor externo Better Stack | Desempenho com muitos pontos, leveza no caminho quente, simplicidade e heartbeat com página de status |
 
 ## 2. Decisões em aberto
 
-- **Reservar o quanto antes:** a org `nekolog-io` no npm e no GitHub (gratuitas) e o domínio `nekolog.io` pelo Cloudflare Registrar, que já deixa o DNS pronto para o Tunnel e a Resend. Os três estavam livres em 29/10/2026.
+- **Em aberto de verdade, e com relógio:** comprar a VPS (item B1 de [COMERCIAL.md](COMERCIAL.md)), escolher o modelo de cobrança (tabela C) e decidir se os pacotes compartilhados vão para o npm sob a licença nova ou saem do npm e o dashboard os consome por git.
 - **Logo e ícone:** o autor vai criar e adicionar depois; até lá, o projeto usa o nome em texto.
 - **Mockups das telas:** aprovação antes das telas do dashboard (etapa 2.1, no `nekolog-dashboard`).
 
@@ -82,7 +73,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 ## 3. Princípios
 
 1. **Ingestão sem I/O, processamento pesado fora dela.** A API valida, calcula o que sai do próprio evento e grava. O que precisa de rede ou de banco — resolver source map, avaliar regra de alerta, montar issue — roda nos jobs. O `fingerprint` é a exceção que confirma a regra: ele é CPU pura sobre o evento que já está em mãos (especificação 5), e o ClickHouse não preenche coluna depois do insert sem uma *mutation*, que é cara e assíncrona.
-2. **Mesmo código na nuvem e no self-host.** Tudo que depende de fornecedor fica atrás de uma interface (`KeyStore`, `RateLimiter`, `BlobStore`, `Mailer`, `LogStore`, `RedisClient`).
+2. **Todo comportamento de fornecedor fica atrás de uma interface** (`KeyStore`, `RateLimiter`, `BlobStore`, `Mailer`, `LogStore`, `RedisClient`). Era para rodar o mesmo código na nuvem e numa máquina; acabou sendo o que permitiu **trocar a plataforma inteira** em 05/11/2026 escrevendo implementações novas e apagando as antigas, sem tocar na aplicação.
 3. **O SDK nunca quebra a aplicação** e não tem dependências.
 4. **Padrões abertos:** formato de log do OpenTelemetry e propagação via `traceparent` (W3C).
 5. **Privacidade por padrão (LGPD):** dados sensíveis são removidos no SDK e no servidor; o IP não é guardado, só o país.
@@ -95,65 +86,73 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 SDKs (browser / node)
    │ HTTPS, lotes com gzip
    ▼
-Cloudflare Worker "ingest" (Hono)
-   ├─ Workers KV ....... key → projeto + ambiente + regras + bloqueio por cota
-   └─ insert ──(Tunnel)──► ClickHouse na VM Oracle Always Free (logs)
-                                  ▲
-Cloudflare Worker "jobs" ◄─ Cron a cada 1 min
-   ├─ alertas, issues, uso, cotas ─┤
-   └─► Resend / Slack / Discord / webhook
-                                  │
-Vercel: dashboard Next.js ────────┘
-   ├─► Neon Postgres (usuários, orgs, projetos, ambientes, keys, alertas)
-   ├─► Upstash Redis (códigos, sessões, rate limit da autenticação)
-   └─► Resend (códigos de login, convites, avisos)
-
-Cloudflare R2: source maps
+Cloudflare Free ....... DNS, TLS na borda, proteção contra ataque
+   │
+   ▼
+┌─ a máquina ─────────────────────────────────────────────────────┐
+│ Caddy (80/443) ── o único que publica porta                     │
+│   ├─ ingest.<domínio> ──► ingest     (Hono em Node)             │
+│   ├─ api.<domínio> ─────► api        (leitura pública)          │
+│   ├─ <domínio>/docs ────► docs       (Astro estático)           │
+│   └─ <domínio> ─────────► web        (Next em standalone)       │
+│                                                                 │
+│ jobs ◄─ agendador próprio, a cada minuto                        │
+│   ├─ alertas, issues, uso, cotas                                │
+│   └─► Resend / Discord / webhook                                │
+│                                                                 │
+│ backup ── pg_dump | gzip | age | rclone, uma vez por dia        │
+│                                                                 │
+│ ClickHouse (logs)   Postgres (contas, projetos, keys, alertas)  │
+│ volumes: spool da contingência, bloqueios, source maps          │
+└─────────────────────────────────────────────────────────────────┘
+   │
+   └─► bucket S3 fora da máquina: backup do ClickHouse e do Postgres
 ```
 
-- **A ingestão não depende do Postgres nem do Redis.** As keys ficam copiadas no KV, então o Neon (que hiberna depois de 5 min parado) nunca adiciona latência, e o orçamento do Upstash fica todo para a autenticação.
-- **Fila desligada por padrão.** O `async_insert` do ClickHouse já agrupa os inserts no servidor. O Cloudflare Queues fica como adaptador opcional.
-- **Exposição do ClickHouse:** pelo Cloudflare Tunnel, sem abrir portas na VM.
-- **Dois usuários no ClickHouse:** um só com `INSERT` (ingestão) e outro só com `SELECT` (dashboard e jobs).
-- **A VM é descartável.** Ela é recriada por script (cloud-init + docker-compose). Os dados que não podem ser perdidos (usuários, keys) ficam no Neon.
-- **Endereços:** `nekolog.io` (site e docs, deste repositório), `app.nekolog.io` (dashboard, deployado a partir do `nekolog-dashboard`), `ingest.nekolog.io` (Worker de ingestão) e `ch.nekolog.io` (ClickHouse pelo Tunnel, protegido pelas credenciais do ClickHouse e, de preferência, por um token de serviço do Cloudflare Access). Os ambientes `dev` e `qa` têm endereços próprios (seção 17).
-- **Dois repositórios, uma infraestrutura:** `nekolog-io` (público) e `nekolog-dashboard` (privado) compartilham o mesmo ClickHouse, Postgres e Redis/Upstash — só o código do dashboard fica fora do repositório público.
+- **A ingestão não depende do Postgres nem do Redis.** As keys vêm do documento do seed, lido do disco e recarregado sozinho quando o arquivo muda. O princípio não mudou com a plataforma: o caminho quente da ingestão não consulta banco de metadados.
+- **Nada publica porta além do Caddy.** O ClickHouse e o Postgres existem só na rede dos containers.
+- **Uma credencial do ClickHouse por papel:** `reader`, `ingest`, `jobs`, `backup` e `migrator`, cada uma com o *grant* mínimo, conferidas por teste (seção 7).
+- **A máquina não é descartável, e é por isso que existe backup.** Um VPS com disco próprio não se recria sozinho como a VM anterior: o ClickHouse manda `BACKUP DATABASE` para um bucket fora da máquina uma vez por dia, e o Postgres vai pelo mesmo cano, cifrado com `age`.
+- **Endereços:** `nekolog.io` (site e documentação), `ingest.nekolog.io`, `api.nekolog.io` e o do dashboard, quando ele chegar na máquina. Todos são registros A apontando para o mesmo endereço, *proxied* pelo Cloudflare, declarados em `infra/vps`.
+- **Dois repositórios, uma máquina:** `nekolog-io` e o privado `nekolog-dashboard` compartilham o mesmo ClickHouse e o mesmo Postgres.
 
-### Serviços gratuitos
+### O que a máquina dá, e o que aperta
 
-| Peça | Serviço | Limite que importa |
+| Peça | Onde | Limite que importa |
 |---|---|---|
-| Ingestão e jobs | Cloudflare Workers | 100 mil req/dia, 1.000 req/min, ~10 ms de CPU por request |
-| Agendamento | Cloudflare Cron Triggers | 5 por conta; um único cron por minuto dispara todas as tarefas |
-| Keys na ingestão | Cloudflare Workers KV | 100 mil leituras/dia, 1.000 escritas/dia |
-| Fila (opcional) | Cloudflare Queues | 10 mil operações/dia, retenção de 24 h |
-| Logs | ClickHouse na VM Oracle Always Free (ARM) | 2 OCPU + 12 GB de RAM (cota reduzida em 2026) |
-| Plano B para logs | Tinybird Free | 10 GB, 1.000 consultas/dia |
-| Metadados | Neon Postgres | 0,5 GB por projeto, 100 CU-h/mês |
-| Autenticação | Upstash Redis | 256 MB, 500 mil comandos/mês |
-| Site, docs e dashboard | Vercel Hobby (dois projetos, um por repositório) | uso não comercial; cron só 1×/dia |
-| Source maps | Cloudflare R2 | 10 GB, download grátis |
+| Ingestão, API e jobs | containers Node na VPS | 1 vCPU dividido com o banco; o orçamento próprio é de **10 ms de CPU** por request |
+| Agendamento | agendador dentro do container de jobs | acorda na virada de cada minuto; nenhuma rota executa tarefa |
+| Keys na ingestão | documento do seed, num volume | relido sozinho a cada 15 s quando o arquivo muda |
+| Logs | ClickHouse na própria máquina | memória: o teto do processo é menor que o do container, de propósito |
+| Metadados | Postgres na própria máquina | — |
+| Contingência e source maps | volumes do Docker | o `capacity-watch` avisa antes de encher |
+| Backup | bucket S3 fora da máquina | regra de ciclo de vida no prefixo `clickhouse/` |
 | E-mail | Resend | 3.000/mês, 100/dia, exige domínio verificado |
-| Exposição da VM | Cloudflare Tunnel | gratuito, exige domínio no Cloudflare |
-| Repositório, CI, publicação | GitHub + Actions + npm | gratuito para projeto público |
+| Borda | Cloudflare Free | DNS, TLS e proteção; é o que substituiu o Workers |
+| Repositório, CI | GitHub + Actions | minutos contados, porque o repositório é privado |
 
-## 5. Self-host
+**Os 10 ms não são mais um limite de plataforma, e continuam valendo.** Eles eram o teto de CPU por request do Cloudflare Workers; a VPS não impõe nenhum. Mas é **1 vCPU** dividido entre o ClickHouse, o Postgres, quatro processos Node e o Caddy, então um request que gaste muito tempo de CPU tira o tempo do banco que ele mesmo vai consultar. O número virou teto auto-imposto, `apps/ingest/src/budget.test.ts` continua guardando, e o que ele obrigou a fazer — memoizar o fingerprint por lote, baixar o lote padrão de 500 para 200 — continua sendo melhor engenharia.
 
-**O self-host cobre só o repositório público:** SDKs, ingestão, jobs e a API pública de leitura (seção 9). **O dashboard não faz parte do self-host** — é exclusivo da instância hospedada na nuvem, porque seu código vive no repositório privado `nekolog-dashboard`. Quem hospeda por conta própria envia logs, consulta pela API pública e recebe alertas, mas não tem a interface web.
+## 5. Como roda numa máquina só
 
-O código do repositório público roda num `docker-compose`, trocando cada serviço gratuito pelo equivalente:
+Tudo o que está no repositório público roda num `docker-compose`: a ingestão, a API pública de leitura, os jobs, o site, a documentação, o ClickHouse, o Postgres e o proxy. **O dashboard não** — ele vive no repositório privado `nekolog-dashboard` e chega na máquina como mais um container, pelo item B7 de [COMERCIAL.md](COMERCIAL.md).
 
-| Nuvem gratuita | Self-host |
+A troca de cada peça da plataforma anterior pelo que roda aqui:
+
+| Plataforma anterior | Hoje |
 |---|---|
-| Workers (ingest, jobs) | containers Node com o mesmo app Hono |
-| KV | cache em memória + Postgres |
-| Upstash Redis | Redis ou Valkey (obrigatório) |
-| R2 | Garage (mesma API S3) — ver ADR [0013](adr/0013-garage-no-lugar-do-minio.md) |
+| Workers (ingest, api, jobs) | containers Node com o mesmo app Hono |
+| Workers KV | arquivos num volume (`@internal/self-host`) |
+| R2 (contingência, source maps) | volumes do Docker |
+| R2 (backup) | um bucket S3 fora da máquina, que é o único serviço externo que guarda dado |
 | Cron Triggers | agendador dentro do container de jobs |
-| Neon / VM Oracle | Postgres e ClickHouse no próprio compose |
-| Resend | SMTP qualquer |
+| Neon, Upstash, VM Oracle | Postgres, Valkey e ClickHouse no próprio compose |
+| Vercel | containers de `web` e `docs` atrás do mesmo Caddy |
+| Cloudflare Tunnel e Access | nada: o banco está na mesma máquina que os apps |
 
-No ambiente de desenvolvimento, o compose também sobe o **Mailpit**, que captura todos os e-mails numa página local.
+**Por que isso foi barato de fazer:** o princípio 2 desta seção — todo comportamento de fornecedor atrás de uma interface — existe desde o M1. Trocar a plataforma inteira foi escrever implementações novas de `KeyStore` e `BlobStore` e apagar as antigas, não reescrever a aplicação.
+
+No ambiente de desenvolvimento, o compose também sobe o **Mailpit**, que captura todos os e-mails numa página local, e o **Garage** (mesma API S3 — ver ADR [0013](adr/0013-garage-no-lugar-do-minio.md)), que é contra o que o backup é testado.
 
 ---
 
@@ -282,12 +281,12 @@ await log.flush() // essencial em serverless
 - `POST /v1/otlp/logs`: aceita OTLP/HTTP em JSON.
 - **Formato completo** do payload, das respostas e dos códigos de erro: especificação 1 do [ESPECIFICACOES.md](ESPECIFICACOES.md).
 - **Limites:** ~512 KB por lote, ~16 KB por mensagem, até 100 atributos.
-- **Validação leve com Valibot**, por causa dos 10 ms de CPU do Worker.
-- **Resposta imediata e contingência:** a ingestão responde `202` assim que valida o lote e grava em segundo plano (`waitUntil`). Se o insert no ClickHouse falhar, o lote vai para o R2 (`spool/`) e os jobs reenviam quando o ClickHouse voltar, com um token de deduplicação por lote para nada ser gravado duas vezes.
+- **Validação leve com Valibot**, por causa dos 10 ms de CPU por request (seção 19.1).
+- **Resposta imediata e contingência:** a ingestão responde `202` assim que valida o lote e grava em segundo plano. Se o insert no ClickHouse falhar, o lote vai para o volume do spool e os jobs reenviam quando o ClickHouse voltar, com um token de deduplicação por lote para nada ser gravado duas vezes. O token é `<environmentId>:<batchId>`, nunca o `batchId` sozinho: ele é escolhido pelo cliente, e o ClickHouse deduplica por partição, que todos os projetos dividem.
 - **Limite de atributos:** no máximo 500 chaves distintas em `attributes` por projeto; chaves novas além disso são descartadas e aparecem no uso.
 - **Rate limit sem Redis:**
-  - a config da key fica em cache na memória do Worker por 60 s, e um contador por instância segura rajadas;
-  - a cota diária é controlada pelos jobs: a cada minuto, eles somam o uso do dia na `usage_per_minute` e mantêm no KV um documento com a lista de ambientes bloqueados. A ingestão lê essa lista (também em cache de 60 s) e passa a responder `429`. O KV só é escrito quando o conjunto de bloqueados muda — o plano gratuito dá 1.000 escritas por dia e o cron acorda 1.440 vezes.
+  - a config da key fica em cache na memória do processo por 60 s, e um contador por instância segura rajadas — é freio de rajada, não controle de volume, e a documentação diz isso em vez de prometer o que ele não garante;
+  - a cota diária é controlada pelos jobs: a cada minuto, eles somam o uso do dia na `usage_per_minute` e mantêm um documento com a lista de ambientes bloqueados. A ingestão lê essa lista (também em cache de 60 s) e passa a responder `429`. O documento só é reescrito quando o conjunto muda.
 
 ### Consulta
 
@@ -317,12 +316,13 @@ await log.flush() // essencial em serverless
   - **Formatos:** JSON (NDJSON, um log por linha), XML e CSV (protegido contra injeção de fórmulas).
   - **Manual:** o usuário escolhe filtros e período no Explorer e pede a exportação.
   - **Agendada:** por projeto e ambiente, diária ou semanal, por exemplo para guardar os logs antes de a retenção apagá-los.
-  - **Geração:** o próprio ClickHouse gera o arquivo no formato escolhido e grava comprimido no R2 (`INSERT INTO FUNCTION s3(...)`), sem gastar CPU do Worker. A credencial do R2 vai dentro do `INSERT` — o ClickHouse troca o segredo por `[HIDDEN]` no `query_log`, mas a mensagem de erro não é mascarada, então a tarefa dos jobs tira a chave e o segredo de qualquer texto antes de gravá-lo na coluna `failure`.
+  - **Geração:** o próprio ClickHouse gera o arquivo no formato escolhido e grava comprimido num bucket S3 (`INSERT INTO FUNCTION s3(...)`), sem gastar CPU da aplicação. A credencial vai dentro do `INSERT` — o ClickHouse troca o segredo por `[HIDDEN]` no `query_log`, mas a mensagem de erro não é mascarada, então a tarefa dos jobs tira a chave e o segredo de qualquer texto antes de gravá-lo na coluna `failure`.
   - **Credencial do ClickHouse:** a exportação roda com o usuário `nekolog_jobs`, que ganha `WRITE ON S3` e `CREATE TEMPORARY TABLE` (a *table function* não existe sem ela) e **continua sem `READ ON S3`** — ele escreve uma exportação e não consegue ler nenhum objeto de volta para dentro do banco.
   - **Exportação vazia:** quando o filtro não casa com nada, o ClickHouse **não cria objeto nenhum**. A tarefa grava ela mesma um gzip vazio na chave, porque `ready` tem de significar que há o que baixar — é o que a *check constraint* `exports_ready_means_there_is_an_object` promete.
   - **Agendamento:** o período exportado é sempre o que **acabou de fechar** — o dia anterior (meia-noite UTC) ou a semana anterior (segunda a segunda, em UTC), nunca o período em curso. Os jobs esperam 15 minutos depois do fim do período antes de gerar, para os logs atrasados ainda entrarem. Um agendamento criado depois do fim de um período não exporta esse período, e o `last_run_at` é carimbado no mesmo `INSERT` que cria a exportação, então o mesmo período nunca sai duas vezes.
   - **Entrega por e-mail com link, não com anexo:** o e-mail avisa que a exportação está pronta e leva ao dashboard, que exige login e permissão no ambiente antes de liberar o download. Logs podem ter dados sensíveis, anexos ficam para sempre na caixa de e-mail e e-mails têm limite de tamanho. O aviso sai nos três idiomas, escolhido pelo `locale` do usuário, e **não carrega nenhum texto que alguém digitou** — nem o filtro da exportação, nem o nome do ambiente: só período, contagem, tamanho, validade e o link. É o que dispensa confiar no escape de HTML dentro do e-mail. O aviso só vai para quem verificou o e-mail e não está suspenso, e só para exportação agendada — a manual aparece na tela de quem pediu.
-  - **Validade:** os arquivos ficam 7 dias no R2 e depois são apagados por uma regra de ciclo de vida.
+  - **Validade:** os arquivos ficam 7 dias no bucket e depois são apagados por uma regra de ciclo de vida.
+  - **Isto não está ligado na máquina.** A exportação precisa de um bucket que o ClickHouse alcance com credencial própria, e o usuário `nekolog_jobs` do compose não tem *grant* nenhum em S3 — o único bucket externo que existe hoje é o do backup, e dar acesso de exportação a ele seria dar escrita no backup. Ligar a exportação é decidir um segundo bucket.
   - Na instância hospedada, até uma exportação agendada por dia por projeto, por causa da cota de e-mails.
 - **Acessibilidade:** meta WCAG 2.2 AA, navegação completa por teclado e testes automáticos com axe no Playwright.
 - **Idiomas:** português, inglês e espanhol (seção 13).
@@ -549,14 +549,15 @@ Um token desconhecido é só recusado, sem encerrar a sessão, para que ninguém
 | `sess:user:{userId}` | sessões do usuário |
 | `rl:{escopo}:{id}` | rate limit de login, cadastro e recuperação de senha |
 
-No self-host, o Redis usa `ioredis`; na nuvem, `@upstash/redis` (HTTP, funciona em serverless e aceita `EVAL`). Um adaptador escolhe pelo ambiente (`REDIS_URL` ou `UPSTASH_REDIS_REST_URL`).
+O Valkey da máquina usa `ioredis`; o adaptador HTTP (`@upstash/redis`) continua existindo e é escolhido pela variável presente (`REDIS_URL` ou `UPSTASH_REDIS_REST_URL`). Nenhum dos dois é dependência do pacote: `nodeRedis` recebe um cliente injetado e `upstashRedis` precisa só de `fetch`.
 
 ### 11.8 E-mail
 
-- Adaptador `Mailer`: Resend na nuvem, SMTP no self-host, Mailpit em desenvolvimento. Templates em React Email.
+- Adaptador `Mailer`: Resend em produção, SMTP para quem preferir, Mailpit em desenvolvimento. Templates em React Email.
 - A Resend só envia para outras pessoas com domínio verificado. O remetente será `no-reply@nekolog.io`.
-- O plano gratuito permite 100 e-mails por dia. Com refresh token, o login com código só acontece a cada 7–30 dias por pessoa, e a demo pública não envia e-mail.
-- O envio não bloqueia a resposta (na Vercel, `waitUntil`), para o tempo de resposta não revelar se a senha estava certa.
+- O plano gratuito permite 100 e-mails por dia. Com refresh token, o login com código só acontece a cada 7–30 dias por pessoa.
+- **Toda mensagem é conferida antes da chamada de rede:** `assertMessage` recusa `\r`, `\n` ou byte nulo no destinatário e no assunto — é assim que se forja um `bcc:` invisível — e exige um endereço único em minúsculas. Em desenvolvimento, a `EMAIL_ALLOWLIST` manda e **lista vazia não libera ninguém**: variável ausente é máquina nova, não permissão para escrever para estranhos.
+- O envio não bloqueia a resposta, para o tempo de resposta não revelar se a senha estava certa.
 
 ### 11.9 Endpoints
 
@@ -642,7 +643,7 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 14.2 Dependências, repositório e publicação
 
-- **Contas:** passkey ou chave de segurança no GitHub, npm, Cloudflare, Vercel, Neon, Upstash, Resend e Oracle.
+- **Contas:** passkey ou chave de segurança no GitHub, no npm, no Cloudflare, na Hostinger e na Resend — que são todas as que restaram.
 - **Publicação no npm:** só pelo GitHub Actions, com trusted publishing (OIDC, sem token guardado) e provenance; campo `files` em cada `package.json`, para publicar só o build.
 - **Instalação de dependências:** pnpm 10, que não roda scripts de instalação de dependências por padrão (exceções explícitas em `onlyBuiltDependencies`); `minimumReleaseAge` de alguns dias no pnpm e no Renovate, para não instalar versões recém-publicadas; `--frozen-lockfile` no CI.
 - **Poucas dependências:** SDKs sem nenhuma; servidor com o mínimo possível.
@@ -666,12 +667,11 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 14.4 Infraestrutura
 
-- **VM sem nenhuma porta de entrada:** tudo passa pelo Cloudflare Tunnel, e a lista de segurança da Oracle nega qualquer entrada.
-- **SSH** só por chave, sem login de root, acessível apenas pelo Cloudflare Access ou pelo console da Oracle.
-- **Atualizações automáticas de segurança** (`unattended-upgrades`) na VM.
-- **ClickHouse e Redis** escutam só na rede interna do Docker; containers rodam sem root.
-- **Segredos** só nos cofres de cada serviço (GitHub Environments, Cloudflare, Vercel), separados por ambiente.
-- **Backups criptografados** com `age` antes de irem para o R2.
+- **Só o proxy publica porta:** 80 e 443, do Caddy. O ClickHouse, o Postgres e os três apps existem só na rede dos containers, e um teste falha se o compose publicar outra.
+- **SSH** só por chave, sem login de root, com firewall e atualizações automáticas (`unattended-upgrades`) na máquina. **Isto é o item B2 de [COMERCIAL.md](COMERCIAL.md) e ainda não foi feito** — a máquina não existe. Enquanto não for, a ameaça E9 do modelo está marcada como parcial.
+- **Containers rodam sem root**, e a imagem dos sites roda como `node`.
+- **Segredos** no `.env` da máquina, gerado com valores novos pelo `up.sh` e nunca versionado, e nos *environments* do GitHub para o que o CI precisa.
+- **Backups criptografados** com `age` antes de saírem da máquina, para um bucket que não é dela.
 - **DNS:** DNSSEC no `nekolog.io`; SPF, DKIM e DMARC no envio de e-mail (seção 15.4).
 
 ### 14.5 Testes de segurança
@@ -679,7 +679,7 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 - Os testes de autenticação da seção 11.11.
 - Testes de IDOR e de isolamento entre organizações.
 - Fuzzing do validador de payload e do parser da busca.
-- Varredura básica do OWASP ZAP contra o ambiente `qa` a cada promoção.
+- Varredura do OWASP ZAP contra a ingestão e a API, à mão, com a superfície descrita em [docs/security/zap/](security/zap/README.md) e as exceções registradas em arquivo, não na memória de ninguém.
 - Teste automático dos cabeçalhos de segurança.
 - Antes da 1.0: revisão completa com o ASVS nível 2 e varredura completa do ZAP.
 
@@ -689,19 +689,19 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 15.1 Instância hospedada por convite
 
-- Em `app.nekolog.io`, contas só nascem de convites: do operador (para novas organizações) ou de membros de uma org (para a própria org).
+- Contas só nascem de convites: do operador (para novas organizações) ou de membros de uma org (para a própria org).
 - **Cotas por organização:** 10 mil eventos por dia e retenção máxima de 7 dias, ajustáveis por organização na área do operador. Projetos e membros não têm limite.
 - **Área do operador** (`/operator`, só para usuários com `is_operator`, sempre pedindo a senha de novo; vê uso, nunca o conteúdo dos logs): convites da instância, uso por organização, ajuste das cotas e suspensão de usuários e organizações.
 - A **demo pública** somente leitura continua aberta (seção 10).
 - **LGPD:** termos de uso e política de privacidade nos três idiomas, exclusão de conta e exportação dos dados pelo próprio usuário.
-- **No self-host**, o primeiro usuário vira operador, e o cadastro aberto é uma opção de configuração.
+- **Cadastro self-serve** é o item C9 de [COMERCIAL.md](COMERCIAL.md); até lá, convite é o único caminho.
 
 ### 15.2 Monitoramento do próprio NekoLog
 
-- **Endpoint `/health`** em ingest, web e jobs, com a versão de cada app e o estado das dependências (ClickHouse, Postgres, Redis).
-- **Monitor externo:** Better Stack (plano gratuito) checando os três, com página de status pública.
-- **Heartbeat dos jobs:** a cada execução, os jobs avisam o monitor externo; se pararem, o monitor alerta.
-- **Alertas** de disco da VM acima de 80%, de ClickHouse fora do ar e de lotes acumulados na contingência do R2.
+- **Endpoint `/health`** em ingest, api, jobs e web, com a versão de cada app.
+- **Monitor externo:** Better Stack (plano gratuito), com página de status pública. É o item B12 e ainda não aponta para nada.
+- **Heartbeat dos jobs:** a cada execução, os jobs avisam o monitor externo — e avisam num endereço **diferente** quando a execução falhou, para um cron morto e uma tarefa quebrada não serem o mesmo sinal.
+- **Alertas** de disco acima do limite, de ClickHouse fora do ar e de lotes acumulados na contingência. A regra em todos: **"não consegui medir" é crítico**, porque leitura de disco que falhou não é disco saudável.
 - **Alertas críticos por canal externo** (e-mail e Discord), porque o NekoLog não pode depender de si mesmo para avisar que caiu.
 - **Dogfooding:** o NekoLog manda os próprios logs para um projeto `nekolog-self`.
 
@@ -726,11 +726,13 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 15.5 Infraestrutura como código
 
-- **OpenTofu** (fork open source do Terraform) a partir do M1, em `infra/`, com um diretório por ambiente (`infra/envs/dev`, `qa` e `prod`) e módulos compartilhados.
-- **O que fica no código:** DNS, Tunnel, Access, Turnstile, Email Routing, KV, R2 e rotas dos Workers (provider do Cloudflare); VM e regras de rede (provider da Oracle); projeto e domínios na Vercel; repositório, rulesets e environments no GitHub. Neon e Upstash entram se os providers deles atenderem; senão, ficam documentados em runbook.
-- **Estado:** guardado no R2 com a criptografia de estado nativa do OpenTofu, porque o estado contém segredos.
-- **Fluxo:** todo PR que muda `infra/` roda `tofu plan` no CI e mostra o plano no PR; o `tofu apply` roda ao mergear, em cada ambiente, com aprovação manual para produção.
+- **OpenTofu** (fork open source do Terraform) em `infra/`, com três raízes: `repo` (rulesets do GitHub), `email` (SPF, DKIM, DMARC e o encaminhamento) e `vps` (os registros A da máquina e o bucket de backup). Não há mais raiz por ambiente, porque não há mais recurso por ambiente: a máquina é uma.
+- **O que fica no código é o que é de fornecedor.** O que roda *dentro* da máquina é `docker-compose`, não OpenTofu: um compose descreve melhor containers do que um provider descreveria, e é o mesmo arquivo em desenvolvimento e em produção.
+- **A máquina em si não está no OpenTofu.** Ela é comprada à mão no hPanel, e o endereço dela entra como variável (`TF_VAR_vps_ipv4`). Declarar a compra de um VPS por código renderia menos do que custa.
+- **Estado:** num bucket S3 com a criptografia de estado nativa do OpenTofu, porque o estado contém segredos.
+- **Fluxo:** todo PR que muda `infra/` roda `fmt -check` e `validate` nas três raízes; com `INFRA_ENABLED` roda `plan`, e o `apply` roda no merge da `main`, no environment `prod`, que tem aprovação manual. **Nada foi aplicado até hoje** — ver [`infra/README.md`](../infra/README.md).
 - **Segredos** nunca aparecem no código; entram por variáveis dos environments do GitHub.
+- **Um teste amarra as duas pontas:** `internal/infra` falha se um nome que o proxy atende não tiver registro de DNS, se o prefixo da regra de ciclo de vida se separar do que o backup escreve, ou se uma raiz sob `infra/` ficar de fora do workflow.
 
 ---
 
@@ -757,18 +759,20 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ## 17. Fluxo de branches e ambientes
 
-| Branch | Ambiente | Dashboard | Ingestão | npm |
-|---|---|---|---|---|
-| `dev` | desenvolvimento integrado | `dev.nekolog.io` | `ingest-dev.nekolog.io` | snapshot sob demanda (tag `dev`) |
-| `qa` | homologação | `qa.nekolog.io` | `ingest-qa.nekolog.io` | snapshot a cada promoção (tag `next`) |
-| `main` | produção | `app.nekolog.io` | `ingest.nekolog.io` | versão estável (tag `latest`) |
+| Branch | O que é | Onde roda | npm |
+|---|---|---|---|
+| `dev` | desenvolvimento integrado | na máquina de quem está programando, pelo `pnpm dev` | snapshot sob demanda (tag `dev`) |
+| `qa` | homologação | nada ainda; **é um ambiente que não existe mais** | snapshot a cada promoção (tag `next`) |
+| `main` | produção | a VPS, por `git pull --ff-only` e build na própria máquina (ADR [0018](adr/0018-deploy-por-git-pull-na-maquina.md)) | versão estável (tag `latest`) |
+
+**A `qa` perdeu o ambiente, e isso é uma consequência honesta de uma máquina só.** Antes havia `dev`, `qa` e `prod` separados por conta gratuita; hoje a segunda máquina custaria o mesmo que a primeira. A branch continua existindo como degrau de promoção — o `main` nunca recebe merge direto da `dev` —, mas o que a `qa` validava agora é validado pelo CI e pela pilha local. **Subir uma segunda VPS para `qa` é uma decisão em aberto**, e o custo dela está na tabela B de [COMERCIAL.md](COMERCIAL.md).
 
 **Fluxo:**
 
 1. Cada etapa do [ETAPAS.md](ETAPAS.md) vira uma branch a partir da `dev`, com prefixo `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `test/`, `security/`, `infra/` ou `a11y/`.
 2. PR para a `dev`, com CI verde e changeset quando muda um pacote ou app. Merge por **squash**: cada etapa vira um commit na `dev`, no padrão Conventional Commits.
-3. **Promoção para QA:** PR da `dev` para a `qa` com **merge commit** (sem squash, para as branches não divergirem). Roda o e2e completo e a varredura do ZAP no ambiente `qa`.
-4. **Release:** PR da `qa` para a `main`, também com merge commit. Na `main`, o Changesets abre o PR "Version Packages"; ao mergear, publica no npm, cria as tags e faz o deploy de produção.
+3. **Promoção para QA:** PR da `dev` para a `qa` com **merge commit** (sem squash, para as branches não divergirem). Roda o e2e completo.
+4. **Release:** PR da `qa` para a `main`, também com merge commit. Na `main`, o Changesets abre o PR "Version Packages"; ao mergear, publica no npm e cria as tags. **O deploy não é automático**: alguém roda `deploy.sh` na máquina, e o rollback é manual, por decisão registrada no ADR [0018](adr/0018-deploy-por-git-pull-na-maquina.md).
 5. **Sincronização:** depois de cada release, a `main` é mesclada de volta na `qa` e na `dev`, para os números de versão ficarem iguais.
 6. **Hotfix:** branch `hotfix/…` a partir da `main`, PR direto para a `main` e depois a mesma sincronização.
 
@@ -778,33 +782,29 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 - **`main` e `qa`:** commits assinados; um check do CI só aceita PRs da branch anterior (`dev` → `qa`, `qa` → `main`), de `hotfix/…` ou o PR do Changesets.
 - **Revisão:** enquanto o projeto tiver uma pessoa só, a aprovação não é obrigatória (o GitHub não deixa aprovar o próprio PR). Quando entrar mais alguém, passa a exigir uma aprovação e o `CODEOWNERS`.
 
-**Separação dos ambientes nos serviços gratuitos:**
+**Separação dentro da máquina:**
 
-- **Neon:** uma branch do banco para cada ambiente.
-- **ClickHouse:** um database por ambiente (`nekolog_dev`, `nekolog_qa`, `nekolog_prod`) na mesma VM.
-- **Workers, KV e R2:** um Worker, um namespace e um bucket por ambiente (`wrangler --env`).
-- **Upstash:** um prefixo de chave por ambiente (`dev:`, `qa:`, `prod:`).
-- **Vercel:** um domínio por branch.
-- **Atenção:** os limites dos planos gratuitos são por conta, então os três ambientes dividem as mesmas cotas (seção 22).
+A separação que importa não é mais entre ambientes da plataforma, e sim entre **ambientes de cada projeto do cliente** (`production`, `staging`, o que ele criar). Essa continua inteira: a key define o ambiente, o `environment_id` é metade de toda chave estrangeira e de todo filtro, e o nível mínimo, a amostragem, a redação, a retenção e a cota são colunas de `environments` (seção 6).
 
 ---
 
 ## 18. Estrutura do repositório
 
-Este é o repositório **público** (`nekolog-io`). O dashboard tem seu próprio repositório **privado** (`nekolog-dashboard`), com estrutura equivalente (Next.js, `internal/auth`, `internal/db`) mas fechada.
+Este é o repositório `nekolog-io`. O dashboard tem o seu, `nekolog-dashboard`, com estrutura equivalente (Next.js, `internal/auth`, `internal/db`). Os dois são privados.
 
 ```
-packages/       # publicados no npm
+packages/       # destinados ao npm; a publicação está desligada (tabela A)
   core/         # SDKs: core, browser, node, react, next, express, fastify,
   …             # hono, nestjs, pino, winston, cli, bundler-plugin
   db/           # Drizzle + migrations (orgs, projetos, alert_rules…)
   clickhouse/   # migrations, query builder, parser da busca
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
   config/       # schemas e carga das variáveis de ambiente
-                # Estes quatro são publicados porque o nekolog-dashboard
+                # Estes quatro existem em packages/ porque o nekolog-dashboard
                 # consome os mesmos: ele escreve no mesmo Postgres e consulta o
-                # mesmo ClickHouse (ADR 0016). internal/auth (senhas, OTP, JWT,
-                # sessões) é exclusivo do dashboard e vive só lá, não aqui.
+                # mesmo ClickHouse (ADR 0016). Se vão pelo npm ou por git é
+                # decisão em aberto. internal/auth (senhas, OTP, JWT, sessões)
+                # é exclusivo do dashboard e vive só lá, não aqui.
 apps/
   ingest/       # Hono em Node, num container
   api/          # API pública de leitura: busca, histograma, issues
@@ -839,17 +839,24 @@ docs/specs/     # especificações técnicas (payload, busca, fingerprint, alert
 - **Base:** pnpm workspaces + Turborepo, build dos pacotes com tsdown, Biome, Vitest e Playwright.
 - **Em todo PR:** lint, typecheck, testes, `publint` e `@arethetypeswrong/cli`, `size-limit` no SDK de browser, testes de integração com ClickHouse, Postgres e Redis como *services* do GitHub Actions, e2e com os `examples/`.
 - **Release:** snapshots na `dev` e na `qa` e versão estável na `main`, publicadas com trusted publishing (OIDC) e provenance (seções 16 e 17). Publicar no npm já cobre yarn, pnpm e bun.
-- **Deploy:** cada branch publica no seu ambiente (seção 17): integração Git da Vercel para web e docs, com preview por PR, e `wrangler deploy --env` pelo Actions para ingest e jobs.
+- **Deploy:** `deploy/self-host/deploy.sh` na máquina — `git pull --ff-only`, build local e `docker compose up`. O CI não publica nada: ele valida. Um build que falha não derruba o que está no ar; um build que dá certo com código ruim derruba, e o script imprime o comando de volta (ADR [0018](adr/0018-deploy-por-git-pull-na-maquina.md)).
 - **Segurança no CI:** seção 14.2.
 - **Compatibilidade:** testes em Node 22, 24 e 26, Bun e Deno, e no Chromium, Firefox e WebKit.
 - **Antes da 1.0:** teste de carga com k6 — feito na etapa 6.4, em `internal/load`. O que ele mediu está no `internal/load/README.md`; o que mudou por causa dele está abaixo.
 
 ### 19.1 O orçamento de CPU da ingestão (medido na 6.4)
 
-Os 10 ms de CPU por request do Worker no plano gratuito (seção 4) são o limite
-mais apertado deste projeto, e **o lote máximo que a especificação 1 permite não
-cabia neles**. Medido em 2026-11-04: um lote de 500 eventos com 20% de erros,
-comprimido e com todas as regras de redação ligadas, custava **10,8 ms**.
+Os 10 ms de CPU por request (seção 4) são o limite mais apertado deste projeto,
+e **o lote máximo que a especificação 1 permite não cabia neles**. Medido em
+2026-11-04: um lote de 500 eventos com 20% de erros, comprimido e com todas as
+regras de redação ligadas, custava **10,8 ms**.
+
+Quando isso foi medido, os 10 ms eram o teto de CPU do Cloudflare Workers no
+plano gratuito. A VPS não impõe teto nenhum — e o número ficou, porque virou
+outra coisa: é **1 vCPU dividido** entre o ClickHouse, o Postgres, quatro
+processos Node e o proxy, então CPU gasta na ingestão é CPU tirada do banco que
+ela mesma vai consultar. O teto agora é auto-imposto, e `CPU_BUDGET_MS` em
+`internal/load` é onde ele mora.
 
 Duas mudanças saíram daí.
 
@@ -866,6 +873,10 @@ Duas mudanças saíram daí.
 
 Mesmo depois das duas, o lote de 500 custa 9,1 ms. **Não sobra folga no lote
 máximo**, e isso é deliberado: quem pede 500 está pedindo o limite.
+
+Nada disso foi desfeito quando a plataforma mudou. Memoizar o fingerprint e
+mandar 200 eventos por padrão continuam sendo melhor engenharia num servidor
+que divide um núcleo com o próprio banco do que eram num Worker.
 
 A redação **não** foi otimizada, embora seja o segundo maior custo (1,7 ms sobre
 3.000 valores de atributo). Toda otimização plausível ali é uma heurística que
@@ -920,12 +931,12 @@ O passo a passo de cada marco, etapa por etapa e com o nome de cada branch, est�
 | Marco | Entrega | Pronto quando |
 |---|---|---|
 | **M0 — Fundação** | repositório com `main`, `qa` e `dev` e suas regras, monorepo, CI, base de segurança (seção 14.2), licenças, docker-compose de dev (ClickHouse, Postgres, Valkey, Mailpit, Garage), dashboard e docs vazios com tema Grafite nos três idiomas, primeiros ADRs e modelo de ameaças | `pnpm dev` sobe tudo e o CI passa nas três branches |
-| **M1 — Ingestão** | formato do payload v1, `core` + `node`, ingest (Node e Workers) com contingência no R2, jobs, tabelas no ClickHouse, keys por ambiente via script, limites e cotas, infraestrutura em OpenTofu e VM da Oracle | um `log.info()` no exemplo Express aparece no ClickHouse de `dev` |
-| **M2 — Plataforma** | `internal/auth` (seção 11), convites, área do operador, orgs, projetos, ambientes, keys, Explorer, gráfico de volume, termos e privacidade, monitoramento, backups, e-mail com SPF/DKIM/DMARC, deploy nos três ambientes | alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção |
+| **M1 — Ingestão** | formato do payload v1, `core` + `node`, ingest com contingência, jobs, tabelas no ClickHouse, keys por ambiente via script, limites e cotas, infraestrutura em OpenTofu | um `log.info()` no exemplo Express aparece no ClickHouse de `dev` |
+| **M2 — Plataforma** | `internal/auth` (seção 11), convites, área do operador, orgs, projetos, ambientes, keys, Explorer, gráfico de volume, termos e privacidade, monitoramento, backups, e-mail com SPF/DKIM/DMARC | alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção |
 | **M3 — Front e integrações** | `browser`, `react`, `next`, `express`, `fastify`, `hono`, `nestjs`, `pino`, `winston`, breadcrumbs, `traceparent`, trace view, matriz de compatibilidade, `cli init` e passo a passo do primeiro log | um clique no front e a request no back aparecem na mesma linha do tempo |
 | **M4 — Investigação** | linguagem de busca, views salvas, tempo real, contexto, issues, releases e source maps, aviso de relógio, exportação, dashboards customizáveis | um erro minificado aparece com arquivo e linha originais |
 | **M5 — Alertas e governança** | alertas e canais (com proteção contra SSRF), configurações por ambiente, remoção de dados no servidor, uso e cotas, audit log, alertas de segurança, API pública, rotação de chaves | um pico de erros em `production` gera alerta no Discord em ~1 min |
-| **M6 — 1.0** | endpoint OTLP, self-host com um comando, docs completas nos três idiomas, teste de carga, revisão de segurança (ASVS nível 2 + ZAP), auditoria de acessibilidade, lançamento | alguém sobe tudo seguindo só a documentação |
+| **M6 — 1.0** | endpoint OTLP, a pilha inteira num `docker compose up`, docs completas nos três idiomas, teste de carga, revisão de segurança (ASVS nível 2 + ZAP), auditoria de acessibilidade | a pilha sobe seguindo só a documentação |
 
 **Depois da 1.0:** Helm chart, SDKs para React Native/Expo, Vue e Svelte, traces e métricas completos, session replay (rrweb), detecção de anomalias e um servidor MCP para consultar os logs com IA direto do editor.
 
@@ -935,35 +946,22 @@ O passo a passo de cada marco, etapa por etapa e com o nome de cada branch, est�
 
 | Risco | Mitigação |
 |---|---|
-| A Oracle reduz a cota ou recupera a VM | VM recriável por script; Tinybird como plano B (adaptador `LogStore`) |
-| 10 ms de CPU no Worker | validação leve; nada pesado na ingestão |
-| Neon hiberna após 5 min | a ingestão não consulta o Postgres (keys no KV) |
-| Queues com 10 mil operações/dia | fila desligada; `async_insert` do ClickHouse |
-| Upstash com 500 mil comandos/mês | Redis só para autenticação; JWT evita consulta a cada request |
-| Resend com 100 e-mails/dia | refresh token espaça os logins; demo sem e-mail |
-| Vercel Hobby: só uso não comercial e cron 1×/dia | projeto de estudo; jobs no Cloudflare |
+| **A máquina é uma só, e o disco é dela** | backup diário do ClickHouse e do Postgres para um bucket que não é da máquina; o teste de restauração continua sendo o item que falta |
+| **1 vCPU dividido com o banco** | teto auto-imposto de 10 ms de CPU por request, guardado por teste; lote padrão de 200 eventos; teto de memória do ClickHouse menor que o do container, para consulta grande falhar em vez de matar o processo |
+| **A `qa` não tem ambiente** | o que ela validava passou para o CI e para a pilha local; subir uma segunda máquina é decisão em aberto (seção 17) |
+| **O deploy e o rollback são manuais** | aceito no ADR [0018](adr/0018-deploy-por-git-pull-na-maquina.md): build que falha não derruba nada, e o script imprime o comando de volta |
+| **A máquina ainda não foi endurecida** | item B2 de [COMERCIAL.md](COMERCIAL.md); até lá, a ameaça E9 do modelo está marcada como parcial, e não como fechada |
+| Resend com 100 e-mails/dia | refresh token espaça os logins |
 | `.io` mais caro e com futuro incerto (acordo entre Reino Unido e Maurício) | o nome `nekolog-io` vale com qualquer domínio; `nekolog.dev` fica como reserva |
-| Os três ambientes dividem as mesmas cotas gratuitas (os limites são por conta) | pouco tráfego de teste em `dev` e `qa`; e-mails desses ambientes só para endereços autorizados |
-| ClickHouse fora do ar | contingência no R2 e reenvio pelos jobs |
-| Perda do Postgres | `pg_dump` diário criptografado no R2, com teste de restauração |
+| ClickHouse fora do ar | contingência num volume e reenvio pelos jobs, com deduplicação por `<environmentId>:<batchId>` |
 | Bots esgotando a cota de e-mail | instância por convite e Turnstile |
-| Worker gratuito faz no máximo 50 subrequests por execução | os jobs agrupam regras e consultas e processam em lotes rotativos (especificação 6) |
-| Exportações agendadas gastando a cota de e-mail | no máximo uma por dia por projeto na instância hospedada |
-| Autenticação feita à mão | checklist OWASP ASVS, testes extensos e revisão antes da demo |
-
-Os limites dos planos gratuitos foram conferidos em 29/10/2026 e mudam com frequência. Confirme na página oficial antes de depender deles.
+| Exportações agendadas gastando a cota de e-mail | no máximo uma por dia por projeto |
+| Autenticação feita à mão | checklist OWASP ASVS, testes extensos e revisão |
+| **Minutos do GitHub Actions passaram a ser contados** | o repositório é privado; o backup do Postgres saiu do Actions para a máquina, e o que sobrou lá é validação |
 
 ## 23. Fontes
 
-- [Cloudflare Queues no plano Free](https://developers.cloudflare.com/changelog/post/2026-02-04-queues-free-plan/)
-- [Limites do Cloudflare Workers](https://developers.cloudflare.com/workers/platform/limits/)
-- [Corte no Oracle Always Free (InfoQ)](https://infoq.com/news/2026/07/oracle-cloud-free-tier-limits/)
 - [ClickHouse Cloud sem plano gratuito permanente](https://dev.to/beton/clickhouse-pricing-teardown-2026-209h)
-- [Limites do Tinybird](https://tinybird.co/docs/forward/pricing/limits)
-- [Preços do Neon](https://neon.com/pricing)
-- [Preços do Upstash Redis](https://upstash.com/pricing/redis)
-- [Cron jobs na Vercel](https://vercel.com/docs/cron-jobs/usage-and-pricing)
-- [Plano gratuito do R2](https://filebase.com/blog/cloudflare-r2-pricing-costs-savings-and-alternatives-in-2026/)
 - [Plano gratuito da Resend](https://automationatlas.io/answers/resend-free-tier-explained-2026/)
 - [Better Auth – Sessões](https://www.better-auth.com/docs/concepts/session-management) e [2FA](https://www.better-auth.com/docs/plugins/2fa) (motivo da troca)
 - [Auth0 – Rotação de refresh token](https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)

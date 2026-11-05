@@ -86,7 +86,7 @@ describe('what the landing page claims', () => {
   it('names the CPU budget the ingestion is actually measured against', async () => {
     const budget = await readFile(`${REPO}internal/load/src/budget.ts`, 'utf8')
 
-    expect(budget).toMatch(/WORKER_CPU_BUDGET_MS = 10\b/)
+    expect(budget).toMatch(/CPU_BUDGET_MS = 10\b/)
     for (const locale of locales) {
       const text = await pageText(locale)
 

@@ -3,33 +3,30 @@ import { describe, expect, it } from 'vitest'
 import {
   API_P95_MS,
   affordableEvents,
+  CPU_BUDGET_MS,
   CPU_HEADROOM,
   INGEST_P95_MS,
+  MACHINE_VCPUS,
   MAX_FAILURE_RATE,
   MIN_CHECK_RATE,
   thresholdsFor,
-  WORKER_CPU_BUDGET_MS,
-  WORKER_REQUESTS_PER_DAY,
-  WORKER_REQUESTS_PER_MINUTE,
 } from './budget.ts'
 
 const PLANO = new URL('../../../docs/PLANO.md', import.meta.url)
 
-describe('the platform budget', () => {
+describe('the CPU budget', () => {
   it('is the one the plan writes down, not a number somebody liked', async () => {
     const plan = await readFile(PLANO, 'utf8')
     const row = plan
       .split('\n')
-      .find((line) => line.includes('Cloudflare Workers') && line.includes('req/dia'))
+      .find((line) => line.includes('Ingestão, API e jobs') && line.includes('ms de CPU'))
 
-    expect(row, 'docs/PLANO.md no longer states the Workers limits').toBeDefined()
-    expect(row).toContain('100 mil req/dia')
-    expect(row).toContain('1.000 req/min')
+    expect(row, 'docs/PLANO.md no longer states the CPU budget').toBeDefined()
+    expect(row).toContain('1 vCPU')
     expect(row).toContain('10 ms de CPU')
 
-    expect(WORKER_CPU_BUDGET_MS).toBe(10)
-    expect(WORKER_REQUESTS_PER_MINUTE).toBe(1_000)
-    expect(WORKER_REQUESTS_PER_DAY).toBe(100_000)
+    expect(CPU_BUDGET_MS).toBe(10)
+    expect(MACHINE_VCPUS).toBe(1)
   })
 
   it('keeps half the CPU budget in reserve, because the measurement is not the edge', () => {
@@ -43,9 +40,9 @@ describe('the platform budget', () => {
     expect(affordableEvents(0.05)).toBe(100)
   })
 
-  it('does not divide by a cost that is not a cost', () => {
+  it('refuses to answer on a cost that is not a cost, instead of inventing a ceiling', () => {
     for (const nonsense of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(affordableEvents(nonsense), String(nonsense)).toBe(WORKER_REQUESTS_PER_MINUTE)
+      expect(affordableEvents(nonsense), String(nonsense)).toBe(0)
     }
   })
 })

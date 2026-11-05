@@ -2,16 +2,15 @@ export type { Thresholds } from './budget.ts'
 export {
   API_P95_MS,
   affordableEvents,
+  CPU_BUDGET_MS,
   CPU_HEADROOM,
   DEFAULT_DURATION,
   DEFAULT_VUS,
   INGEST_P95_MS,
+  MACHINE_VCPUS,
   MAX_FAILURE_RATE,
   MIN_CHECK_RATE,
   thresholdsFor,
-  WORKER_CPU_BUDGET_MS,
-  WORKER_REQUESTS_PER_DAY,
-  WORKER_REQUESTS_PER_MINUTE,
 } from './budget.ts'
 export type { CorpusBatch, CorpusOptions } from './corpus.ts'
 export {
