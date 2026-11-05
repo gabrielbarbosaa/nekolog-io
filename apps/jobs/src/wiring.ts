@@ -1,11 +1,23 @@
 import type { BlobStore, KvNamespace } from '@nekolog-io/adapters'
 import { kvQuotaStore } from '@nekolog-io/adapters'
-import { type ClickHouseConfig, queryRows } from '@nekolog-io/clickhouse/client'
+import { type BackupDestination, backupHistoryQuery } from '@nekolog-io/clickhouse/backup'
+import { type ClickHouseConfig, execute, queryRows } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import { clickHouseUsageStore } from '@nekolog-io/clickhouse/usage-store'
-import { capacityAlert, type OperatorAlert, quotaAlert, spoolAlert } from './alerts/operator.ts'
+import {
+  backupAlert,
+  capacityAlert,
+  type OperatorAlert,
+  quotaAlert,
+  spoolAlert,
+} from './alerts/operator.ts'
 import type { RunSummary } from './run.ts'
 import type { CapacityAlert, DiskReading } from './tasks/capacity-watch.ts'
+import type {
+  BackupHistoryReader,
+  BackupStarter,
+  ClickHouseBackupAlert,
+} from './tasks/clickhouse-backup.ts'
 import type { QuotaBlockEvent } from './tasks/quota-block.ts'
 import type { SpoolResendEvent } from './tasks/spool-resend.ts'
 import type { TaskDeps } from './tasks.ts'
@@ -68,6 +80,38 @@ export function diskReaderFor(
   }
 }
 
+export function writeBackupAlert(alert: ClickHouseBackupAlert): void {
+  write('warn', '[nekolog/jobs] backup', JSON.stringify(alert))
+}
+
+function within(signal: AbortSignal): typeof fetch {
+  return ((input, init) => fetch(input, { ...init, signal })) as typeof fetch
+}
+
+export function backupHistoryReaderFor(config: ClickHouseConfig): BackupHistoryReader {
+  return async (signal: AbortSignal) => {
+    const rows = await queryRows<{
+      name: string
+      status: string
+      error: string
+      started_at: number
+    }>(config, backupHistoryQuery(), { database: null, fetch: within(signal) })
+
+    return rows.map((row) => ({
+      name: row.name,
+      status: row.status,
+      error: row.error,
+      startedAt: Number(row.started_at) * 1000,
+    }))
+  }
+}
+
+export function backupStarterFor(config: ClickHouseConfig): BackupStarter {
+  return async (sql: string, signal: AbortSignal) => {
+    await execute(config, sql, { database: null, fetch: within(signal) })
+  }
+}
+
 export function raise(
   tell: (alert: OperatorAlert) => Promise<void>,
   alert: OperatorAlert | null,
@@ -78,18 +122,49 @@ export function raise(
   void tell(alert)
 }
 
+export type BackupWiring = {
+  clickHouse: ClickHouseConfig
+  destination: BackupDestination
+}
+
 export type CoreWiring = {
   spool: BlobStore
   kv: KvNamespace
   clickHouse: ClickHouseConfig
   dailyQuota?: number
+  backup?: BackupWiring
   tellOperator: (alert: OperatorAlert) => Promise<void>
+}
+
+export type BackupDeps = Pick<
+  TaskDeps,
+  'backupDestination' | 'backupHistory' | 'startBackup' | 'onBackupAlert'
+>
+
+export function backupDeps(
+  backup: BackupWiring | undefined,
+  tellOperator: (alert: OperatorAlert) => Promise<void>,
+): BackupDeps {
+  if (backup === undefined) {
+    return {}
+  }
+  return {
+    backupDestination: backup.destination,
+    backupHistory: backupHistoryReaderFor(backup.clickHouse),
+    startBackup: backupStarterFor(backup.clickHouse),
+    onBackupAlert: (alert: ClickHouseBackupAlert) => {
+      writeBackupAlert(alert)
+      raise(tellOperator, backupAlert(alert))
+    },
+  }
 }
 
 export function coreTaskDeps(wiring: CoreWiring): TaskDeps {
   const tellOperator = wiring.tellOperator
 
   return {
+    ...backupDeps(wiring.backup, tellOperator),
+    clickHouseDatabase: wiring.clickHouse.database,
     spool: wiring.spool,
     logStore: clickHouseLogStore(wiring.clickHouse),
     usage: clickHouseUsageStore(wiring.clickHouse),

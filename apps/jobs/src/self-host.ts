@@ -12,7 +12,7 @@ import { clickHouseIssueSource } from '@nekolog-io/clickhouse/issues'
 import { operatorNotifier } from './alerts/operator.ts'
 import type { Task } from './task.ts'
 import { buildTasks, type TaskDeps } from './tasks.ts'
-import { coreTaskDeps, write } from './wiring.ts'
+import { type BackupWiring, coreTaskDeps, write } from './wiring.ts'
 import { dailyQuotaFrom } from './worker.ts'
 
 export const DEFAULT_JOBS_PORT = 8788
@@ -33,7 +33,25 @@ export type SelfHostJobsEnv = {
   HEARTBEAT_URL?: string
   OPS_DISCORD_WEBHOOK_URL?: string
   JOBS_VERSION?: string
+  CLICKHOUSE_BACKUP_USER?: string
+  CLICKHOUSE_BACKUP_PASSWORD?: string
+  BACKUP_S3_ENDPOINT?: string
+  BACKUP_S3_ACCESS_KEY_ID?: string
+  BACKUP_S3_SECRET_ACCESS_KEY?: string
 }
+
+export const NO_BACKUP_WARNING: string =
+  '[nekolog/jobs] no ClickHouse backup is configured: every log on this machine exists in exactly ' +
+  'one place. Set CLICKHOUSE_BACKUP_USER, CLICKHOUSE_BACKUP_PASSWORD, BACKUP_S3_ENDPOINT, ' +
+  'BACKUP_S3_ACCESS_KEY_ID and BACKUP_S3_SECRET_ACCESS_KEY to change that.'
+
+export const DEFAULT_BACKUP_USER = 'nekolog_backup'
+
+export const BACKUP_VARIABLES: ReadonlyArray<keyof SelfHostJobsEnv> = [
+  'BACKUP_S3_ENDPOINT',
+  'BACKUP_S3_ACCESS_KEY_ID',
+  'BACKUP_S3_SECRET_ACCESS_KEY',
+]
 
 export type SelfHostJobsConfig = {
   clickHouse: ClickHouseConfig
@@ -48,6 +66,7 @@ export type SelfHostJobsConfig = {
   heartbeatUrl?: string
   opsWebhookUrl?: string
   version?: string
+  backup?: BackupWiring
 }
 
 const REQUIRED: ReadonlyArray<keyof SelfHostJobsEnv> = [
@@ -73,6 +92,47 @@ export function portFrom(value: string | undefined): number {
   return port
 }
 
+export function backupWiringFrom(env: SelfHostJobsEnv): BackupWiring | undefined {
+  const given = BACKUP_VARIABLES.filter((name) => {
+    const value = env[name]
+    return value !== undefined && value !== ''
+  })
+
+  if (given.length === 0) {
+    return undefined
+  }
+  const missing = BACKUP_VARIABLES.filter((name) => !given.includes(name))
+  if (env.CLICKHOUSE_BACKUP_PASSWORD === undefined || env.CLICKHOUSE_BACKUP_PASSWORD === '') {
+    missing.push('CLICKHOUSE_BACKUP_PASSWORD')
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `The ClickHouse backup is half configured: ${missing.join(', ')} ${
+        missing.length === 1 ? 'is' : 'are'
+      } missing. ` +
+        'Fill all of them in, or leave all of them out and accept that the logs have no backup.',
+    )
+  }
+
+  return {
+    clickHouse: {
+      url: env.CLICKHOUSE_URL as string,
+      database: env.CLICKHOUSE_DB as string,
+      user:
+        env.CLICKHOUSE_BACKUP_USER === undefined || env.CLICKHOUSE_BACKUP_USER === ''
+          ? DEFAULT_BACKUP_USER
+          : env.CLICKHOUSE_BACKUP_USER,
+      password: env.CLICKHOUSE_BACKUP_PASSWORD as string,
+    },
+    destination: {
+      endpoint: env.BACKUP_S3_ENDPOINT as string,
+      accessKeyId: env.BACKUP_S3_ACCESS_KEY_ID as string,
+      secretAccessKey: env.BACKUP_S3_SECRET_ACCESS_KEY as string,
+    },
+  }
+}
+
 export function selfHostJobsConfigFrom(env: SelfHostJobsEnv): SelfHostJobsConfig {
   const missing = REQUIRED.filter((name) => {
     const value = env[name]
@@ -86,8 +146,10 @@ export function selfHostJobsConfigFrom(env: SelfHostJobsEnv): SelfHostJobsConfig
   }
 
   const dailyQuota = dailyQuotaFrom(env.DAILY_EVENT_QUOTA)
+  const backup = backupWiringFrom(env)
 
   return {
+    ...(backup === undefined ? {} : { backup }),
     clickHouse: {
       url: env.CLICKHOUSE_URL as string,
       database: env.CLICKHOUSE_DB as string,
@@ -129,6 +191,7 @@ export function selfHostTaskDeps(wiring: SelfHostJobsWiring): TaskDeps {
       kv: fileKvNamespace(config.kvDir),
       clickHouse: config.clickHouse,
       ...(config.dailyQuota === undefined ? {} : { dailyQuota: config.dailyQuota }),
+      ...(config.backup === undefined ? {} : { backup: config.backup }),
       tellOperator,
     }),
     issueSource: clickHouseIssueSource(config.clickHouse),

@@ -18,6 +18,7 @@ else
     echo "CLICKHOUSE_READ_PASSWORD=$(openssl rand -hex 24)"
     echo "CLICKHOUSE_INSERT_PASSWORD=$(openssl rand -hex 24)"
     echo "CLICKHOUSE_JOBS_PASSWORD=$(openssl rand -hex 24)"
+    echo "CLICKHOUSE_BACKUP_PASSWORD=$(openssl rand -hex 24)"
     echo "CLICKHOUSE_MIGRATOR_PASSWORD=$(openssl rand -hex 24)"
     echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
     echo "ENCRYPTION_KEY=$(openssl rand -hex 32)"
@@ -29,6 +30,9 @@ else
     echo "API_PUBLISH=${API_PUBLISH:-8789}"
     echo "SEED_ENVIRONMENTS=${SEED_ENVIRONMENTS:-production}"
     echo "SEED_RETENTION_DAYS=${SEED_RETENTION_DAYS:-30}"
+    echo "BACKUP_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}"
+    echo "BACKUP_S3_ACCESS_KEY_ID=${BACKUP_S3_ACCESS_KEY_ID:-}"
+    echo "BACKUP_S3_SECRET_ACCESS_KEY=${BACKUP_S3_SECRET_ACCESS_KEY:-}"
   } >.env
   echo "back .env up somewhere safe: ENCRYPTION_KEY cannot be recovered from the database"
 fi

@@ -9,6 +9,7 @@ export default defineConfig({
     'src/issues.ts',
     'src/export.ts',
     'src/alerts.ts',
+    'src/backup.ts',
     'src/search/index.ts',
     'src/cli.ts',
   ],

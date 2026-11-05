@@ -691,7 +691,10 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 - `pg_dump` diário do Postgres pelo GitHub Actions, criptografado com `age` e guardado no R2 por 30 dias.
 - Teste de restauração a cada marco, numa branch do Neon.
 - O Redis não tem backup: códigos e sessões são temporários (no pior caso, todo mundo faz login de novo).
-- Os logs do ClickHouse são descartáveis; o que não pode se perder está no Postgres.
+- **O ClickHouse tem backup diário desde 05/11/2026**, e a frase que estava aqui — "os logs são descartáveis; o que não pode se perder está no Postgres" — era verdade num projeto de estudo e deixou de ser no momento em que alguém paga para guardar esses logs. A tarefa `clickhouse-backup` no `apps/jobs` manda `BACKUP DATABASE` para um bucket S3 **fora da máquina**, uma vez por dia UTC, com credencial própria (`nekolog_backup`: só `BACKUP`, `WRITE ON S3` e leitura de `system.backups` — escreve a cópia inteira e **não lê uma linha**).
+- Cada backup é completo e independente: sem cadeia incremental, perder um não leva os outros junto. Em troca, ocupa mais espaço.
+- **Nada apaga backup velho**, porque o ClickHouse não apaga objeto em S3. A retenção é regra de ciclo de vida no bucket.
+- Configurar é opcional e **não configurar é barulhento**: o container de jobs avisa em toda partida que os logs existem num lugar só, e configurar pela metade faz ele se recusar a subir.
 
 ### 15.4 E-mail
 

@@ -3,6 +3,9 @@
 Seven containers that run everything in this repository on one machine. This is
 the composition the hosted service runs, not a demonstration of it.
 
+**Nothing is backed up until you say where to.** See
+[the backup](#the-backup-which-is-off-by-default-and-says-so).
+
 ```bash
 cd deploy/self-host
 ./up.sh
@@ -56,6 +59,38 @@ Two settings cost time to get right, so they are worth knowing:
   tried here and it cost a restart loop to diagnose, because the error goes to
   `clickhouse-server.err.log` inside the container and never to stdout.
 
+## The backup, which is off by default and says so
+
+Fill `BACKUP_S3_ENDPOINT`, `BACKUP_S3_ACCESS_KEY_ID` and
+`BACKUP_S3_SECRET_ACCESS_KEY` in and the jobs container backs the whole
+`nekolog` database up once a day, straight from ClickHouse into that bucket.
+Leave them empty and there is no backup at all — and the container says exactly
+that on every start, because a platform that quietly keeps one copy of somebody
+else's data is worse than one that refuses to start.
+
+**It has to be a bucket somewhere else.** A backup on this disk dies with this
+disk, and this machine has one. Any S3-compatible store works.
+
+Three things follow from how ClickHouse does this, and all three are deliberate:
+
+- **The backup runs as `nekolog_backup`, a credential of its own**, holding only
+  `BACKUP ON nekolog.*`, `WRITE ON S3` and `SELECT ON system.backups`. It writes
+  a complete copy of every log and **cannot read a single one** — that was
+  measured, not assumed. Nothing else here may reach an object store.
+- **Nothing deletes an old backup**, because ClickHouse cannot delete an S3
+  object. Put a lifecycle rule on the bucket or it grows forever.
+- **Each backup is full and independent.** No incremental chain, so losing one
+  does not take the others with it. That costs space and buys the property that
+  matters.
+
+Half-configuring it is refused at startup, naming what is missing. Restoring is
+in [the runbook](../../docs/runbooks/restauracao-de-backup.md#35-restaurar-o-clickhouse);
+the short version is that you restore into a **new** database and compare counts
+before trusting it.
+
+The Postgres backup is still the one in `.github/workflows/backup.yml`, which
+runs on GitHub and not here.
+
 ## What is deliberately not here
 
 - **The dashboard**, because it is closed-source and cloud-only (`docs/PLANO.md`
@@ -84,11 +119,12 @@ read-only and the state read-only; only `jobs` writes the KV, and only
 
 ## Who may do what in ClickHouse
 
-`clickhouse-users.xml` carries the same four credentials as dev, against one
+`clickhouse-users.xml` carries the same five credentials as dev, against one
 database called `nekolog`. The jobs user may read `system.disks` — without it
 `capacity-watch` reports "I cannot measure", which is an alert and not a
 healthy disk. It has no `WRITE ON S3` and no `CREATE TEMPORARY TABLE`, because
-nothing here exports.
+nothing here exports: the only credential that may reach an object store is
+`nekolog_backup`, and that one may not read a row.
 
 The `api` container runs as `nekolog_reader`, which holds `SELECT` on the one
 database and nothing else — no S3, no `system`, no write of any kind. It mounts

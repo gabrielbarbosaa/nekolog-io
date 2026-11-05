@@ -34,6 +34,18 @@
       </grants>
     </nekolog_jobs>
 
+    <nekolog_backup>
+      <password from_env="CLICKHOUSE_BACKUP_PASSWORD"/>
+      <networks><ip>::/0</ip></networks>
+      <profile>default</profile>
+      <quota>default</quota>
+      <grants>
+        <query>GRANT BACKUP ON nekolog_dev.*</query>
+        <query>GRANT WRITE ON S3</query>
+        <query>GRANT SELECT ON system.backups</query>
+      </grants>
+    </nekolog_backup>
+
     <nekolog_migrator>
       <password from_env="CLICKHOUSE_MIGRATOR_PASSWORD"/>
       <networks><ip>::/0</ip></networks>
