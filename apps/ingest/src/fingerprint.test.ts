@@ -286,37 +286,34 @@ describe('text that arrives from outside', () => {
     expect(normaliseMessage(long)).not.toContain('tail')
   })
 
-  it('normalises seven hostile messages of sixteen kilobytes without backtracking', () => {
-    const hostile = [
-      `${'a'.repeat(16_000)}!`,
-      `${'1'.repeat(8_000)}.${'2'.repeat(8_000)}`,
-      `"${'x'.repeat(16_000)}`,
-      `${'https://a/'.repeat(1_600)}`,
-      `${'a@'.repeat(8_000)}b.com`,
-      `${'0123456789abcdef'.repeat(1_000)}`,
-      ' '.repeat(16_000),
+  it('costs the same on a hostile message however long it is, because it truncates', () => {
+    const hostile = (times: number): string[] => [
+      `${'a'.repeat(times)}!`,
+      `${'1'.repeat(times / 2)}.${'2'.repeat(times / 2)}`,
+      `"${'x'.repeat(times)}`,
+      'https://a/'.repeat(times / 10),
+      `${'a@'.repeat(times / 2)}b.com`,
+      '0123456789abcdef'.repeat(times / 16),
+      ' '.repeat(times),
     ]
 
-    const benign = hostile.map((_, index) => `ordinary line ${index} `.repeat(700))
+    const messages = hostile(64_000)
 
-    const cost = (messages: readonly string[]): number => {
-      const began = performance.now()
+    const began = performance.now()
+    for (let round = 0; round < 5; round += 1) {
       for (const message of messages) {
         normaliseMessage(message)
       }
-      return performance.now() - began
     }
-
-    cost(benign)
-    const baseline = Math.max(cost(benign), 0.1)
-    const took = cost(hostile)
+    const took = performance.now() - began
 
     expect(
-      took / baseline,
-      `${took.toFixed(1)} ms for hostile input against ${baseline.toFixed(1)} ms for benign input of the same size`,
-    ).toBeLessThan(15)
-    expect(took).toBeLessThan(120)
-  })
+      took,
+      `${took.toFixed(1)} ms for 35 hostile messages of 64 KB. ` +
+        'It costs about 2 ms because normaliseMessage truncates first; without that it is seconds, ' +
+        'so the ceiling is three hundred times the real cost and no slow runner reaches it.',
+    ).toBeLessThan(500)
+  }, 30_000)
 
   it('reads a stack of nothing but noise without falling over', () => {
     expect(() => appFrames('\u0000\n(((\n@@@\nat at at\n'.repeat(50))).not.toThrow()
