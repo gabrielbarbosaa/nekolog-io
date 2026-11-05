@@ -1,4 +1,15 @@
 <clickhouse>
+  <profiles>
+    <default>
+      <max_memory_usage>858993459</max_memory_usage>
+      <max_bytes_before_external_group_by>429496729</max_bytes_before_external_group_by>
+      <max_bytes_before_external_sort>429496729</max_bytes_before_external_sort>
+      <max_threads>2</max_threads>
+      <max_execution_time>60</max_execution_time>
+      <log_queries>0</log_queries>
+    </default>
+  </profiles>
+
   <users>
     <nekolog_reader>
       <password from_env="CLICKHOUSE_READ_PASSWORD"/>

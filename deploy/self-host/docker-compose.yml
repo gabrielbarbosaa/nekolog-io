@@ -18,9 +18,11 @@ services:
       CLICKHOUSE_INSERT_PASSWORD: ${CLICKHOUSE_INSERT_PASSWORD:?set CLICKHOUSE_INSERT_PASSWORD in .env}
       CLICKHOUSE_JOBS_PASSWORD: ${CLICKHOUSE_JOBS_PASSWORD:?set CLICKHOUSE_JOBS_PASSWORD in .env}
       CLICKHOUSE_MIGRATOR_PASSWORD: ${CLICKHOUSE_MIGRATOR_PASSWORD:?set CLICKHOUSE_MIGRATOR_PASSWORD in .env}
+    mem_limit: ${CLICKHOUSE_MEM_LIMIT:-1800m}
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/nekolog.xml:ro
+      - ./clickhouse-limits.xml:/etc/clickhouse-server/config.d/nekolog.xml:ro
     ulimits:
       nofile:
         soft: 262144
@@ -44,6 +46,7 @@ services:
       POSTGRES_USER: nekolog
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: nekolog
+    mem_limit: ${POSTGRES_MEM_LIMIT:-512m}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -96,12 +99,13 @@ services:
       INGEST_VERSION: ${INGEST_VERSION:-unknown}
       SPOOL_DIR: /var/lib/nekolog/spool
       KV_DIR: /var/lib/nekolog/kv
+    mem_limit: ${APP_MEM_LIMIT:-256m}
     volumes:
       - nekolog_state:/var/lib/nekolog/state:ro
       - nekolog_spool:/var/lib/nekolog/spool
       - nekolog_kv:/var/lib/nekolog/kv:ro
     ports:
-      - "${INGEST_PUBLISH:-8787}:8787"
+      - "127.0.0.1:${INGEST_PUBLISH:-8787}:8787"
     command: ["node", "apps/ingest/src/serve-self-host.ts"]
     logging: *logging
 
@@ -123,11 +127,12 @@ services:
       API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-120}
       API_VERSION: ${API_VERSION:-unknown}
       SOURCEMAPS_DIR: /var/lib/nekolog/sourcemaps
+    mem_limit: ${APP_MEM_LIMIT:-256m}
     volumes:
       - nekolog_state:/var/lib/nekolog/state:ro
       - nekolog_sourcemaps:/var/lib/nekolog/sourcemaps
     ports:
-      - "${API_PUBLISH:-8789}:8789"
+      - "127.0.0.1:${API_PUBLISH:-8789}:8789"
     command: ["node", "apps/api/src/serve-self-host.ts"]
     logging: *logging
 
@@ -153,12 +158,32 @@ services:
       HEARTBEAT_URL: ${HEARTBEAT_URL:-}
       SPOOL_DIR: /var/lib/nekolog/spool
       KV_DIR: /var/lib/nekolog/kv
+    mem_limit: ${APP_MEM_LIMIT:-256m}
     volumes:
       - nekolog_spool:/var/lib/nekolog/spool
       - nekolog_kv:/var/lib/nekolog/kv
     ports:
       - "127.0.0.1:${JOBS_PUBLISH:-8788}:8788"
     command: ["node", "apps/jobs/src/serve.ts"]
+    logging: *logging
+
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - ingest
+      - api
+    environment:
+      NEKOLOG_DOMAIN: ${NEKOLOG_DOMAIN:?set NEKOLOG_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    mem_limit: ${PROXY_MEM_LIMIT:-128m}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "${HTTP_PUBLISH:-80}:80"
+      - "${HTTPS_PUBLISH:-443}:443"
     logging: *logging
 
 volumes:
@@ -168,3 +193,5 @@ volumes:
   nekolog_spool:
   nekolog_kv:
   nekolog_sourcemaps:
+  caddy_data:
+  caddy_config:

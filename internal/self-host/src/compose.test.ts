@@ -71,10 +71,48 @@ describe('the self-host compose', () => {
     expect(serviceBlock('postgres')).not.toContain('ports:')
   })
 
-  it('publishes the ingestion and the read API, and keeps the jobs health on the loopback', () => {
-    expect(serviceBlock('ingest')).toMatch(/- "\$\{INGEST_PUBLISH:-8787\}:8787"/)
-    expect(serviceBlock('api')).toMatch(/- "\$\{API_PUBLISH:-8789\}:8789"/)
+  it('keeps every application on the loopback, because the proxy is the way in', () => {
+    expect(serviceBlock('ingest')).toMatch(/- "127\.0\.0\.1:\$\{INGEST_PUBLISH:-8787\}:8787"/)
+    expect(serviceBlock('api')).toMatch(/- "127\.0\.0\.1:\$\{API_PUBLISH:-8789\}:8789"/)
     expect(serviceBlock('jobs')).toMatch(/- "127\.0\.0\.1:\$\{JOBS_PUBLISH:-8788\}:8788"/)
+  })
+
+  it('reaches the world through one service, and only that one', () => {
+    const published = [...COMPOSE.matchAll(/\n {4}ports:\n((?: {6}- "[^"]+"\n)+)/g)].flatMap(
+      (match) => (match[1] as string).split('\n').filter((line) => line.includes('"')),
+    )
+
+    expect(published.length).toBeGreaterThan(3)
+    for (const line of published) {
+      const open = !line.includes('127.0.0.1:')
+      expect(open === serviceBlock('proxy').includes(line.trim()), line.trim()).toBe(true)
+    }
+  })
+
+  it('gives every service a memory ceiling, because one machine runs them all', () => {
+    for (const service of ['clickhouse', 'postgres', 'ingest', 'api', 'jobs', 'proxy']) {
+      expect(serviceBlock(service), `${service} has no mem_limit`).toMatch(/\n {4}mem_limit: /)
+    }
+  })
+
+  it("keeps ClickHouse's own ceiling below the container's, so a query is refused, not killed", () => {
+    const limits = readFileSync(join(HERE, 'clickhouse-limits.xml'), 'utf8')
+    const own = Number(/<max_server_memory_usage>(\d+)</.exec(limits)?.[1])
+    const container = /CLICKHOUSE_MEM_LIMIT:-(\d+)m\}/.exec(COMPOSE)?.[1]
+
+    expect(own).toBeGreaterThan(0)
+    expect(container).toBeDefined()
+    expect(own).toBeLessThan(Number(container) * 1024 * 1024)
+  })
+
+  it('terminates TLS for both addresses it serves', () => {
+    const caddy = readFileSync(join(HERE, 'Caddyfile'), 'utf8')
+
+    expect(caddy).toContain('ingest.{$NEKOLOG_DOMAIN}')
+    expect(caddy).toContain('api.{$NEKOLOG_DOMAIN}')
+    expect(caddy).toContain('reverse_proxy ingest:8787')
+    expect(caddy).toContain('reverse_proxy api:8789')
+    expect(caddy, 'the certificate would stop renewing silently').toContain('{$ACME_EMAIL}')
   })
 
   it('gives the read API a credential that cannot write, and no spool or block list', () => {

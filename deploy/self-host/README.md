@@ -1,19 +1,60 @@
-# The self-host stack
+# The stack
 
-Six containers that run everything in this repository on one machine. The
-reader-facing guide is `apps/docs` → **Run it yourself**, in three languages;
-this file is the part an operator needs and a reader does not.
+Seven containers that run everything in this repository on one machine. This is
+the composition the hosted service runs, not a demonstration of it.
 
 ```bash
 cd deploy/self-host
 ./up.sh
 ```
 
-Three of them answer on a port: `ingest` on 8787, the **public read API** on
-8789, and the jobs health endpoint on 8788 — that last one bound to the
-loopback, because it is for a monitor and not for the world. Put TLS in front of
-the two that are published: an API key travels in the `Authorization` header and
-both speak plain HTTP.
+**On Windows `up.sh` does not run** — it is `sh` and needs `openssl`. Copy
+`.env.example` to `.env`, fill in the passwords yourself, and run
+`docker compose up -d --build`.
+
+## One way in
+
+Only `proxy` is reachable from outside the machine. It is Caddy, it answers on
+80 and 443, it gets a certificate for `ingest.$NEKOLOG_DOMAIN` and
+`api.$NEKOLOG_DOMAIN` from Let's Encrypt, and it forwards to the two
+applications over the private network.
+
+`ingest`, `api` and the jobs health endpoint bind to **127.0.0.1** only, so they
+are reachable for a local `curl` and for a monitor, and by nobody else. The two
+databases publish no port at all. `compose.test.ts` fails if an application
+starts listening on anything but the loopback, or if a second service starts
+publishing to the world.
+
+With `NEKOLOG_DOMAIN=localhost`, Caddy issues its own certificate and
+`https://ingest.localhost` works for testing, which is how the whole path above
+was verified.
+
+## Sized for the smallest machine worth using
+
+Every container has a `mem_limit`, and the defaults add up to about 3 GB so they
+fit a 4 GB box with room for the operating system. ClickHouse takes the bulk of
+it.
+
+**ClickHouse's own ceiling is deliberately lower than its container limit.**
+`max_server_memory_usage` is 1.2 GiB against a 1800 MB container, so a query
+that asks for too much is refused by ClickHouse — with an error naming the
+query — instead of the kernel killing the server and taking every other query
+with it. `compose.test.ts` compares the two numbers and fails if the ceiling
+ever rises above the limit.
+
+Two settings cost time to get right, so they are worth knowing:
+
+- `mark_cache_size` defaults to **5 GiB** and `uncompressed_cache_size` to
+  **8 GiB**. Neither is allocated up front, but both count against the server
+  ceiling as they fill, and on a small machine they are the difference between
+  working and thrashing. They are 256 MiB and 128 MiB here.
+- **Do not shrink `background_pool_size`.** It looks like a memory knob and is
+  a thread-pool size, and ClickHouse refuses to start when
+  `background_pool_size * background_merges_mutations_concurrency_ratio` falls
+  below `number_of_free_entries_in_pool_to_execute_mutation` — "mutations
+  cannot work with these settings". That is the server being right; it was
+  tried here and it cost a restart loop to diagnose, because the error goes to
+  `clickhouse-server.err.log` inside the container and never to stdout.
 
 ## What is deliberately not here
 
