@@ -3,11 +3,6 @@ title: Hono
 description: Un middleware, cualquier runtime y la cabecera que el navegador necesita en CORS.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npm install @nekolog-io/hono @nekolog-io/node
 ```

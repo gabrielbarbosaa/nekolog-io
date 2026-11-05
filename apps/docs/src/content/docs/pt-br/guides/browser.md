@@ -3,11 +3,6 @@ title: Browser
 description: Instale o SDK de browser, pegue os erros que ninguém pegou e mantenha dado de usuário fora do log.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
-comportamento que o código já tem, para a forma da API ficar clara.
-:::
-
 ```bash
 npm install @nekolog-io/browser
 ```

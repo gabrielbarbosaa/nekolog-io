@@ -3,11 +3,6 @@ title: Next.js
 description: register() no servidor, o provider no cliente, e o escopo que um route handler não tem.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
-comportamento que o código já tem, para a forma da API ficar clara.
-:::
-
 ```bash
 npm install @nekolog-io/next
 ```

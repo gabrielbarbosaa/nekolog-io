@@ -3,12 +3,6 @@ title: Search language
 description: The query language the Explorer and the public API share, with its fields, operators and limits.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published, and no instance is hosted
-yet. This page describes the behaviour the code already has, so the shape of the
-API is clear.
-:::
-
 One language, used by the Explorer in the dashboard, by `q` on
 [`/v1/logs` and `/v1/histogram`](/docs/api/reference/), and by the condition of
 an [alert rule](/docs/guides/alerts/).

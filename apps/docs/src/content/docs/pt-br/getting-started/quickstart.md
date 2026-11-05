@@ -3,10 +3,10 @@ title: Primeiros passos
 description: Envie seu primeiro log de uma aplicação Node.js.
 ---
 
-:::caution[Ainda não disponível]
-Os pacotes `@nekolog-io/*` ainda não foram publicados no npm, então os comandos
-desta página ainda não funcionam. Eles estão aqui para deixar clara a forma da
-API enquanto ela é construída.
+:::caution[Você precisa de um convite antes]
+Os pacotes `@nekolog-io/*` não são públicos. Seu convite traz as credenciais do
+registro e as keys do seu primeiro projeto; configure os dois antes de os
+comandos abaixo funcionarem.
 :::
 
 ## Instalação
@@ -66,4 +66,4 @@ await log.flush() // importante em serverless, onde o processo pode encerrar ant
 - [Versionamento e suporte](/docs/pt-br/reference/versioning/) — o que uma
   mudança promete, e por quanto tempo uma versão antiga continua funcionando.
 - [Introdução](/docs/pt-br/getting-started/introduction/) — como as peças se
-  encaixam e o que é open source.
+  encaixam e o que você recebe.

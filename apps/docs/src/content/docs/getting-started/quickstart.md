@@ -3,10 +3,10 @@ title: Quickstart
 description: Send your first log from a Node.js application.
 ---
 
-:::caution[Not available yet]
-The `@nekolog-io/*` packages have not been published to npm, so the commands on
-this page do not work yet. They are here so the shape of the API is clear while
-it is being built.
+:::caution[You need an invitation first]
+The `@nekolog-io/*` packages are not public. Your invitation carries the
+registry credentials and the keys for your first project; set them up before
+the commands below will work.
 :::
 
 ## Install
@@ -66,4 +66,4 @@ await log.flush() // important in serverless, where the process can exit early
 - [Versioning and support](/docs/reference/versioning/) — what a change
   promises, and how long an old version keeps working.
 - [Introduction](/docs/getting-started/introduction/) — how the pieces fit
-  together and what is open source.
+  together and what you get.

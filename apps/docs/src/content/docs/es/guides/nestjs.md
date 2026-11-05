@@ -3,11 +3,6 @@ title: NestJS
 description: Un módulo global, un interceptor y los propios logs de Nest por el mismo camino.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npm install @nekolog-io/nestjs @nekolog-io/node
 ```

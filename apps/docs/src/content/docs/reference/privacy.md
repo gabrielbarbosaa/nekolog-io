@@ -3,12 +3,6 @@ title: What is stored
 description: What a log line holds, what is removed before it leaves your process, what is removed on the server, and what is never written at all.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published, and no instance is hosted
-yet. This page describes the behaviour the code already has, so the shape of the
-API is clear.
-:::
-
 Logs are the most sensitive thing this platform holds, because people put things
 in them by accident. This page is what the code does about that — the legal text
 lives at [/legal/privacy](https://nekolog.io/legal/privacy).
@@ -91,7 +85,7 @@ logs.
 |---|---|
 | Log lines | ClickHouse |
 | Projects, keys, issues, alerts | Postgres, and only the key's SHA-256 hash, never the key |
-| Source maps and exports | an object store, or a directory in the self-host |
+| Source maps and exports | an object store |
 
 An export link goes to the dashboard, never to the file, and the bucket deletes
 it after seven days. A source map is never served back by the public API: there

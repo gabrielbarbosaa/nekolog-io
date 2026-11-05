@@ -1,6 +1,6 @@
 ---
 title: Introducción
-description: Qué es NekoLog, cómo está armado y qué es open source.
+description: Qué es NekoLog, cómo está armado y qué recibes.
 ---
 
 NekoLog es una plataforma de logs para aplicaciones JavaScript y TypeScript, en
@@ -8,11 +8,9 @@ el front-end y en el back-end. Instalas un SDK, este agrupa tus logs por lotes y
 los envía a una API de ingestión, se almacenan en ClickHouse, y los buscas y
 visualizas en un dashboard — con claves de API separadas por entorno.
 
-:::caution[En desarrollo inicial]
-Todavía no se ha publicado nada en npm. Estas páginas describen el
-comportamiento diseñado; consulta
-[la hoja de ruta](https://github.com/gabrielbarbosaa/nekolog-io/blob/main/docs/ETAPAS.md)
-para saber qué existe hoy.
+:::caution[Por invitación]
+No hay registro abierto. Una invitación da acceso al panel y a los paquetes;
+[escríbenos](mailto:contato@nekolog.io) si quieres una.
 :::
 
 ## Cómo encajan las piezas
@@ -25,19 +23,26 @@ para saber qué existe hoy.
   reglas de alerta y controlar uso y cuotas.
 - **El dashboard** es donde buscas logs, lees trazas y gestionas proyectos.
 
-## Open core
+## Qué recibes
 
-Este proyecto es **open core**:
+Dos cosas, y no ejecutas ninguna de las dos:
 
-- Los SDKs, la API de ingestión, los jobs y la API pública de lectura son open
-  source bajo MIT, en
-  [`nekolog-io`](https://github.com/gabrielbarbosaa/nekolog-io). Puedes alojar
-  todo eso por cuenta propia con Docker.
-- **El dashboard es de código cerrado** y solo funciona en la instancia alojada.
-  No forma parte del self-host.
+- **El SDK de tu stack**, instalado dentro de tu propia aplicación. Es la única
+  parte de NekoLog que corre de tu lado.
+- **Un acceso al dashboard**, donde buscas tus logs, lees trazas, ves issues y
+  configuras alertas.
 
-Si lo alojas por cuenta propia, envías logs, los consultas con la API pública de
-lectura y recibes alertas — pero no tienes la interfaz web.
+Todo lo demás — la ingestión, el almacenamiento, los jobs — corre en nuestra
+instancia. No hay nada que desplegar, nada que mantener en pie y ninguna base
+de datos tuya que dimensionar.
+
+NekoLog es software propietario. El SDK es tuyo para instalarlo y embarcarlo en
+tu aplicación; no es tuyo para republicarlo ni para montar un servicio de logs.
+Los términos completos vienen con el contrato.
+
+Si prefieres no usar nuestros SDKs, la ingestión habla
+[OTLP/HTTP](/docs/es/api/otlp/) y tu exportador OpenTelemetry actual puede
+apuntar directamente a ella.
 
 ## Claves y entornos
 

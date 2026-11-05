@@ -3,12 +3,6 @@ title: Qué se guarda
 description: Qué lleva una línea de log, qué se quita antes de salir de tu proceso, qué se quita en el servidor, y qué no se escribe nunca.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado, y todavía no hay instancia
-alojada. Esta página describe el comportamiento que el código ya tiene, para que
-la forma de la API quede clara.
-:::
-
 Los logs son lo más sensible que guarda esta plataforma, porque la gente mete
 cosas ahí sin querer. Esta página es lo que el código hace al respecto — el
 texto legal está en [/legal/privacy](https://nekolog.io/legal/privacy).
@@ -93,7 +87,7 @@ silencio.
 |---|---|
 | Líneas de log | ClickHouse |
 | Proyectos, keys, issues, alertas | Postgres, y solo el hash SHA-256 de la key, nunca la key |
-| Source maps y exportaciones | un almacén de objetos, o un directorio en el self-host |
+| Source maps y exportaciones | un almacén de objetos |
 
 Un enlace de exportación lleva al dashboard, nunca al archivo, y el bucket lo
 borra a los siete días. Un source map nunca se sirve de vuelta por la API

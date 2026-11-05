@@ -3,12 +3,6 @@ title: Alerts
 description: Rules evaluated every minute, and the channels they reach — including how to verify a webhook really came from NekoLog.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published, and no instance is hosted
-yet. This page describes the behaviour the code already has, so the shape of the
-API is clear.
-:::
-
 A rule is a [search](/docs/api/search/), a window and a threshold. Every minute
 a job measures each rule of each environment and, when the answer crosses, sends
 one notice to the channels the rule names. You create them in the dashboard;

@@ -3,11 +3,6 @@ title: Trace distribuído
 description: Ligue um clique no browser à request que ele causou — e o header do CORS que torna isso possível.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
-comportamento que o código já tem, para a forma da API ficar clara.
-:::
-
 Todo log de uma página leva o mesmo `trace`, e toda request sai com um header
 `traceparent` do W3C — um span filho por request. O back-end continua esse trace
 em vez de começar outro, e o clique no front e a request no back terminam na

@@ -54,11 +54,6 @@ export default defineConfig({
           translations: { 'pt-BR': 'Referência', es: 'Referencia' },
           items: [{ slug: 'reference/privacy' }, { slug: 'reference/versioning' }],
         },
-        {
-          label: 'Run it yourself',
-          translations: { 'pt-BR': 'Rodar por conta própria', es: 'Ejecutarlo por tu cuenta' },
-          items: [{ slug: 'self-host/install' }],
-        },
       ],
     }),
   ],

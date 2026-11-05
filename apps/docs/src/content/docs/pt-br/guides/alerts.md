@@ -3,12 +3,6 @@ title: Alertas
 description: Regras avaliadas a cada minuto, e os canais que elas alcançam — incluindo como conferir que um webhook veio mesmo do NekoLog.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados, e ainda não há instância
-hospedada. Esta página descreve o comportamento que o código já tem, para a
-forma da API ficar clara.
-:::
-
 Uma regra é uma [busca](/docs/pt-br/api/search/), uma janela e um limite. A cada
 minuto um job mede cada regra de cada ambiente e, quando a resposta cruza, manda
 um aviso para os canais que a regra nomeia. Você cria as regras no dashboard; o

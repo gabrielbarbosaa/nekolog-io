@@ -3,11 +3,6 @@ title: React
 description: Provider, useLogger and an error boundary that reports what broke.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published. This page describes the
-behaviour the code already has, so the shape of the API is clear.
-:::
-
 ```bash
 npm install @nekolog-io/react
 ```

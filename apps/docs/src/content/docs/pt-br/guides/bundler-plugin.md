@@ -3,11 +3,6 @@ title: Plugin de bundler
 description: Registra a release e sobe os source maps no fim de todo build de produção, no Vite, no webpack, no Rollup ou no esbuild.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
-comportamento que o código já tem, para a forma da API ficar clara.
-:::
-
 O `@nekolog-io/bundler-plugin` faz de dentro do build o que
 [`nekolog releases create` e `nekolog sourcemaps upload`](/docs/pt-br/guides/cli/)
 fazem de um script de deploy — então ninguém precisa lembrar de rodar nada, e

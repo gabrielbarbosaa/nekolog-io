@@ -3,11 +3,6 @@ title: Node.js
 description: Contexto por petición, hooks de proceso y las variables de entorno que el SDK lee.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npm install @nekolog-io/node
 ```
@@ -34,7 +29,7 @@ Sin opción explícita, valen estas:
 | Variable | Para qué |
 |---|---|
 | `NEKOLOG_KEY` | la clave; ya determina proyecto y entorno |
-| `NEKOLOG_ENDPOINT` | otro destino, para self-host |
+| `NEKOLOG_ENDPOINT` | otro destino, si el tuyo no es el predeterminado |
 | `NEKOLOG_SERVICE` | el nombre del servicio |
 | `NEKOLOG_RELEASE` | la versión desplegada |
 | `NEKOLOG_LEVEL` | el nivel mínimo |
