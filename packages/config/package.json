@@ -2,7 +2,7 @@
   "name": "@nekolog-io/config",
   "version": "1.0.0",
   "description": "Environment variable schemas and loader shared by the NekoLog apps, following specification 2.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

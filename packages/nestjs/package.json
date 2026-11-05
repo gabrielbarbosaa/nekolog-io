@@ -2,7 +2,7 @@
   "name": "@nekolog-io/nestjs",
   "version": "1.0.0",
   "description": "NekoLog module and interceptor for NestJS.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

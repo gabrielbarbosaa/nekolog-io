@@ -2,7 +2,7 @@
   "name": "@nekolog-io/db",
   "version": "1.0.0",
   "description": "Postgres schema NekoLog's jobs and dashboard share: organizations, projects, environments, keys and the audit log.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

@@ -2,7 +2,7 @@
   "name": "@nekolog-io/winston",
   "version": "1.0.0",
   "description": "NekoLog transport for winston.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

@@ -2,7 +2,7 @@
   "name": "@nekolog-io/express",
   "version": "1.0.0",
   "description": "NekoLog middleware for Express: request context, access log and error log.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",

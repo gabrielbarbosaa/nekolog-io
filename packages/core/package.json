@@ -2,7 +2,7 @@
   "name": "@nekolog-io/core",
   "version": "1.0.0",
   "description": "Core logger for NekoLog: levels, child loggers and context. Zero dependencies.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gabrielbarbosaa/nekolog-io.git",
