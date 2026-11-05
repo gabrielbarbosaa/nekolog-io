@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/adapters",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Vendor-neutral interfaces NekoLog runs on: KeyStore, RateLimiter, BlobStore, QuotaStore and Mailer, with the memory, Workers KV and R2 implementations.",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": "./src/index.ts"

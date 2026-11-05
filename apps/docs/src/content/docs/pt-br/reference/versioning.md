@@ -3,10 +3,10 @@ title: Versionamento e suporte
 description: O que carrega versão, o que uma mudança nela promete, e por quanto tempo uma versão antiga continua funcionando.
 ---
 
-:::caution[Nada é 1.0 ainda]
-Todo pacote está em `0.x` e nenhum foi publicado. Até a 1.0, trate qualquer
-coisa daqui como passível de mudar — as promessas abaixo são as que valem a
-partir da 1.0.
+:::caution[A 1.0 está cortada, nada foi publicado ainda]
+Todo pacote está em `1.0.0` no repositório e nenhum foi publicado no npm ainda —
+não existe organização no npm. As promessas abaixo são as que valem a partir da
+1.0, e valem desde a primeira versão publicada.
 :::
 
 ## O que carrega versão

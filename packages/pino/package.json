@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/pino",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog destination for pino: send the same lines to NekoLog.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

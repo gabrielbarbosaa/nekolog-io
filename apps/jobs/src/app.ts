@@ -5,6 +5,8 @@ export type JobsAppDeps = {
   version?: string
 }
 
+export const UNKNOWN_VERSION = 'unknown'
+
 export function createJobsApp(deps: JobsAppDeps): Hono {
   const app = new Hono()
 
@@ -12,7 +14,7 @@ export function createJobsApp(deps: JobsAppDeps): Hono {
     c.json({
       status: 'ok',
       service: 'jobs',
-      version: deps.version ?? 'unknown',
+      version: deps.version ?? UNKNOWN_VERSION,
       tasks: deps.taskCount,
     }),
   )

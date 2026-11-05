@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/next",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog SDK for Next.js: register in instrumentation.ts, on the server and on the client.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

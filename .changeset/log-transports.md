@@ -1,6 +1,0 @@
----
-'@nekolog-io/pino': minor
-'@nekolog-io/winston': minor
----
-
-Add the two log-library bridges. `@nekolog-io/pino` is a **destination**, not a worker-thread transport: pino's transports run in a separate worker, which would mean a second logger, a second queue and a second flush to get right on shutdown, while a destination keeps the batching the service already has and lets `pino.multistream` go on writing to stdout. `@nekolog-io/winston` is a `TransportStream` that reads the level from `Symbol.for('level')`, where winston keeps the real one, and understands both the npm and the syslog level sets. Both refuse to lose anything: pino puts the serialised `err` in the event's error and keeps its `msg` in a `log.msg` attribute when the two differ, and winston takes the error's type and message from the first line of `info.stack` — because `log.error('payment failed', err)` makes winston **concatenate** the two into `info.message`, and reading the error from there would give it a message it never had. The pino stream handles a line split across writes, stops buffering at 1 MB instead of growing without end, and skips a line that is not JSON after reporting it; the winston transport calls `next()` even when our logger throws, since a transport that does not call back stalls the whole chain.

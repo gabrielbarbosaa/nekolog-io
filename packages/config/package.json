@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/config",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Environment variable schemas and loader shared by the NekoLog apps, following specification 2.",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": "./src/index.ts"

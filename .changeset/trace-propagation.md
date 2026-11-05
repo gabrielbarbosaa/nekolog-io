@@ -1,7 +1,0 @@
----
-'@nekolog-io/browser': minor
-'@nekolog-io/node': minor
-'@nekolog-io/core': minor
----
-
-Propagate W3C `traceparent`, and only to the domains that were configured. The parsing and formatting now live in `@nekolog-io/core` — `parseTraceparent`, `traceparentOf`, `traceForRequest`, `childSpan` and `createTraceTargetMatcher` — so the browser, Node and the Express example stop carrying three copies of the same spec. In the browser every log on the page carries the same trace and every request gets a child span, which is what puts a click on the front end and the request on the back end in one timeline; the default target is the page's own origin, because a `traceId` is an internal identifier and an extra header on a cross-origin request turns it into a preflight that can simply fail. Matching is strict on purpose: whole-host or whole-origin equality, `.example.com` for subdomains, an optional path that must match a segment boundary, `http:`/`https:` only, and never the ingestion endpoint. In Node `installTracePropagation({targets})` reads the trace from the request's `AsyncLocalStorage` context and has **no default**: there is no "own origin" on a server, and silently sending internal trace ids to a payment gateway is not a default anybody wants. Adding the header never breaks the request — `Headers`, pair lists, plain objects and a prepared `Request` are each extended rather than replaced, and anything unexpected means the request goes out without the header instead of not going out.

@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/db",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Postgres schema NekoLog's jobs and dashboard share: organizations, projects, environments, keys and the audit log.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "files": [
     "dist",
     "src/index.ts",
-    "migrations"
+    "migrations",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": "./src/index.ts"

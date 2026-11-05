@@ -50,7 +50,7 @@ un `404` y no un error de método.
 
 | Ruta | Qué hace |
 |---|---|
-| `GET /health` | Si este despliegue está en pie. No necesita key. |
+| `GET /health` | Si este despliegue está en pie, y qué versión es. No necesita key. |
 | `GET /openapi.json` | Esta API, descrita. No necesita key. |
 | `GET /v1/logs` | Búsqueda. |
 | `GET /v1/histogram` | Conteos por cubo y por nivel, para un gráfico. |

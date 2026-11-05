@@ -28,6 +28,7 @@ export type ApiEnv = {
   CLICKHOUSE_READ_PASSWORD: string
   DATABASE_URL: string
   API_REQUESTS_PER_MINUTE?: string
+  API_VERSION?: string
   CF_ACCESS_CLIENT_ID?: string
   CF_ACCESS_CLIENT_SECRET?: string
 }
@@ -127,6 +128,7 @@ export function buildApiApp(env: ApiEnv): Hono {
         rateLimiter: memoryRateLimiter(),
         requestsPerWindow: requestsPerMinuteFrom(env.API_REQUESTS_PER_MINUTE),
       },
+      ...(env.API_VERSION ? { version: env.API_VERSION } : {}),
     }),
   )
 }

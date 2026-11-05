@@ -53,8 +53,10 @@ existir. Teste de IDOR entre organizações é do dashboard.
   Um procedimento nunca testado falha exatamente quando é necessário.
 - **Padrões próprios de secret scanning** para `nekolog_sk_` e `nekolog_pk_`
   ainda não foram configurados no GitHub (ameaça I9).
-- **Trusted publishing (OIDC) no npm** ainda não está ligado; é a etapa 6.7
-  (ameaça S7).
+- **O *trusted publisher* de cada pacote no npmjs.com** ainda não existe, por
+  não existir a conta. O workflow já publica por OIDC e não carrega nenhum
+  token, mas o npm só aceita depois que o pacote apontar para este repositório
+  e para `release.yml` (ameaça S7, etapa 6.7).
 - **Varredura do ZAP a cada promoção** depende de o deploy ser ligado.
 
 Resolvida desde a versão anterior desta página: a recriptografia da

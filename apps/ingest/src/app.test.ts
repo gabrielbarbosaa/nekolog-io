@@ -7,6 +7,7 @@ import {
   denyAll,
   type IngestDeps,
   type IngestPrincipal,
+  UNKNOWN_VERSION,
 } from './app.ts'
 
 const PRINCIPAL: IngestPrincipal = { projectId: 'p_1', environmentId: 'e_1' }
@@ -75,8 +76,20 @@ describe('/health', () => {
     const response = await app.request('https://ingest.nekolog.io/health')
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'ok' })
+    expect(await response.json()).toEqual({
+      status: 'ok',
+      service: 'ingest',
+      version: UNKNOWN_VERSION,
+    })
     expect(batches).toEqual([])
+  })
+
+  it('reports the version it was deployed with, so a report can name one', async () => {
+    const { app } = setup({ version: '1.0.0' })
+
+    const response = await app.request('https://ingest.nekolog.io/health')
+
+    expect(await response.json()).toEqual({ status: 'ok', service: 'ingest', version: '1.0.0' })
   })
 })
 

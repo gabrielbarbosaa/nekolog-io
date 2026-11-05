@@ -13,11 +13,12 @@ concurrency:
 
 jobs:
   release:
-    name: Version packages
+    name: Version and publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -41,10 +42,36 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create or update the Version Packages PR
+      - name: Build, because every package publishes its dist and nothing else
+        run: pnpm build
+
+      - name: Write and check one SBOM per published package
+        run: pnpm run release:sbom
+
+      - name: Create the Version Packages PR, or publish what it merged
+        id: changesets
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
+          version: pnpm run version-packages
+          publish: ${{ vars.NPM_PUBLISH_ENABLED == 'true' && 'pnpm run release' || '' }}
+          createGithubReleases: true
           pr-title: "chore: version packages"
           commit-message: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attach each package's bill of materials to its own release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          set -euo pipefail
+          node internal/release/src/cli.ts --json > sboms.json
+          echo "$PUBLISHED" | jq -c '.[]' | while read -r package; do
+            name="$(echo "$package" | jq -r '.name')"
+            version="$(echo "$package" | jq -r '.version')"
+            file="$(jq -r --arg name "$name" '.[] | select(.name == $name) | .file' sboms.json)"
+            test -n "$file"
+            gh release upload "$name@$version" "sbom/$file" --clobber
+          done
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

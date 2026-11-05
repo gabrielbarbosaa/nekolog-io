@@ -54,6 +54,9 @@ backend.hcl
 *.tfvars
 *.auto.tfvars
 internal/load/k6/fixtures/
+
+# Release artifacts, generated per release and attached to it
+sbom/
 docs/security/zap/*.html
 docs/security/zap/*.md
 !docs/security/zap/README.md

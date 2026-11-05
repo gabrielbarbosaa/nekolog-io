@@ -27,6 +27,55 @@ PR para a `dev`, squash merge, CI verde.
 3. **Sincronização**: depois de toda release, mescla a `main` de volta na `qa` e na `dev`, pra manter os números de versão alinhados.
 4. **Hotfix**: branch `hotfix/…` a partir da `main`, PR direto pra `main`, depois a mesma sincronização de volta pra `qa` e `dev`.
 
+## Como uma versão sai
+
+O `release.yml` roda a cada push na `main` e faz uma de duas coisas, nunca as
+duas: se existe changeset pendente, ele abre ou atualiza o PR "Version
+Packages"; se não existe, os números já estão no repositório e ele **publica**.
+
+Antes de qualquer uma das duas, ele constrói — cada pacote publica só o `dist`,
+e publicar um `dist` vazio é um pacote quebrado no npm que não dá pra
+despublicar — e escreve um SBOM CycloneDX por pacote publicado, conferindo que
+o conjunto descreve exatamente esta release. Depois de publicar, anexa o
+documento de cada pacote à Release daquele pacote.
+
+| O quê | Onde |
+|---|---|
+| Versões e changelogs | Changesets, pelo PR "Version Packages" na `main` |
+| Tags e Releases | `createGithubReleases` do `changesets/action`, uma por pacote |
+| Publicação no npm | `pnpm publish`, por **trusted publishing** |
+| Proveniência | automática sob trusted publishing; nada a passar |
+| SBOM | `pnpm run release:sbom`, anexado a cada Release |
+
+**Não existe token do npm.** A autenticação é um token OIDC que o GitHub emite
+para aquele workflow daquele repositório (`id-token: write`), e o npm o troca
+pela permissão de publicar. Um teste em `internal/release` falha se
+`NPM_TOKEN`, `NODE_AUTH_TOKEN` ou um `.npmrc` aparecerem no workflow. Do outro
+lado, cada pacote precisa ter o *trusted publisher* configurado no npmjs.com
+apontando para este repositório e para o arquivo **`release.yml`** — só o nome
+do arquivo, não o caminho.
+
+A publicação está atrás da variável de repositório `NPM_PUBLISH_ENABLED`, que
+não existe: sem ela o workflow ainda versiona, constrói e escreve o SBOM, e não
+publica nada. É o mesmo arranjo do `INFRA_ENABLED`, do `WORKERS_DEPLOY_ENABLED`
+e do `BACKUPS_ENABLED`.
+
+### A saída do `0.x` foi feita uma vez, à mão
+
+A 1.0 saiu na etapa 6.7, num PR próprio para a `dev`, e não pelo PR "Version
+Packages". O motivo é que não havia release anterior: eram 67 changesets
+acumulados desde o primeiro commit e nenhum pacote jamais publicado, então o
+"Version Packages" seria o PR da história inteira do repositório. Da 1.0 em
+diante o fluxo é o da tabela acima, sem exceção.
+
+Essa foi também a primeira vez que `changeset version` rodou de verdade, e ele
+**falhou**: desde o começo havia changesets listando um pacote publicado e um
+app privado juntos, e o Changesets trata pacote privado como ignorado e recusa
+um changeset misto. Ou seja, a primeira release teria quebrado no primeiro
+comando. A correção é `privatePackages: { version: true, tag: false }` no
+`.changeset/config.json` — que é o que a seção 16 do PLANO.md já dizia: os apps
+são versionados como pacotes privados, e aparecem no `/health`.
+
 ## Quem pode abrir PR pra onde
 
 O workflow [`branch-rules.yml`](../../.github/workflows/branch-rules.yml) é um check obrigatório que barra combinações fora do fluxo:

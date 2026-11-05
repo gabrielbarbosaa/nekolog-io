@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/browser",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog SDK for the browser: global errors, session, setUser and a beacon flush on pagehide.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

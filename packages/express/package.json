@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/express",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog middleware for Express: request context, access log and error log.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

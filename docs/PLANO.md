@@ -716,7 +716,7 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 | O quê | Como é versionado |
 |---|---|
 | Pacotes npm (`@nekolog-io/*`) | SemVer com Changesets; `0.x` até a 1.0; changelog por pacote |
-| Apps (`web`, `ingest`, `jobs`) | também pelo Changesets, como pacotes privados; a versão aparece no `/health` e no rodapé do dashboard |
+| Apps (`web`, `ingest`, `api`, `jobs`) | também pelo Changesets, como pacotes privados (`privatePackages: { version: true, tag: false }` — sem isso o Changesets os trata como ignorados e recusa qualquer changeset que misture um app com um pacote publicado); a versão aparece no `/health` e no rodapé do dashboard |
 | API HTTP | no caminho (`/v1`); uma mudança incompatível vira `/v2`, e a anterior continua por pelo menos 6 meses |
 | Payload de ingestão | campo `schemaVersion`; o servidor aceita as duas últimas versões |
 | Bancos de dados | migrations numeradas (Drizzle no Postgres, runner próprio em TypeScript no ClickHouse, especificação 3), nunca editadas depois do merge |
@@ -728,6 +728,7 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 - **Depreciação:** tudo que for removido ganha aviso no console e no changelog pelo menos uma versão minor antes.
 - **Correções:** a major atual recebe tudo; a anterior recebe correções de segurança por 6 meses depois de uma nova major.
 - **Commits:** Conventional Commits, verificados pelo commitlint, que alimentam os changelogs.
+- **A 1.0 saiu na etapa 6.7**, num PR próprio e não pelo PR "Version Packages": eram 68 changesets acumulados sem nenhuma release anterior em que se apoiar. Da 1.0 em diante vale o fluxo da seção 17 sem exceção. O procedimento está em [docs/process/branching.md](process/branching.md).
 
 ---
 
@@ -793,6 +794,12 @@ internal/       # não publicados: só fazem sentido dentro deste repositório
   seed/         # cria org, projeto, ambientes e keys antes de existir o dashboard
   tracking/     # projeta o docs/ETAPAS.md no GitHub (milestones e issues)
   deploy/       # resolve a configuração do wrangler na hora do deploy
+  self-host/    # os adaptadores de arquivo que substituem R2 e KV numa máquina
+  security-headers/ # uma política de cabeçalhos, lida pelo site, pela doc e pelas APIs
+  backup/       # nomes, retenção e verificação do dump cifrado
+  load/         # scripts do k6, o corpus que eles mandam e os limites da plataforma
+  compat/       # a matriz de runtimes, rodada sobre o dist e não sobre o fonte
+  release/      # o SBOM de cada pacote publicado e a conferência da release
 examples/       # express, nestjs, next, react-vite (também nos testes e2e)
 deploy/         # docker-compose (dev e self-host), cloud-init da VM, segredos do deploy
                 # O wrangler.json de cada Worker fica junto do app, porque o

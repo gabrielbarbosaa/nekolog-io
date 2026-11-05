@@ -90,8 +90,12 @@ export function openApiDocument(servers: ReadonlyArray<{ url: string; descriptio
                 'application/json': {
                   schema: {
                     type: 'object',
-                    required: ['status'],
-                    properties: { status: { type: 'string', const: 'ok' } },
+                    required: ['status', 'service', 'version'],
+                    properties: {
+                      status: { type: 'string', const: 'ok' },
+                      service: { type: 'string', const: 'api' },
+                      version: { type: 'string', example: '1.0.0' },
+                    },
                   },
                 },
               },

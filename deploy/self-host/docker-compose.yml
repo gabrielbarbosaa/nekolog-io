@@ -93,6 +93,7 @@ services:
       CLICKHOUSE_INSERT_USER: nekolog_ingest
       CLICKHOUSE_INSERT_PASSWORD: ${CLICKHOUSE_INSERT_PASSWORD:?set CLICKHOUSE_INSERT_PASSWORD in .env}
       INGEST_EVENTS_PER_MINUTE: ${INGEST_EVENTS_PER_MINUTE:-2000}
+      INGEST_VERSION: ${INGEST_VERSION:-unknown}
       SPOOL_DIR: /var/lib/nekolog/spool
       KV_DIR: /var/lib/nekolog/kv
     volumes:
@@ -120,6 +121,7 @@ services:
       CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?set CLICKHOUSE_READ_PASSWORD in .env}
       DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
       API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-120}
+      API_VERSION: ${API_VERSION:-unknown}
       SOURCEMAPS_DIR: /var/lib/nekolog/sourcemaps
     volumes:
       - nekolog_state:/var/lib/nekolog/state:ro
@@ -138,6 +140,7 @@ services:
     environment:
       JOBS_PORT: "8788"
       JOBS_HOST: 0.0.0.0
+      JOBS_VERSION: ${JOBS_VERSION:-unknown}
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_DB: nekolog
       CLICKHOUSE_JOBS_USER: nekolog_jobs

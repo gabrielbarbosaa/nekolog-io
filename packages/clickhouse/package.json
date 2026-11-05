@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/clickhouse",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "ClickHouse side of NekoLog: the forward-only migration runner, the HTTP client and the log and usage stores.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,8 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "migrations"
+    "migrations",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": "./src/index.ts",

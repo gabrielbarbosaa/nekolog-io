@@ -1,6 +1,6 @@
 {
   "name": "@nekolog-io/cli",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "NekoLog command line: nekolog init detects the framework, installs the SDK and writes the .env.",
   "license": "MIT",
   "repository": {
@@ -19,7 +19,8 @@
   ],
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "bin": {
     "nekolog": "./dist/cli.mjs"
