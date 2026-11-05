@@ -29,6 +29,8 @@ const SHARED = [
   '@nekolog-io/db',
 ]
 
+const OPEN = /\bMIT\b|open[- ]source|open[- ]core|c[óo]digo aberto|self[- ]host/i
+
 type Messages = { [key: string]: string | Messages }
 
 function collect(node: Messages): string[] {
@@ -129,28 +131,36 @@ describe('what the landing page claims', () => {
     }
   })
 
-  it('tells the reader there is nothing to sign up for', async () => {
+  it('names the version it is, in every language', async () => {
     for (const locale of locales) {
-      const text = await pageText(locale)
-
-      expect(text.toLowerCase()).toContain('npm')
-      expect(says(text, '1.0')).toBe(true)
+      expect(says(await pageText(locale), '1.0'), `${locale} does not say 1.0`).toBe(true)
     }
   })
 
-  it('says the same measured numbers as the launch post, in both languages', async () => {
-    const posts = await Promise.all(
-      ['post.en.md', 'post.pt-BR.md'].map(async (file) => ({
-        file,
-        text: await readFile(`${REPO}docs/launch/${file}`, 'utf8'),
-      })),
-    )
+  it('tells the reader there is no open sign-up, in their own language', async () => {
+    const said: Record<Locale, string> = {
+      en: 'by invitation',
+      'pt-BR': 'por convite',
+      es: 'por invitación',
+    }
 
-    for (const { file, text } of posts) {
-      for (const number of ['10', '10.8', '500', '200', '12.05', '5']) {
-        expect(says(text, number), `${file} does not say ${number}`).toBe(true)
+    for (const locale of locales) {
+      expect((await pageText(locale)).toLowerCase(), `${locale} drops the invitation`).toContain(
+        said[locale],
+      )
+    }
+  })
+
+  it('never calls the product open source, open core or MIT', async () => {
+    const claiming: string[] = []
+
+    for (const locale of locales) {
+      if (OPEN.test(await pageText(locale))) {
+        claiming.push(locale)
       }
     }
+
+    expect(claiming).toEqual([])
   })
 
   it('would notice a number that is only in the English page', async () => {
@@ -159,5 +169,11 @@ describe('what the landing page claims', () => {
     expect(says('answered 400 and moved on', '40')).toBe(false)
     expect(says('12,05 kB', '5')).toBe(false)
     expect(says('the target was 5 kB', '5')).toBe(true)
+  })
+
+  it('would notice a page that went back to calling itself open', () => {
+    expect(OPEN.test('This repository is MIT.')).toBe(true)
+    expect(OPEN.test('O self-host te dá tudo isso.')).toBe(true)
+    expect(OPEN.test('NekoLog é software proprietário.')).toBe(false)
   })
 })

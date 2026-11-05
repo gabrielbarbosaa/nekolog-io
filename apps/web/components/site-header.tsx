@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { DOCS_URL, GITHUB_URL } from '@/lib/links'
+import { CONTACT_URL, DOCS_URL } from '@/lib/links'
 
 export function SiteHeader() {
   const t = useTranslations('HomePage')
@@ -22,11 +22,11 @@ export function SiteHeader() {
             {t('footer.docs')}
           </Link>
           <Link
-            href={GITHUB_URL}
+            href={CONTACT_URL}
             className="text-muted-foreground text-sm hover:text-foreground"
             prefetch={false}
           >
-            {t('footer.github')}
+            {t('footer.contact')}
           </Link>
           <ThemeToggle />
           <LocaleSwitcher />

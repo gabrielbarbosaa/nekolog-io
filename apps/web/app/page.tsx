@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { SiteHeader } from '@/components/site-header'
 import type { Locale } from '@/i18n/locales'
-import { docsUrl, GITHUB_URL, LICENSE_URL } from '@/lib/links'
+import { CONTACT_URL, docsUrl } from '@/lib/links'
 
 const INSTALL = 'pnpm add @nekolog-io/node'
 
@@ -48,11 +48,11 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href={docs('self-host/install/')}
+              href={CONTACT_URL}
               prefetch={false}
               className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm hover:opacity-90"
             >
-              {t('runIt')}
+              {t('askForAccess')}
             </Link>
             <Link
               href={docs()}
@@ -60,13 +60,6 @@ export default async function HomePage() {
               className="rounded-md border border-border px-4 py-2 font-medium text-sm hover:bg-accent hover:text-accent-foreground"
             >
               {t('readTheDocs')}
-            </Link>
-            <Link
-              href={GITHUB_URL}
-              prefetch={false}
-              className="rounded-md border border-border px-4 py-2 font-medium text-sm hover:bg-accent hover:text-accent-foreground"
-            >
-              {t('sourceOnGitHub')}
             </Link>
           </div>
         </section>
@@ -108,20 +101,20 @@ export default async function HomePage() {
         </section>
 
         <section className="border-border border-t py-16">
-          <h2 className="font-semibold text-2xl tracking-tight">{t('open.title')}</h2>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t('open.body')}</p>
-          <p className="mt-4 max-w-3xl text-muted-foreground">{t('open.line')}</p>
+          <h2 className="font-semibold text-2xl tracking-tight">{t('model.title')}</h2>
+          <p className="mt-4 max-w-3xl text-muted-foreground">{t('model.body')}</p>
+          <p className="mt-4 max-w-3xl text-muted-foreground">{t('model.line')}</p>
           <div className="mt-8 grid gap-6 sm:grid-cols-2">
             <article className="rounded-lg border border-border bg-card p-5">
-              <h3 className="font-medium text-card-foreground">{t('open.selfHostTitle')}</h3>
+              <h3 className="font-medium text-card-foreground">{t('model.yoursTitle')}</h3>
               <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-                {t('open.selfHostBody')}
+                {t('model.yoursBody')}
               </p>
             </article>
             <article className="rounded-lg border border-border border-dashed p-5">
-              <h3 className="font-medium">{t('open.hostedTitle')}</h3>
+              <h3 className="font-medium">{t('model.oursTitle')}</h3>
               <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-                {t('open.hostedBody')}
+                {t('model.oursBody')}
               </p>
             </article>
           </div>
@@ -163,17 +156,14 @@ export default async function HomePage() {
           <Link href={docs()} prefetch={false} className="hover:text-foreground">
             {t('footer.docs')}
           </Link>
-          <Link href={GITHUB_URL} prefetch={false} className="hover:text-foreground">
-            {t('footer.github')}
+          <Link href={CONTACT_URL} prefetch={false} className="hover:text-foreground">
+            {t('footer.contact')}
           </Link>
           <Link href="/legal/terms" className="hover:text-foreground">
             {legal('terms')}
           </Link>
           <Link href="/legal/privacy" className="hover:text-foreground">
             {legal('privacy')}
-          </Link>
-          <Link href={LICENSE_URL} prefetch={false} className="ml-auto hover:text-foreground">
-            {t('footer.license')}
           </Link>
         </div>
       </footer>

@@ -2,13 +2,12 @@
   "HomePage": {
     "title": "NekoLog",
     "tagline": "Logs para aplicaciones JavaScript y TypeScript, en el front y en el back.",
-    "lede": "SDKs que agrupan en lotes y envían lo que tu aplicación ya escribe, una API de ingesta, ClickHouse para almacenar, trabajos en segundo plano para alertas y una API HTTP para leerlo todo de vuelta.",
-    "status": "Versión 1.0. Nada se ha publicado en npm todavía y no hay servicio alojado — lo que se puede hacer hoy es ejecutarlo por tu cuenta.",
-    "runIt": "Ejecutarlo por tu cuenta",
+    "lede": "SDKs que agrupan en lotes y envían lo que tu aplicación ya escribe, una API de ingesta, ClickHouse para almacenar, trabajos en segundo plano para alertas y un panel para leerlo todo de vuelta.",
+    "status": "Versión 1.0, por invitación. No hay registro abierto: una invitación te da el SDK de tu stack y un acceso al panel.",
+    "askForAccess": "Pedir una invitación",
     "readTheDocs": "Leer la documentación",
-    "sourceOnGitHub": "Código en GitHub",
     "sampleLabel": "Tres líneas en tu aplicación",
-    "readLabel": "Y leerlo de vuelta, sin ningún panel de por medio",
+    "readLabel": "Y leerlo de vuelta, desde donde estés",
     "features": {
       "title": "Qué hace",
       "sdks": {
@@ -36,14 +35,14 @@
         "body": "POST /v1/otlp/logs acepta OTLP/HTTP y lo convierte antes que nada, así que un registro OTLP pasa exactamente por la misma validación y limpieza que uno nativo."
       }
     },
-    "open": {
-      "title": "Qué es abierto y qué no",
-      "body": "Este repositorio es MIT: los SDKs, la ingesta, los trabajos, la API pública de lectura, esta página y la documentación. El panel — las pantallas — es de código cerrado y solo corre en el servicio alojado.",
-      "line": "La línea está donde está a propósito. Todo lo que toca tus datos, tu proceso y tus logs es abierto y auditable. El self-host te da ingesta, almacenamiento, búsqueda, agrupación de errores y alertas a través de una API HTTP; lo que no te da es una pantalla donde mirarlos.",
-      "selfHostTitle": "En el self-host",
-      "selfHostBody": "Ingesta, OTLP, limpieza de datos sensibles, muestreo, nivel mínimo, cuotas, agrupación de errores, alertas a un webhook y la API de lectura.",
-      "hostedTitle": "Solo en el servicio alojado",
-      "hostedBody": "El panel: el explorador, los gráficos, las pantallas de error, las vistas guardadas, la resolución de source maps y la descarga de exportaciones."
+    "model": {
+      "title": "Qué corre dónde",
+      "body": "NekoLog es software propietario, y tú casi no ejecutas nada de él. El SDK entra en tu aplicación; todo lo que está detrás es nuestro para mantenerlo en pie.",
+      "line": "No hay nada que desplegar, nada que sostener a las tres de la madrugada y ninguna base de datos tuya que dimensionar. Cuando la ingesta necesite más espacio, el problema es nuestro.",
+      "yoursTitle": "De tu lado",
+      "yoursBody": "Un SDK, instalado en tu aplicación. Nunca rompe tu app, no tiene ninguna dependencia y quita el dato sensible antes de la primera llamada de red.",
+      "oursTitle": "Del nuestro",
+      "oursBody": "Ingesta, almacenamiento, retención, agrupación de errores, alertas, exportaciones y el panel donde lees todo eso — mantenidos en pie, con copia de seguridad y vigilados."
     },
     "data": {
       "title": "Qué hace con tus datos",
@@ -55,15 +54,14 @@
     },
     "numbers": {
       "title": "Medido, no prometido",
-      "deps": "@nekolog-io/core no tiene dependencias de runtime, por contrato — y cada paquete publicado sale con un inventario CycloneDX construido desde el lockfile, así que una dependencia que llegue ahí hace fallar la release.",
+      "deps": "@nekolog-io/core no tiene dependencias de runtime, por contrato — y cada paquete sale con un inventario CycloneDX construido desde el lockfile, así que una dependencia que llegue ahí hace fallar la release.",
       "size": "El SDK de navegador no cumple su propio presupuesto de tamaño. La meta era 5 kB con gzip; init está en 12,05 kB. La mayor parte de eso es el filtro de privacidad, que no es opcional. La meta incumplida está escrita, en lugar de redondeada hasta desaparecer.",
       "cpu": "El lote más grande que permite el protocolo no cabía en un Worker gratuito: 500 eventos costaban 10,8 ms de CPU contra un límite de 10 ms. El lote por defecto del cliente ahora es de 200 eventos, y una prueba vigila el presupuesto en CI.",
       "runtimes": "Node 22, 24 y 26, Bun, Deno, Chromium, Firefox y WebKit ejecutan la suite en cada pull request — contra el paquete construido, no contra el código fuente."
     },
     "footer": {
       "docs": "Documentación",
-      "github": "GitHub",
-      "license": "Licencia MIT"
+      "contact": "Habla con nosotros"
     }
   },
   "ThemeToggle": {

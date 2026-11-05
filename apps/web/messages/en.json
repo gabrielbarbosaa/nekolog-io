@@ -2,13 +2,12 @@
   "HomePage": {
     "title": "NekoLog",
     "tagline": "Logging for JavaScript and TypeScript applications, front-end and back-end.",
-    "lede": "SDKs that batch and send what your application already writes, an ingestion API, ClickHouse for storage, background jobs for alerts, and an HTTP API to read it all back.",
-    "status": "Version 1.0. Nothing is published to npm yet and there is no hosted service — what you can do today is run it yourself.",
-    "runIt": "Run it yourself",
+    "lede": "SDKs that batch and send what your application already writes, an ingestion API, ClickHouse for storage, background jobs for alerts, and a dashboard to read it all back.",
+    "status": "Version 1.0, by invitation. There is no open sign-up: an invitation gives you the SDK for your stack and a dashboard login.",
+    "askForAccess": "Ask for an invitation",
     "readTheDocs": "Read the docs",
-    "sourceOnGitHub": "Source on GitHub",
     "sampleLabel": "Three lines in your application",
-    "readLabel": "And read it back, with no dashboard involved",
+    "readLabel": "And read it back, from anywhere",
     "features": {
       "title": "What it does",
       "sdks": {
@@ -36,14 +35,14 @@
         "body": "POST /v1/otlp/logs takes OTLP/HTTP and converts it before anything else runs, so an OTLP record goes through exactly the same validation and redaction as a native one."
       }
     },
-    "open": {
-      "title": "What is open and what is not",
-      "body": "This repository is MIT: the SDKs, the ingestion, the jobs, the public read API, this page and the documentation. The dashboard — the screens — is closed-source and runs only on the hosted service.",
-      "line": "The line is drawn on purpose. Everything that touches your data, your process and your logs is open and auditable. Self-host gives you ingestion, storage, search, issue grouping and alerts through an HTTP API; what it does not give you is a screen to look at them in.",
-      "selfHostTitle": "In the self-host",
-      "selfHostBody": "Ingestion, OTLP, redaction, sampling, minimum level, quotas, issue grouping, alerts to a webhook, and the read API.",
-      "hostedTitle": "Only on the hosted service",
-      "hostedBody": "The dashboard: the explorer, the charts, the issue screens, saved views, source-map resolution and the export download."
+    "model": {
+      "title": "What runs where",
+      "body": "NekoLog is proprietary software, and you run almost none of it. The SDK goes into your application; everything behind it is ours to operate.",
+      "line": "There is nothing to deploy, nothing to keep up at three in the morning, and no database of yours to size. When the ingestion needs more room, that is our problem.",
+      "yoursTitle": "On your side",
+      "yoursBody": "One SDK, installed into your application. It never throws into your app, carries no dependencies, and strips sensitive values before the first network call.",
+      "oursTitle": "On ours",
+      "oursBody": "Ingestion, storage, retention, error grouping, alerting, exports, and the dashboard you read them in — kept up, backed up and watched."
     },
     "data": {
       "title": "What it does with your data",
@@ -55,15 +54,14 @@
     },
     "numbers": {
       "title": "Measured, not claimed",
-      "deps": "@nekolog-io/core has zero runtime dependencies, by contract — and every published package ships a CycloneDX bill of materials built from the lockfile, so a dependency arriving there fails the release.",
+      "deps": "@nekolog-io/core has zero runtime dependencies, by contract — and every package ships a CycloneDX bill of materials built from the lockfile, so a dependency arriving there fails the release.",
       "size": "The browser SDK does not meet its own size budget. The target was 5 kB gzip; init is 12.05 kB. Most of that is the privacy pipeline, which is not optional. The miss is written down rather than rounded away.",
       "cpu": "The biggest batch the protocol allows did not fit a free Worker: 500 events cost 10.8 ms of CPU against a 10 ms limit. The client's default batch is 200 events now, and a test guards the budget in CI.",
       "runtimes": "Node 22, 24 and 26, Bun, Deno, Chromium, Firefox and WebKit run the suite on every pull request — against the built package, not the source."
     },
     "footer": {
       "docs": "Documentation",
-      "github": "GitHub",
-      "license": "MIT licensed"
+      "contact": "Talk to us"
     }
   },
   "ThemeToggle": {

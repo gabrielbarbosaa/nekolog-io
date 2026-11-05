@@ -29,7 +29,7 @@ function flattenEntries(messages: Messages, prefix = ''): [string, string][] {
 
 const translatedLocales = locales.filter((locale) => locale !== defaultLocale)
 
-const THE_SAME_IN_EVERY_LANGUAGE = ['HomePage.title', 'HomePage.footer.github']
+const THE_SAME_IN_EVERY_LANGUAGE = ['HomePage.title']
 
 describe('dashboard message i18n parity', () => {
   it('defines the same keys in every locale', async () => {
