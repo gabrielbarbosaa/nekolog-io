@@ -1,6 +1,6 @@
 # ADR 0002 — Open-core, com o dashboard fechado
 
-- **Status:** aceita
+- **Status:** substituída pela [0017](0017-licenca-proprietaria-e-repositorio-privado.md) em 2026-11-05
 - **Data:** 2026-10-30
 - **Plano:** seções 1, 2, 5, 10, 18 e 20
 
