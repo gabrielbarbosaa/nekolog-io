@@ -1,8 +1,7 @@
 import type { Locale } from '@/i18n/locales'
 
-export const GITHUB_URL = 'https://github.com/gabrielbarbosaa/nekolog-io'
 export const DOCS_URL = 'https://nekolog.io/docs/'
-export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`
+export const CONTACT_URL = 'mailto:contato@nekolog.io'
 
 const DOCS_PREFIX: Record<Locale, string> = {
   en: '',

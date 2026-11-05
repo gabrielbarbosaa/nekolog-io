@@ -882,8 +882,10 @@ pula valores, e um controle de privacidade que silenciosamente deixa de redigir
 - **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da
   seção 1.
 - **Divulgação:** não há. Sem presença pública a distribuição é por convite, e o
-  texto em [docs/launch/](launch/README.md) perdeu o destino — ele afirma MIT,
-  open-core e self-host em todos os parágrafos.
+  `docs/launch/` foi removido em 05/11/2026: o texto afirmava MIT, open-core e
+  self-host em quase todo parágrafo, e os dois destinos que ele tinha — dev.to e
+  TabNews — deixaram de fazer sentido para um produto fechado. Ele está no
+  histórico do git se um dia houver o que anunciar.
 - **O que falta para cobrar** está em [COMERCIAL.md](COMERCIAL.md), com esforço
   por item.
 
