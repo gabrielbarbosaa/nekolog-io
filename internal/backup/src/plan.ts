@@ -30,6 +30,24 @@ export function keyFor(environment: string, at: Date): string {
   return `${BACKUP_PREFIX}${environment}/${stampFor(at)}${BACKUP_SUFFIX}`
 }
 
+export type BucketAddress = {
+  endpoint: string
+  bucket: string
+}
+
+export function splitBucketUrl(url: string): BucketAddress {
+  const trimmed = url.trim().replace(/\/+$/, '')
+  const match = /^(https?:\/\/[^/\s'"\\]+)\/([A-Za-z0-9][A-Za-z0-9._-]*)$/.exec(trimmed)
+
+  if (match === null) {
+    throw new BackupRefused(
+      `${JSON.stringify(url)} is not a bucket address. It has to be <http(s)://host>/<bucket>, ` +
+        'with nothing after the bucket name.',
+    )
+  }
+  return { endpoint: match[1] as string, bucket: match[2] as string }
+}
+
 export function isBackupKey(key: string): boolean {
   if (!key.startsWith(BACKUP_PREFIX) || !key.endsWith(BACKUP_SUFFIX)) {
     return false

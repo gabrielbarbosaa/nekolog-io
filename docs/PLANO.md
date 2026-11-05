@@ -688,8 +688,9 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 
 ### 15.3 Backups
 
-- `pg_dump` diário do Postgres pelo GitHub Actions, criptografado com `age` e guardado no R2 por 30 dias.
-- Teste de restauração a cada marco, numa branch do Neon.
+- `pg_dump` diário do Postgres **pela própria máquina** (container `backup` do `deploy/self-host`), `pg_dump | gzip | age | rclone rcat` num cano só, guardado por 30 dias. Saiu do GitHub Actions em 05/11/2026: o Postgres da VPS não publica porta, então um runner não o alcança sem expor o banco, e os minutos do Actions passaram a ser contados quando o repositório virou privado.
+- **Só a metade pública da chave `age` fica na máquina.** Quem entra na máquina alcança o bucket e não lê backup nenhum.
+- Teste de restauração a cada marco, **numa máquina diferente da que fez o backup** — é o que exercita a chave privada, que é o ponto de falha mais provável. Continua sendo um `workflow_dispatch` no Actions.
 - O Redis não tem backup: códigos e sessões são temporários (no pior caso, todo mundo faz login de novo).
 - **O ClickHouse tem backup diário desde 05/11/2026**, e a frase que estava aqui — "os logs são descartáveis; o que não pode se perder está no Postgres" — era verdade num projeto de estudo e deixou de ser no momento em que alguém paga para guardar esses logs. A tarefa `clickhouse-backup` no `apps/jobs` manda `BACKUP DATABASE` para um bucket S3 **fora da máquina**, uma vez por dia UTC, com credencial própria (`nekolog_backup`: só `BACKUP`, `WRITE ON S3` e leitura de `system.backups` — escreve a cópia inteira e **não lê uma linha**).
 - Cada backup é completo e independente: sem cadeia incremental, perder um não leva os outros junto. Em troca, ocupa mais espaço.

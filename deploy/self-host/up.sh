@@ -33,6 +33,9 @@ else
     echo "BACKUP_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}"
     echo "BACKUP_S3_ACCESS_KEY_ID=${BACKUP_S3_ACCESS_KEY_ID:-}"
     echo "BACKUP_S3_SECRET_ACCESS_KEY=${BACKUP_S3_SECRET_ACCESS_KEY:-}"
+    echo "BACKUP_AGE_RECIPIENT=${BACKUP_AGE_RECIPIENT:-}"
+    echo "BACKUP_ENVIRONMENT=${BACKUP_ENVIRONMENT:-prod}"
+    echo "BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-30}"
   } >.env
   echo "back .env up somewhere safe: ENCRYPTION_KEY cannot be recovered from the database"
 fi

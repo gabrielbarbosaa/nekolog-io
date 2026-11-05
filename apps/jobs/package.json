@@ -7,10 +7,12 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "serve": "node src/serve.ts",
+    "backup": "node src/backup.ts",
     "deploy:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
+    "@internal/backup": "workspace:*",
     "@internal/self-host": "workspace:*",
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/clickhouse": "workspace:*",
