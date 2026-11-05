@@ -1,0 +1,76 @@
+name: Self-host image
+
+on:
+  pull_request:
+    paths:
+      - "deploy/self-host/**"
+      - "apps/ingest/**"
+      - "apps/api/**"
+      - "apps/jobs/**"
+      - "internal/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - ".github/workflows/self-host.yml"
+  push:
+    branches: [dev, qa, main]
+    paths:
+      - "deploy/self-host/**"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-host-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build it and start every entry point
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -f deploy/self-host/Dockerfile -t nekolog/self-host:ci .
+
+      - name: Report what it weighs
+        run: docker image ls nekolog/self-host:ci --format '{{.Size}}'
+
+      - name: Every entry point resolves and refuses for the right reason
+        run: |
+          set -euo pipefail
+          for entry in \
+            apps/ingest/src/serve-self-host.ts \
+            apps/api/src/serve-self-host.ts \
+            apps/jobs/src/serve.ts \
+            apps/jobs/src/backup.ts; do
+            out="$(timeout --signal=KILL 60 docker run --rm nekolog/self-host:ci \
+              node "/app/$entry" 2>&1 | head -n 1 || true)"
+            echo "$entry -> $out"
+            case "$out" in
+              *missing*|*"not backed up"*) ;;
+              *) echo "::error::$entry did not start: $out"; exit 1 ;;
+            esac
+          done
+
+      - name: The tools the backup needs are installed
+        run: |
+          set -euo pipefail
+          docker run --rm nekolog/self-host:ci sh -c 'pg_dump --version && age --version && rclone version | head -n 1'
+
+      - name: The migration runners are installed
+        run: |
+          set -euo pipefail
+          docker run --rm nekolog/self-host:ci sh -c 'test -d /app/packages/db/node_modules/drizzle-kit'
+          docker run --rm nekolog/self-host:ci node /app/packages/clickhouse/src/cli.ts status 2>&1 |
+            grep -q CLICKHOUSE_URL

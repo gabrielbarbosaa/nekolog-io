@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,6 +12,7 @@ const EXAMPLE = readFileSync(join(HERE, '.env.example'), 'utf8')
 const DOCKERFILE = readFileSync(join(HERE, 'Dockerfile'), 'utf8')
 const BOOTSTRAP = readFileSync(join(HERE, 'bootstrap.sh'), 'utf8')
 const UP = readFileSync(join(HERE, 'up.sh'), 'utf8')
+const DEPLOY = readFileSync(join(HERE, 'deploy.sh'), 'utf8')
 const IGNORED = readFileSync(join(ROOT, '.dockerignore'), 'utf8')
 
 function serviceBlock(name: string): string {
@@ -277,5 +279,88 @@ describe('the image and the scripts around it', () => {
 
   it('never overwrites an .env that is already there', () => {
     expect(UP).toMatch(/if \[ -f \.env \]/)
+  })
+})
+
+describe('the scripts the operator types', () => {
+  const listed = ((): string => {
+    try {
+      return execFileSync('git', ['ls-files', '-s', 'deploy/self-host'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      })
+    } catch {
+      return ''
+    }
+  })()
+
+  it.skipIf(listed === '')('are executable, or ./up.sh fails on a fresh clone', () => {
+    const notExecutable = listed
+      .split('\n')
+      .filter((line) => line.trim() !== '' && line.endsWith('.sh'))
+      .filter((line) => !line.startsWith('100755'))
+
+    expect(notExecutable).toEqual([])
+  })
+
+  it.skipIf(listed === '')(
+    'were found at all, so the check is not passing on an empty list',
+    () => {
+      expect(
+        listed.split('\n').filter((line) => line.endsWith('.sh')).length,
+      ).toBeGreaterThanOrEqual(3)
+    },
+  )
+})
+
+describe('the deploy on the machine', () => {
+  it('refuses anything that is not a clean clone of the branch it deploys', () => {
+    expect(DEPLOY).toContain('git rev-parse --is-inside-work-tree')
+    expect(DEPLOY).toContain('git status --porcelain')
+    expect(DEPLOY).toContain('NEKOLOG_DEPLOY_BRANCH:-main')
+  })
+
+  it('fast-forwards and never merges on the server', () => {
+    expect(DEPLOY).toContain('git merge --ff-only')
+    expect(DEPLOY).not.toMatch(/git (reset|checkout) --hard/)
+    expect(DEPLOY).not.toContain('git pull\n')
+  })
+
+  it('prints the way back before and after, because the rollback is by hand', () => {
+    expect([...DEPLOY.matchAll(/roll back with: git -C/g)]).toHaveLength(2)
+    expect(DEPLOY).toContain('$before')
+  })
+
+  it('builds before it replaces anything, and waits for the containers to come up', () => {
+    expect(DEPLOY).toContain('docker compose up -d --build --remove-orphans')
+    expect(DEPLOY).toContain('NEKOLOG_DEPLOY_WAIT:-180')
+    expect(DEPLOY).toContain('docker compose logs --tail')
+  })
+
+  it('does not count the bootstrap, which is supposed to exit', () => {
+    expect(DEPLOY).toContain('$1 != "bootstrap"')
+  })
+})
+
+describe('the image the machine builds', () => {
+  it('installs the production graph of the four entry points and nothing else', () => {
+    expect(DOCKERFILE).toContain('pnpm install --frozen-lockfile --prod')
+    for (const filter of [
+      '@apps/ingest...',
+      '@apps/api...',
+      '@apps/jobs...',
+      '@internal/seed...',
+    ]) {
+      expect(DOCKERFILE, filter).toContain(`--filter "${filter}"`)
+    }
+  })
+
+  it('keeps drizzle-kit, because the bootstrap migrates Postgres with it', () => {
+    expect(DOCKERFILE).toContain('pnpm install --frozen-lockfile --filter "@nekolog-io/db"')
+    expect(BOOTSTRAP).toContain('db:migrate')
+  })
+
+  it('drops the pnpm store, which is a second copy of everything it just linked', () => {
+    expect(DOCKERFILE).toContain('rm -rf "$(pnpm store path)"')
   })
 })

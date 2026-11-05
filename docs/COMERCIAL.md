@@ -101,7 +101,7 @@ trabalho real está em A5, A6 e A7.
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
 | B9 | Mover o backup do Postgres do Actions para a máquina | **feito** — container `backup`, `pg_dump \| gzip \| age \| rclone` num cano só; o workflow ficou só com o teste de restauração | P |
-| B10 | Deploy: como o código chega na VPS | some a integração de git da Vercel | M |
+| B10 | Deploy: como o código chega na VPS | **feito** — clone na máquina, `deploy.sh` com `git pull --ff-only` e build local; a imagem caiu de 2,09 GB para 1,05 GB, que é o que torna isso viável num 1 vCPU ([ADR 0018](adr/0018-deploy-por-git-pull-na-maquina.md)) | M |
 | B11 | Limitar a memória do ClickHouse e ligar swap | ver a nota sobre o KVM 1 | P |
 | B12 | Monitor externo (Better Stack free) no heartbeat dos jobs | o `HEARTBEAT_URL` já existe e não aponta para nada | P |
 
@@ -138,6 +138,27 @@ O teste de restauração **continua no Actions**, à mão. Restaurar numa máqui
 diferente da que fez o backup é a única versão desse teste que vale: ela
 exercita a chave privada do `age`, que é o ponto de falha mais provável de
 todos.
+
+### O B10 encolheu a imagem antes de decidir qualquer coisa
+
+A pergunta era "registry ou build na máquina". A resposta dependia de um número
+que ninguém tinha medido: **a imagem pesava 2,09 GB**, sendo 1,3 GB de
+`node_modules` — o monorepo inteiro instalado para rodar quatro processos Node.
+
+Com isso, as duas opções eram ruins: construir 2 GB num 1 vCPU ao lado do
+ClickHouse, ou pagar um registry e transferir 1 GB por deploy (a camada gratuita
+do GHCR para pacote privado são 500 MB, e a imagem não pode ser pública porque
+carrega o código).
+
+Instalando só o grafo de produção das quatro aplicações, `node_modules` caiu
+para **12,6 MB** e a imagem para **1,05 GB** — o resto é a base Alpine e os
+binários do backup. O build na máquina passou a ser razoável, e o deploy passou
+a ser um `git pull` de alguns MB, sem conta nova e sem custo novo.
+
+O que se aceita está no [ADR 0018](adr/0018-deploy-por-git-pull-na-maquina.md),
+e o principal é: **o rollback é manual.** Um build que falha não derruba nada;
+um build que dá certo com código ruim derruba, e o script imprime o comando de
+volta.
 
 ### Sobre começar no KVM 1
 
