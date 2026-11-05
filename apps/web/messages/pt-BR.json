@@ -48,7 +48,7 @@
       "title": "O que ele faz com os seus dados",
       "ip": "O endereço IP nunca é gravado. Nem com hash, nem truncado — a linha carrega o país, e um teste falha se um cabeçalho de endereço chegar ao armazenamento.",
       "client": "Dado sensível sai de dentro do seu processo, depois do seu próprio beforeSend, então o hook não tem como desfazer.",
-      "server": "E de novo no servidor, a partir de uma lista fechada de padrões nomeados. Você não pode mandar uma expressão regular, porque a regex de terceiro num Worker com 10 ms de CPU é uma negação de serviço que você escreve sozinho.",
+      "server": "E de novo no servidor, a partir de uma lista fechada de padrões nomeados. Você não pode mandar uma expressão regular, porque a regex de terceiro no caminho quente de um servidor com 10 ms de CPU por request é uma negação de serviço que você escreve sozinho.",
       "url": "Um breadcrumb de clique registra o seletor, nunca o texto do elemento. A page.url perde a query string, porque é lá que mora token de recuperação de senha.",
       "link": "O que fica guardado"
     },
@@ -56,7 +56,7 @@
       "title": "Medido, não prometido",
       "deps": "O @nekolog-io/core tem zero dependências de runtime, por contrato — e todo pacote sai com um inventário CycloneDX construído do lockfile, então uma dependência chegando ali falha a release.",
       "size": "O SDK de navegador não cumpre o próprio orçamento de tamanho. A meta era 5 kB com gzip; o init está em 12,05 kB. A maior parte disso é o filtro de privacidade, que não é opcional. A meta não cumprida está escrita, em vez de arredondada para longe.",
-      "cpu": "O maior lote que o protocolo permite não cabia num Worker gratuito: 500 eventos custavam 10,8 ms de CPU contra um limite de 10 ms. O lote padrão do cliente agora é de 200 eventos, e um teste vigia o orçamento no CI.",
+      "cpu": "O maior lote que o protocolo permite não cabia no orçamento: 500 eventos custavam 10,8 ms de CPU contra um teto de 10 ms num núcleo que o banco divide. O lote padrão do cliente agora é de 200 eventos, e um teste vigia o orçamento no CI.",
       "runtimes": "Node 22, 24 e 26, Bun, Deno, Chromium, Firefox e WebKit rodam a suíte em cada pull request — contra o pacote construído, não contra o fonte."
     },
     "footer": {

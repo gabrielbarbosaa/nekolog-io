@@ -48,7 +48,7 @@
       "title": "What it does with your data",
       "ip": "The IP address is never written. Not hashed, not truncated — the row carries the country, and a test fails if an address header reaches storage.",
       "client": "Sensitive values are stripped inside your process, after your own beforeSend hook, so the hook cannot undo it.",
-      "server": "And again on the server, from a closed list of named patterns. You cannot supply a regular expression, because a third party's regex on a Worker with a 10 ms CPU budget is a denial of service you write for yourself.",
+      "server": "And again on the server, from a closed list of named patterns. You cannot supply a regular expression, because a third party's regex on the hot path of a server with a 10 ms CPU budget per request is a denial of service you write for yourself.",
       "url": "A click breadcrumb records the selector, never the element's text. page.url drops the query string, because reset tokens live there.",
       "link": "What is stored"
     },
@@ -56,7 +56,7 @@
       "title": "Measured, not claimed",
       "deps": "@nekolog-io/core has zero runtime dependencies, by contract — and every package ships a CycloneDX bill of materials built from the lockfile, so a dependency arriving there fails the release.",
       "size": "The browser SDK does not meet its own size budget. The target was 5 kB gzip; init is 12.05 kB. Most of that is the privacy pipeline, which is not optional. The miss is written down rather than rounded away.",
-      "cpu": "The biggest batch the protocol allows did not fit a free Worker: 500 events cost 10.8 ms of CPU against a 10 ms limit. The client's default batch is 200 events now, and a test guards the budget in CI.",
+      "cpu": "The biggest batch the protocol allows did not fit the budget: 500 events cost 10.8 ms of CPU against a 10 ms ceiling on a core the database shares. The client's default batch is 200 events now, and a test guards the budget in CI.",
       "runtimes": "Node 22, 24 and 26, Bun, Deno, Chromium, Firefox and WebKit run the suite on every pull request — against the built package, not the source."
     },
     "footer": {

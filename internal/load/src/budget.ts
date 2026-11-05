@@ -1,6 +1,6 @@
-export const WORKER_CPU_BUDGET_MS = 10
-export const WORKER_REQUESTS_PER_MINUTE = 1_000
-export const WORKER_REQUESTS_PER_DAY = 100_000
+export const CPU_BUDGET_MS = 10
+
+export const MACHINE_VCPUS = 1
 
 export const CPU_HEADROOM = 0.5
 
@@ -14,9 +14,9 @@ export const DEFAULT_DURATION = '30s'
 
 export function affordableEvents(msPerEvent: number): number {
   if (!Number.isFinite(msPerEvent) || msPerEvent <= 0) {
-    return WORKER_REQUESTS_PER_MINUTE
+    return 0
   }
-  return Math.floor((WORKER_CPU_BUDGET_MS * CPU_HEADROOM) / msPerEvent)
+  return Math.floor((CPU_BUDGET_MS * CPU_HEADROOM) / msPerEvent)
 }
 
 export type Thresholds = {
