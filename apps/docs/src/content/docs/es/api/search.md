@@ -3,12 +3,6 @@ title: Lenguaje de búsqueda
 description: El lenguaje que comparten el Explorer y la API pública, con sus campos, operadores y límites.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado, y todavía no hay instancia
-alojada. Esta página describe el comportamiento que el código ya tiene, para que
-la forma de la API quede clara.
-:::
-
 Un solo lenguaje, usado por el Explorer en el dashboard, por `q` en
 [`/v1/logs` y `/v1/histogram`](/docs/es/api/reference/) y por la condición de una
 [regla de alerta](/docs/es/guides/alerts/).

@@ -3,11 +3,6 @@ title: winston
 description: Acrescente um transport e continue com o logger que você já tem.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados. Esta página descreve o
-comportamento que o código já tem, para a forma da API ficar clara.
-:::
-
 ```bash
 npm install @nekolog-io/winston @nekolog-io/node
 ```

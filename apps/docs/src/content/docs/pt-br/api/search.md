@@ -3,12 +3,6 @@ title: Linguagem de busca
 description: A linguagem que o Explorer e a API pública dividem, com os campos, os operadores e os limites dela.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados, e ainda não há instância
-hospedada. Esta página descreve o comportamento que o código já tem, para a
-forma da API ficar clara.
-:::
-
 Uma linguagem só, usada pelo Explorer no dashboard, pelo `q` em
 [`/v1/logs` e `/v1/histogram`](/docs/pt-br/api/reference/) e pela condição de uma
 [regra de alerta](/docs/pt-br/guides/alerts/).

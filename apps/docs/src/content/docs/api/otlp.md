@@ -3,12 +3,6 @@ title: OTLP endpoint
 description: Send logs from an OpenTelemetry collector or SDK, without a NekoLog SDK.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published, and no instance is hosted
-yet. This page describes the behaviour the code already has, so the shape of the
-API is clear.
-:::
-
 If you already run OpenTelemetry, you do not need our SDK. Point the logs
 exporter at the ingestion:
 

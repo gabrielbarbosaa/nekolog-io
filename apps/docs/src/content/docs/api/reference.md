@@ -3,12 +3,6 @@ title: Public API reference
 description: Read your logs, their histogram and your issues with a secret key, and record what you deployed.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published, and no instance is hosted
-yet. This page describes the behaviour the code already has, so the shape of the
-API is clear.
-:::
-
 Everything the dashboard shows, you can read yourself. The API serves its own
 OpenAPI document at `/openapi.json`, built against the origin you asked it from,
 so you can point a generator or [OWASP ZAP](https://www.zaproxy.org/) straight
@@ -149,10 +143,3 @@ never looks like a query that worked.
 
 A `503` answers a fixed sentence on purpose: the real exception can quote a
 column or a bound value, so it goes to the server's log instead of to you.
-
-## Where it runs
-
-The same app serves on Cloudflare Workers and as a plain Node process, which is
-what the [self-host](/docs/self-host/install/) runs on port 8789. On Workers it
-reaches Postgres over HTTP, which is the only reason a Worker can serve issues
-at all.

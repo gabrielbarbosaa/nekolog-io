@@ -69,7 +69,7 @@ Esforço: **P** até um dia, **M** dois a cinco dias, **G** mais que uma semana.
 | A3 | Trocar `LICENSE` e guardar o MIT histórico | **feito** — `966f509` é o commit de corte | P |
 | A4 | Campo `license` nos `package.json` | **feito** — 18 manifests | P |
 | A5 | `README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY` | **feito, e menor que o previsto** — as duas traduções do README e os dois arquivos de comunidade foram **removidos**, não reescritos | M |
-| A6 | A documentação: introdução, quickstart, self-host, versionamento, privacidade — **nos três idiomas** | pendente; a parte de self-host **sai** em vez de ser reescrita | M |
+| A6 | A documentação, **nos três idiomas** | **feito** — as três páginas de self-host foram removidas, 54 blocos de "ainda não está no npm" saíram, e a introdução passou a dizer o que o cliente recebe | M |
 | A7 | A landing (`apps/web`, 3 locales) e o post de lançamento | pendente; o post perdeu o destino | M |
 | A8 | Consertar `readme.test.ts` e `claims.test.ts` | `readme.test.ts` **feito**; `claims.test.ts` vai com A7 | P |
 | A9 | ADR superando a [0002](adr/0002-open-core-com-dashboard-fechado.md) | **feito** — [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md) | P |

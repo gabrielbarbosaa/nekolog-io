@@ -3,11 +3,6 @@ title: pino
 description: Envía a NekoLog las mismas líneas que pino ya escribe, sin reescribir ninguna.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npm install @nekolog-io/pino @nekolog-io/node
 ```

@@ -3,11 +3,6 @@ title: Trazas distribuidas
 description: Conecta un clic en el navegador con la petición que provocó — y la cabecera de CORS que lo hace posible.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 Cada log de una página lleva el mismo `trace`, y cada petición sale con una
 cabecera `traceparent` del W3C — un span hijo por petición. El back-end continúa
 esa traza en vez de empezar otra, y el clic en el front y la petición en el back

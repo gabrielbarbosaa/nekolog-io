@@ -3,11 +3,6 @@ title: Express
 description: Request context, one access line per response, and the CORS header the browser needs.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published. This page describes the
-behaviour the code already has, so the shape of the API is clear.
-:::
-
 ```bash
 npm install @nekolog-io/express @nekolog-io/node
 ```

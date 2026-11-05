@@ -3,11 +3,6 @@ title: nekolog init
 description: One command that detects the framework, installs the right SDK and writes the .env.
 ---
 
-:::caution[Not on npm yet]
-The `@nekolog-io/*` packages have not been published. This page describes the
-behaviour the code already has, so the shape of the API is clear.
-:::
-
 ```bash
 npx @nekolog-io/cli init
 npx @nekolog-io/cli init --key nekolog_pk_… --no-install
@@ -92,9 +87,8 @@ your key on the wire:
 - **a commit that is not what `git rev-parse` prints** — uppercase, too short or
   not hexadecimal;
 - **plain HTTP to anywhere but this machine.** A secret key in the clear is a
-  secret key given away. Point `--api` at `https://…`, or put a reverse proxy
-  with a certificate in front of your self-host. `http://localhost` is allowed,
-  because nothing leaves the machine.
+  secret key given away. Point `--api` at `https://…`. `http://localhost` is
+  allowed, because nothing leaves the machine.
 
 ## Uploading source maps
 

@@ -3,11 +3,6 @@ title: nekolog init
 description: Un comando que detecta el framework, instala el SDK correcto y escribe el .env.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npx @nekolog-io/cli init
 npx @nekolog-io/cli init --key nekolog_pk_… --no-install
@@ -93,8 +88,7 @@ tu clave en la red:
 - **un commit que no es lo que imprime `git rev-parse`** — en mayúsculas,
   demasiado corto o no hexadecimal;
 - **HTTP plano hacia cualquier sitio que no sea esta máquina.** Una clave
-  secreta en claro es una clave secreta regalada. Apunta `--api` a `https://…`,
-  o pon un proxy inverso con certificado delante de tu self-host.
+  secreta en claro es una clave secreta regalada. Apunta `--api` a `https://…`.
   `http://localhost` se permite, porque nada sale de la máquina.
 
 ## Subir source maps

@@ -3,11 +3,6 @@ title: React
 description: Provider, useLogger y un error boundary que reporta lo que se rompió.
 ---
 
-:::caution[Todavía no está en npm]
-Los paquetes `@nekolog-io/*` aún no se han publicado. Esta página describe el
-comportamiento que el código ya tiene, para que la forma de la API quede clara.
-:::
-
 ```bash
 npm install @nekolog-io/react
 ```

@@ -3,12 +3,6 @@ title: Referência da API pública
 description: Leia seus logs, o histograma deles e suas issues com uma key secreta, e registre o que você subiu.
 ---
 
-:::caution[Ainda não está no npm]
-Os pacotes `@nekolog-io/*` ainda não foram publicados, e ainda não há instância
-hospedada. Esta página descreve o comportamento que o código já tem, para a
-forma da API ficar clara.
-:::
-
 Tudo que o dashboard mostra, você consegue ler por conta própria. A API serve o
 próprio documento OpenAPI em `/openapi.json`, montado contra a origem de onde
 você pediu, então dá para apontar um gerador ou o
@@ -149,10 +143,3 @@ parecer uma consulta que funcionou.
 Um `503` responde uma frase fixa de propósito: a exceção de verdade pode citar
 uma coluna ou um valor, então ela vai para o log do servidor em vez de vir para
 você.
-
-## Onde isso roda
-
-O mesmo app serve em Cloudflare Workers e como processo Node comum, que é o que
-o [self-host](/docs/pt-br/self-host/install/) sobe na porta 8789. No Worker ele
-alcança o Postgres por HTTP, que é o único motivo de um Worker conseguir servir
-issues.
