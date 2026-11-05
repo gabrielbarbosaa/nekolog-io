@@ -1,0 +1,20 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+ingest.{$NEKOLOG_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 2MB
+	}
+	reverse_proxy ingest:8787
+}
+
+api.{$NEKOLOG_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8789
+}

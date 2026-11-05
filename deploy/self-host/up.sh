@@ -22,6 +22,8 @@ else
     echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
     echo "ENCRYPTION_KEY=$(openssl rand -hex 32)"
     echo "NEKOLOG_CONSOLE_URL=${NEKOLOG_CONSOLE_URL:-https://localhost}"
+    echo "NEKOLOG_DOMAIN=${NEKOLOG_DOMAIN:-localhost}"
+    echo "ACME_EMAIL=${ACME_EMAIL:-admin@localhost}"
     echo "INGEST_PUBLISH=${INGEST_PUBLISH:-8787}"
     echo "JOBS_PUBLISH=${JOBS_PUBLISH:-8788}"
     echo "API_PUBLISH=${API_PUBLISH:-8789}"
