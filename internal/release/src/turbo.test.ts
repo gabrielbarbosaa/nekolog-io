@@ -112,6 +112,44 @@ describe('a test that reads outside its own package', () => {
   })
 })
 
+const TEST_VARIABLE = /process\.env\.([A-Z][A-Z0-9_]*_TEST(?:_[A-Z0-9_]+)?)\b/g
+
+function declaredEnv(): string[] {
+  const json = JSON.parse(readFileSync(join(ROOT, 'turbo.json'), 'utf8')) as {
+    tasks?: { test?: { env?: string[] } }
+  }
+  return json.tasks?.test?.env ?? []
+}
+
+function variablesTestsRead(): Map<string, string> {
+  const found = new Map<string, string>()
+  for (const pkg of PACKAGES) {
+    for (const file of testFilesIn(pkg.directory)) {
+      for (const match of readFileSync(file, 'utf8').matchAll(TEST_VARIABLE)) {
+        found.set(match[1] as string, relative(ROOT, file))
+      }
+    }
+  }
+  return found
+}
+
+describe('an environment variable that decides whether an integration test runs', () => {
+  const read = variablesTestsRead()
+
+  it('was found in enough places for this check to mean anything', () => {
+    expect(read.size).toBeGreaterThan(8)
+  })
+
+  it('is declared in the root turbo.json, or Turbo strips it and the test skips in silence', () => {
+    const declared = new Set(declaredEnv())
+    const stripped = [...read]
+      .filter(([name]) => !declared.has(name))
+      .map(([name, file]) => `${name}, read by ${file}`)
+
+    expect(stripped).toEqual([])
+  })
+})
+
 describe('the detector itself', () => {
   const inside = "const HERE = join(dirname(fileURLToPath(import.meta.url)), '..')"
   const outside = "const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')"

@@ -6,7 +6,12 @@ import { createJobsApp } from './app.ts'
 import { sendHeartbeat } from './heartbeat.ts'
 import type { RunSummary } from './run.ts'
 import { startScheduler } from './scheduler.ts'
-import { type SelfHostJobsConfig, selfHostJobsConfigFrom, selfHostJobTasks } from './self-host.ts'
+import {
+  NO_BACKUP_WARNING,
+  type SelfHostJobsConfig,
+  selfHostJobsConfigFrom,
+  selfHostJobTasks,
+} from './self-host.ts'
 import { write, writeSummary } from './wiring.ts'
 
 function report(line: string): void {
@@ -62,6 +67,14 @@ async function main(): Promise<void> {
   report(`jobs running, ${tasks.length} tasks, health on http://${config.host}:${config.port}`)
   report(`ClickHouse ${config.clickHouse.url} database ${config.clickHouse.database}`)
   report(`spool ${config.spoolDir}  kv ${config.kvDir}`)
+
+  if (config.backup === undefined) {
+    write('warn', NO_BACKUP_WARNING)
+  } else {
+    report(
+      `backing ${config.clickHouse.database} up daily to ${config.backup.destination.endpoint}`,
+    )
+  }
 }
 
 try {

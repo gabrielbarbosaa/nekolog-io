@@ -1,5 +1,6 @@
 import { assertWebhookTarget } from '@nekolog-io/adapters'
 import type { CapacityAlert } from '../tasks/capacity-watch.ts'
+import type { ClickHouseBackupAlert } from '../tasks/clickhouse-backup.ts'
 import type { QuotaBlockEvent } from '../tasks/quota-block.ts'
 import type { SpoolResendEvent } from '../tasks/spool-resend.ts'
 import type { Fetcher } from './deliver.ts'
@@ -63,6 +64,17 @@ export function capacityAlert(alert: CapacityAlert): OperatorAlert {
     headline: `Cannot read the ${alert.what}`,
     detail: trim(alert.why),
   }
+}
+
+export function backupAlert(alert: ClickHouseBackupAlert): OperatorAlert {
+  const headline =
+    alert.kind === 'history-unreadable'
+      ? 'Cannot tell whether ClickHouse is being backed up'
+      : alert.kind === 'backup-failed'
+        ? 'The ClickHouse backup failed'
+        : 'The ClickHouse backup could not be started'
+
+  return { severity: 'critical', kind: alert.kind, headline, detail: trim(alert.why) }
 }
 
 export function quotaAlert(event: QuotaBlockEvent): OperatorAlert | null {

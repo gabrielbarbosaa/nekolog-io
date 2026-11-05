@@ -82,6 +82,32 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - name: Start the object store
+        run: |
+          network=$(docker network ls --filter name=github_network --format '{{.Name}}' | head -n 1)
+          if [ -z "$network" ]; then
+            echo "No service network to attach Garage to; ClickHouse could not reach it." >&2
+            exit 1
+          fi
+          docker run -d --name garage --network "$network" --network-alias garage \
+            -p 3900:3900 -p 3903:3903 \
+            -v "$PWD/deploy/garage.dev.toml:/etc/garage.toml:ro" \
+            dxflrs/garage:v2.1.0
+          for _ in $(seq 1 40); do
+            if curl -sf -H "Authorization: Bearer ${GARAGE_ADMIN_TOKEN}" \
+              "${GARAGE_ADMIN_URL}/v2/GetClusterStatus" > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          sh deploy/garage-init.sh
+        env:
+          GARAGE_ADMIN_URL: http://localhost:3903
+          GARAGE_ADMIN_TOKEN: dev-admin-token
+          R2_BUCKET: nekolog-dev
+          R2_ACCESS_KEY_ID: GK31c2f218a2e44f485b94239e
+          R2_SECRET_ACCESS_KEY: b0e7a4c21d8f5639ae0c47b2f81d3a6950c8e2b47f1a9d3c6e05b8a2f47c91d3
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -116,4 +142,13 @@ jobs:
           MAILPIT_TEST_REQUIRED: "1"
           MAILPIT_TEST_URL: http://localhost:8025
           SMTP_TEST_URL: smtp://localhost:1025
+          BACKUP_S3_TEST_REQUIRED: "1"
+          BACKUP_S3_TEST_PROBE: http://localhost:3900
+          BACKUP_S3_TEST_ENDPOINT: http://garage:3900/nekolog-dev
+          BACKUP_S3_TEST_ACCESS_KEY: GK31c2f218a2e44f485b94239e
+          BACKUP_S3_TEST_SECRET: b0e7a4c21d8f5639ae0c47b2f81d3a6950c8e2b47f1a9d3c6e05b8a2f47c91d3
+          EXPORT_S3_TEST_REQUIRED: "1"
+          EXPORT_S3_TEST_ENDPOINT: http://garage:3900/nekolog-dev
+          EXPORT_S3_TEST_ACCESS_KEY: GK31c2f218a2e44f485b94239e
+          EXPORT_S3_TEST_SECRET: b0e7a4c21d8f5639ae0c47b2f81d3a6950c8e2b47f1a9d3c6e05b8a2f47c91d3
           FUZZ_RUNS: "1000"

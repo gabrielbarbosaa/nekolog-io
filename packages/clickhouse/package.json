@@ -31,6 +31,7 @@
     "./issues": "./src/issues.ts",
     "./export": "./src/export.ts",
     "./alerts": "./src/alerts.ts",
+    "./backup": "./src/backup.ts",
     "./search": "./src/search/index.ts"
   },
   "publishConfig": {
@@ -65,6 +66,10 @@
       "./alerts": {
         "types": "./dist/alerts.d.mts",
         "default": "./dist/alerts.mjs"
+      },
+      "./backup": {
+        "types": "./dist/backup.d.mts",
+        "default": "./dist/backup.mjs"
       },
       "./search": {
         "types": "./dist/search/index.d.mts",

@@ -30,7 +30,8 @@ const ROLES = ['reader', 'ingest', 'jobs'] as const
 const WRITE_S3 = 'GRANT WRITE ON S3'
 const TEMPORARY_TABLE = 'GRANT CREATE TEMPORARY TABLE ON *.*'
 const READ_DISKS = 'GRANT SELECT ON system.disks'
-const GLOBAL_GRANTS = [WRITE_S3, TEMPORARY_TABLE, READ_DISKS]
+const READ_BACKUPS = 'GRANT SELECT ON system.backups'
+const GLOBAL_GRANTS = [WRITE_S3, TEMPORARY_TABLE, READ_DISKS, READ_BACKUPS]
 
 function vmUser(role: string): string {
   return `nekolog_${role}_${ENVIRONMENT}`
@@ -270,9 +271,51 @@ describe('the capacity reading, which is the one thing outside the platform data
   })
 })
 
+describe('the backup credential, which may write a copy and may not read one row', () => {
+  it.each([
+    ['dev', DEV, 'nekolog_dev'],
+    ['self-host', SELF_HOST, 'nekolog'],
+  ])('holds exactly the three grants a backup needs in %s', (_name, xml, database) => {
+    expect([...grantsOf(xml, 'nekolog_backup')].sort()).toEqual(
+      [`GRANT BACKUP ON ${database}.*`, WRITE_S3, READ_BACKUPS].sort(),
+    )
+  })
+
+  it.each([
+    ['dev', DEV],
+    ['self-host', SELF_HOST],
+  ])('cannot read, write or change a single row in %s', (_name, xml) => {
+    for (const grant of grantsOf(xml, 'nekolog_backup')) {
+      if (grant === READ_BACKUPS) {
+        continue
+      }
+      expect(grant).not.toMatch(/\b(SELECT|INSERT|CREATE|DROP|ALTER|TRUNCATE)\b/)
+    }
+  })
+
+  it.each([
+    ['dev', DEV],
+    ['self-host', SELF_HOST],
+  ])('reads one system table and no other part of system in %s', (_name, xml) => {
+    const onSystem = grantsOf(xml, 'nekolog_backup').filter((grant) => grant.includes('system'))
+    expect(onSystem).toEqual([READ_BACKUPS])
+  })
+
+  it('is not on the vm, because that deployment is not the one being built', () => {
+    expect(usersOf(VM)).not.toContain('nekolog_backup')
+    expect(VM).not.toContain('BACKUP ON')
+  })
+})
+
 describe('the self-host file, where one box runs the whole platform', () => {
   it('names one database, because self-host has no second environment to leak into', () => {
-    for (const user of ['nekolog_reader', 'nekolog_ingest', 'nekolog_jobs', 'nekolog_migrator']) {
+    for (const user of [
+      'nekolog_reader',
+      'nekolog_ingest',
+      'nekolog_jobs',
+      'nekolog_backup',
+      'nekolog_migrator',
+    ]) {
       const grants = grantsOf(SELF_HOST, user)
 
       expect(grants.length).toBeGreaterThan(0)
@@ -286,12 +329,13 @@ describe('the self-host file, where one box runs the whole platform', () => {
     }
   })
 
-  it('cannot reach an object store at all, because self-host runs no exports yet', () => {
+  it('lets nobody but the backup credential reach an object store, since nothing here exports', () => {
     for (const user of ['nekolog_reader', 'nekolog_ingest', 'nekolog_jobs', 'nekolog_migrator']) {
       for (const grant of grantsOf(SELF_HOST, user)) {
         expect(grant).not.toContain('ON S3')
       }
     }
+    expect(grantsOf(SELF_HOST, 'nekolog_backup')).toContain(WRITE_S3)
   })
 
   it('keeps the migrator inside the platform database, unlike a database-wide grant', () => {
@@ -326,10 +370,12 @@ describe('the vm file, where the three environments share one server', () => {
     }
   })
 
-  it('keeps the three grants that cannot name a database down to the jobs role', () => {
+  it('keeps the grants that cannot name a database down to the jobs role', () => {
+    const jobsGlobals = [WRITE_S3, TEMPORARY_TABLE, READ_DISKS]
+
     for (const role of ROLES) {
       const global = grantsOf(VM, vmUser(role)).filter((grant) => GLOBAL_GRANTS.includes(grant))
-      expect(global.sort()).toEqual(role === 'jobs' ? [...GLOBAL_GRANTS].sort() : [])
+      expect(global.sort()).toEqual(role === 'jobs' ? [...jobsGlobals].sort() : [])
     }
   })
 

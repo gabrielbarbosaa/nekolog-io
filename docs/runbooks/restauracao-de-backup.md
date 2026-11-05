@@ -7,12 +7,15 @@
 | Dado | Backup | Se perder |
 |---|---|---|
 | **Postgres** (usuários, orgs, projetos, ambientes, keys, alertas, audit log) | `pg_dump` diário, cifrado com `age`, no R2, retenção de 30 dias | Restaurar. É o único dado insubstituível. |
-| **ClickHouse** (logs) | **Nenhum**, por decisão | Perda aceita: logs são descartáveis e têm TTL curto de qualquer forma. |
+| **ClickHouse** (logs) | `BACKUP DATABASE` diário para um bucket S3 fora da máquina, se configurado | Restaurar. É o dado pelo qual o cliente paga. |
 | **Redis** (códigos, sessões) | **Nenhum**, por decisão | Todo mundo faz login de novo. |
 | **R2** (source maps, exportações) | Nenhum | Exportações são regeneráveis; source maps são reenviados no próximo deploy do cliente. |
 
-Ou seja: **restauração aqui significa Postgres.** Se o problema for ClickHouse,
-não há o que restaurar — veja [incidente §3.3](incidente.md#33-logs-não-aparecem).
+A linha do ClickHouse dizia "nenhum, por decisão — perda aceita: logs são
+descartáveis". Isso valia para um projeto de estudo e **deixou de valer no dia
+em que alguém paga para guardar esses logs**. Hoje existe backup; o que não
+existe é obrigação de configurá-lo, e um container de jobs sem destino avisa
+isso em toda partida.
 
 ## 1. Decidir se é para restaurar
 
@@ -65,6 +68,43 @@ Restaurar o Postgres deixa o resto do sistema fora de sincronia:
   regras criadas depois precisam ser recriadas, regras apagadas voltam a
   disparar.
 
+## 3.5. Restaurar o ClickHouse
+
+Cada backup é um objeto por conta própria em `clickhouse/<carimbo>` dentro do
+bucket, onde o carimbo é o momento da tentativa (`2026-11-05T03-00-00Z`). Não há
+cadeia incremental: **cada um é completo e independe dos outros**, então perder
+um não leva os anteriores junto.
+
+**Restaure sempre num banco novo, nunca por cima do `nekolog`.** Um `RESTORE`
+por cima de uma tabela que existe falha, e insistir com `allow_non_empty_tables`
+mistura o que foi restaurado com o que já estava lá.
+
+```sql
+RESTORE DATABASE nekolog AS nekolog_restaurado
+FROM S3('«endpoint»/«bucket»/clickhouse/«carimbo»', '«key»', '«secret»')
+```
+
+Depois confira antes de trocar qualquer coisa de lugar:
+
+```sql
+SELECT
+  (SELECT count() FROM nekolog_restaurado.logs)              AS linhas,
+  (SELECT count() FROM nekolog_restaurado.usage_per_minute)  AS consumo,
+  (SELECT count() FROM nekolog_restaurado._migrations)       AS migracoes
+```
+
+`usage_per_minute` é o que mede consumo para cobrança, e `_migrations` é o que
+diz em qual versão de schema aquele backup estava — se as migrações do
+repositório estiverem à frente, rode o runner por cima do banco restaurado antes
+de usá-lo.
+
+**Quem pode restaurar não é quem faz o backup.** O `nekolog_backup` só tem
+`BACKUP`, `WRITE ON S3` e leitura de `system.backups`: ele escreve a cópia e não
+consegue ler uma linha de log nem trazer nada de volta. O `nekolog_migrator` não
+tem acesso nenhum a S3. A restauração roda como `default`, com a senha do
+`.env`, e isso é de propósito: restaurar é quebra de vidro, e nenhuma credencial
+de rotina deveria conseguir fazer.
+
 ## 4. Teste de restauração (não espere o incidente)
 
 O plano exige **teste a cada marco** (seção 15.3). Um backup nunca restaurado
@@ -106,3 +146,24 @@ esperança, não backup.
 
 Nada disso roda ainda: falta a variável `BACKUPS_ENABLED`, o banco no Neon, o
 bucket no R2 e o par de chaves do `age`.
+
+## O backup do ClickHouse roda de outro jeito
+
+Não é um cano de comandos num workflow: é a tarefa `clickhouse-backup` no
+`apps/jobs`, que acorda de hora em hora e pergunta ao próprio ClickHouse o que
+já aconteceu hoje. Se o dia já tem um backup pronto, ou se tem um em andamento,
+ela não faz nada. Se tem uma tentativa que falhou, ela **avisa e tenta de
+novo**. Se não consegue nem ler o histórico, **avisa e não começa nada** — não
+dá para decidir "ninguém fez backup hoje" com base numa medição que falhou.
+
+Três coisas que valem saber:
+
+- **Cada tentativa tem nome próprio**, com o momento dentro. O ClickHouse se
+  recusa a escrever por cima de um backup existente, então uma retentativa sobre
+  o mesmo nome falharia para sempre.
+- **O período é o dia UTC.** O `system.backups` é uma tabela em memória: se o
+  ClickHouse reiniciar, a tarefa esquece o que já fez e tira outro backup. Isso
+  é de propósito — na dúvida, fazer backup demais.
+- **Nada aqui apaga backup velho**, porque o ClickHouse não sabe apagar objeto
+  em S3. A retenção é uma regra de ciclo de vida no bucket. Sem ela, o bucket
+  cresce para sempre.

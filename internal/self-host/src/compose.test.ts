@@ -105,6 +105,35 @@ describe('the self-host compose', () => {
     expect(own).toBeLessThan(Number(container) * 1024 * 1024)
   })
 
+  it('backs ClickHouse up as a credential that cannot read a row, never as the jobs one', () => {
+    const jobs = serviceBlock('jobs')
+
+    expect(jobs).toContain('CLICKHOUSE_BACKUP_USER: nekolog_backup')
+    expect(jobs).toMatch(/CLICKHOUSE_BACKUP_PASSWORD: \$\{CLICKHOUSE_BACKUP_PASSWORD:\?/)
+    expect(required()).toContain('CLICKHOUSE_BACKUP_PASSWORD')
+  })
+
+  it('leaves the destination empty rather than inventing one on the same disk', () => {
+    const jobs = serviceBlock('jobs')
+
+    for (const name of [
+      'BACKUP_S3_ENDPOINT',
+      'BACKUP_S3_ACCESS_KEY_ID',
+      'BACKUP_S3_SECRET_ACCESS_KEY',
+    ]) {
+      expect(jobs).toContain(`${name}: \${${name}:-}`)
+      expect(EXAMPLE).toContain(`${name}=`)
+    }
+    expect(EXAMPLE).toContain('A backup on this disk is not a')
+    expect(UP).toContain('CLICKHOUSE_BACKUP_PASSWORD=$(openssl rand -hex 24)')
+  })
+
+  it('gives nobody but the backup credential a reason to hold the object store keys', () => {
+    for (const service of ['ingest', 'api', 'bootstrap', 'clickhouse']) {
+      expect(serviceBlock(service), service).not.toContain('BACKUP_S3_')
+    }
+  })
+
   it('terminates TLS for both addresses it serves', () => {
     const caddy = readFileSync(join(HERE, 'Caddyfile'), 'utf8')
 

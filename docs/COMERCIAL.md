@@ -99,11 +99,31 @@ trabalho real está em A5, A6 e A7.
 | B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P |
 | B6 | Containers para `apps/web` e `apps/docs` no compose | **não existem**; o self-host não tem nenhum dos dois | M |
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
-| B8 | **Backup do ClickHouse** | **não existe em lugar nenhum**; hoje só o Postgres tem | M |
+| B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
 | B9 | Mover o backup do Postgres do Actions para a máquina | o `backup.yml` roda no GitHub | P |
 | B10 | Deploy: como o código chega na VPS | some a integração de git da Vercel | M |
 | B11 | Limitar a memória do ClickHouse e ligar swap | ver a nota sobre o KVM 1 | P |
 | B12 | Monitor externo (Better Stack free) no heartbeat dos jobs | o `HEARTBEAT_URL` já existe e não aponta para nada | P |
+
+### O que o B8 fez, e o que ele deixou para você
+
+A tarefa `clickhouse-backup` manda o `BACKUP DATABASE` direto do ClickHouse para
+um bucket S3, uma vez por dia. Verificado de ponta a ponta: o stack local fez
+backup, restaurou noutro banco e as contagens bateram.
+
+Três coisas continuam sendo decisão sua, e sem elas o backup não existe:
+
+1. **Um bucket fora da máquina.** Backup no mesmo disco morre com o disco. O R2
+   tem camada gratuita de 10 GB e serve para começar; qualquer S3 serve.
+2. **Regra de ciclo de vida nesse bucket.** Nada no código apaga backup velho,
+   porque o ClickHouse não apaga objeto em S3. Sem a regra, o bucket cresce até
+   a conta doer.
+3. **Um teste de restauração de verdade**, depois que a VPS existir. Backup que
+   ninguém restaurou é esperança.
+
+O **B9** (tirar o backup do Postgres do GitHub Actions) ficou de fora de
+propósito: é outro mecanismo — `pg_dump | gzip | age` — e misturar os dois numa
+mudança só esconde qual deles quebrou.
 
 ### Sobre começar no KVM 1
 

@@ -12,6 +12,7 @@ import type {
   UsageStore,
 } from '@nekolog-io/adapters'
 import type { AlertTarget } from '@nekolog-io/clickhouse/alerts'
+import type { BackupDestination } from '@nekolog-io/clickhouse/backup'
 import type { ExportDestination } from '@nekolog-io/clickhouse/export'
 import type { DeliveryOptions } from './alerts/deliver.ts'
 import { registerTasks } from './schedule.ts'
@@ -24,6 +25,12 @@ import {
 } from './tasks/alert-evaluate.ts'
 import { type AlertNotifyEvent, alertNotifyTask } from './tasks/alert-notify.ts'
 import { type CapacityAlert, capacityWatchTask, type DiskReader } from './tasks/capacity-watch.ts'
+import {
+  type BackupHistoryReader,
+  type BackupStarter,
+  type ClickHouseBackupAlert,
+  clickHouseBackupTask,
+} from './tasks/clickhouse-backup.ts'
 import { type ExportNotifyEvent, exportNotifyTask } from './tasks/export-notify.ts'
 import { type ExportRunEvent, type ExportWriter, exportRunTask } from './tasks/export-run.ts'
 import { type ExportScheduleEvent, exportScheduleTask } from './tasks/export-schedule.ts'
@@ -64,6 +71,10 @@ export type TaskDeps = {
   alertChannels?: AlertChannelStore
   alertDelivery?: DeliveryOptions
   onAlertNotifyEvent?: (event: AlertNotifyEvent) => void
+  backupDestination?: BackupDestination
+  backupHistory?: BackupHistoryReader
+  startBackup?: BackupStarter
+  onBackupAlert?: (alert: ClickHouseBackupAlert) => void
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
@@ -146,7 +157,24 @@ export function buildTasks(deps: TaskDeps): readonly Task[] {
           }),
         ]
 
+  const backing =
+    deps.backupDestination === undefined ||
+    deps.backupHistory === undefined ||
+    deps.startBackup === undefined ||
+    deps.clickHouseDatabase === undefined
+      ? []
+      : [
+          clickHouseBackupTask({
+            database: deps.clickHouseDatabase,
+            destination: deps.backupDestination,
+            history: deps.backupHistory,
+            start: deps.startBackup,
+            ...(deps.onBackupAlert === undefined ? {} : { onAlert: deps.onBackupAlert }),
+          }),
+        ]
+
   return registerTasks([
+    ...backing,
     ...alerting,
     ...notifying_alerts,
     ...grouping,

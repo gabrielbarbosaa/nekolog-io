@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-ADMIN="http://garage:3903"
+ADMIN="${GARAGE_ADMIN_URL:-http://garage:3903}"
 
 api() {
   method=$1

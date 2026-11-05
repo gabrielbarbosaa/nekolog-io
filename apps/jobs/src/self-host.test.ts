@@ -11,7 +11,10 @@ import { buildSeed, toDocument } from '@internal/seed'
 import type { SqlRunner } from '@nekolog-io/adapters'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  BACKUP_VARIABLES,
+  backupWiringFrom,
   DEFAULT_JOBS_PORT,
+  NO_BACKUP_WARNING,
   portFrom,
   type SelfHostJobsEnv,
   selfHostJobsConfigFrom,
@@ -44,6 +47,13 @@ function envFor(): SelfHostJobsEnv {
     KV_DIR: join(folder, 'kv'),
   }
 }
+
+const backupEnv = {
+  CLICKHOUSE_BACKUP_PASSWORD: 'another-one',
+  BACKUP_S3_ENDPOINT: 'https://account.r2.cloudflarestorage.com/nekolog-backups',
+  BACKUP_S3_ACCESS_KEY_ID: 'GK31c2f218a2e44f485b94239e',
+  BACKUP_S3_SECRET_ACCESS_KEY: 'b'.repeat(64),
+} satisfies Partial<SelfHostJobsEnv>
 
 const NOTHING: SqlRunner = async () => []
 
@@ -142,6 +152,54 @@ describe('what the self-host jobs container actually runs', () => {
     expect(deps.alertDelivery?.secretKey).toBe('a'.repeat(64))
     expect(deps.alertDelivery?.dashboardUrl).toBe('https://logs.example.com')
     expect(deps.alertTarget?.database).toBe('nekolog')
+  })
+
+  it('does not back ClickHouse up until somebody says where to, and says so out loud', () => {
+    const config = selfHostJobsConfigFrom(envFor())
+    const here = names(selfHostJobTasks({ config, sql: NOTHING }))
+
+    expect(config.backup).toBeUndefined()
+    expect(here).not.toContain('clickhouse-backup')
+    expect(NO_BACKUP_WARNING).toContain('exactly one place')
+    for (const name of BACKUP_VARIABLES) {
+      expect(NO_BACKUP_WARNING).toContain(name)
+    }
+  })
+
+  it('backs it up once the destination and the credential are there', () => {
+    const config = selfHostJobsConfigFrom({ ...envFor(), ...backupEnv })
+    const here = names(selfHostJobTasks({ config, sql: NOTHING }))
+
+    expect(here).toContain('clickhouse-backup')
+    expect(config.backup?.clickHouse.user).toBe('nekolog_backup')
+    expect(config.backup?.clickHouse.database).toBe('nekolog')
+  })
+
+  it('runs the backup as a credential of its own, never as the jobs one', () => {
+    const config = selfHostJobsConfigFrom({ ...envFor(), ...backupEnv })
+
+    expect(config.backup?.clickHouse.user).not.toBe(config.clickHouse.user)
+    expect(config.backup?.clickHouse.password).not.toBe(config.clickHouse.password)
+  })
+
+  it.each([...BACKUP_VARIABLES, 'CLICKHOUSE_BACKUP_PASSWORD' as const])(
+    'refuses to start with %s missing from the rest',
+    (name) => {
+      expect(() => backupWiringFrom({ ...envFor(), ...backupEnv, [name]: undefined })).toThrow(
+        new RegExp(`half configured: .*${name}`),
+      )
+    },
+  )
+
+  it('takes the credential name as given, and names it itself when nobody did', () => {
+    const chosen = backupWiringFrom({
+      ...envFor(),
+      ...backupEnv,
+      CLICKHOUSE_BACKUP_USER: 'someone_else',
+    })
+
+    expect(chosen?.clickHouse.user).toBe('someone_else')
+    expect(backupWiringFrom({ ...envFor(), ...backupEnv })?.clickHouse.user).toBe('nekolog_backup')
   })
 
   it('exports nothing yet, and does not pretend otherwise', () => {

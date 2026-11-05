@@ -88,7 +88,7 @@ services:
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-dev-admin-token}
       R2_BUCKET: ${R2_BUCKET:-nekolog-dev}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-GK31c2f218a2e44f485b94239e}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-4420d5c5d6b0b5e6a1e1d8f3c2b7a9e0f1d2c3b4a5968778}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-b0e7a4c21d8f5639ae0c47b2f81d3a6950c8e2b47f1a9d3c6e05b8a2f47c91d3}
     entrypoint: ["/bin/sh", "/garage-init.sh"]
 
 volumes:
