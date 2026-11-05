@@ -6,7 +6,7 @@
 
 | Dado | Backup | Se perder |
 |---|---|---|
-| **Postgres** (usuários, orgs, projetos, ambientes, keys, alertas, audit log) | `pg_dump` diário, cifrado com `age`, no R2, retenção de 30 dias | Restaurar. É o único dado insubstituível. |
+| **Postgres** (usuários, orgs, projetos, ambientes, keys, alertas, audit log) | `pg_dump` diário **pela própria máquina**, cifrado com `age`, num bucket S3, retenção de 30 dias | Restaurar. |
 | **ClickHouse** (logs) | `BACKUP DATABASE` diário para um bucket S3 fora da máquina, se configurado | Restaurar. É o dado pelo qual o cliente paga. |
 | **Redis** (códigos, sessões) | **Nenhum**, por decisão | Todo mundo faz login de novo. |
 | **R2** (source maps, exportações) | Nenhum | Exportações são regeneráveis; source maps são reenviados no próximo deploy do cliente. |
@@ -131,21 +131,37 @@ que não foi testado.
   [incidente §5](incidente.md#5-se-for-incidente-de-segurança): indisponibilidade
   prolongada de dado pessoal também tem implicação sob a LGPD.
 
-## Como o backup roda hoje
+## Como o backup do Postgres roda hoje
 
-O workflow [`backup.yml`](../../.github/workflows/backup.yml) faz o dump diário às
-05:17 UTC: `pg_dump | gzip | age` num cano só, sem arquivo legível no meio, e
-confere a assinatura `age-encryption.org` antes de subir para o R2. A limpeza
-usa o `internal/backup`, que **recusa** apagar a lista inteira — se tudo parece
-vencido, o errado é o relógio.
+**Na máquina, não no GitHub.** O container `backup` do `deploy/self-host` roda
+`pg_dump | gzip | age | rclone rcat` num cano só: nenhum `.sql` legível existe
+em momento algum, nem dentro do container. Ele não guarda estado — pergunta ao
+bucket o que já tem do dia — e **não apaga nada num dia em que falhou em
+escrever**.
 
-**O teste de restauração é o mesmo workflow**, disparado à mão com
-`restore_test`: ele baixa o backup mais recente, restaura num Postgres
-descartável e consulta cada tabela, uma a uma. Backup que ninguém restaurou é
-esperança, não backup.
+Saiu do Actions por dois motivos. O primeiro é prático: o Postgres da VPS não
+publica porta nenhuma, então um runner do GitHub não tem como alcançá-lo sem
+expor o banco na internet. O segundo é de custo: o repositório é privado e os
+minutos do Actions passaram a ser contados.
 
-Nada disso roda ainda: falta a variável `BACKUPS_ENABLED`, o banco no Neon, o
-bucket no R2 e o par de chaves do `age`.
+**O teste de restauração continua no Actions**, à mão
+([`backup.yml`](../../.github/workflows/backup.yml)): ele baixa o backup mais
+recente, confere a assinatura `age-encryption.org`, restaura num Postgres
+descartável e consulta cada tabela, uma a uma. **Restaurar numa máquina
+diferente da que fez o backup é a única versão desse teste que vale** — ela
+exercita também a chave privada do `age`, que é o ponto de falha mais provável.
+
+Nada disso roda ainda: falta a variável `BACKUPS_ENABLED`, a máquina, o bucket e
+o par de chaves do `age`.
+
+### Uma coisa que esteve errada o tempo todo
+
+O workflow mandava a connection string inteira em `PGDATABASE`. A libpq trata
+essa variável como **nome de banco**, não como URI, então o `pg_dump` ignorava
+host, porta, usuário e senha e tentava o socket local. Ninguém tinha visto
+porque o workflow nunca rodou. O `pgEnvFrom` agora quebra a URI nas variáveis
+que a libpq realmente lê. Se você tiver um procedimento manual anotado em algum
+lugar com `PGDATABASE=postgres://…`, ele não funciona.
 
 ## O backup do ClickHouse roda de outro jeito
 

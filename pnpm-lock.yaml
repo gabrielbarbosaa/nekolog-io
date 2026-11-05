@@ -355,6 +355,9 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)
+      '@internal/backup':
+        specifier: workspace:*
+        version: link:../../internal/backup
       '@internal/self-host':
         specifier: workspace:*
         version: link:../../internal/self-host

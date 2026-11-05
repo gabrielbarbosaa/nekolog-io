@@ -128,10 +128,29 @@ describe('the self-host compose', () => {
     expect(UP).toContain('CLICKHOUSE_BACKUP_PASSWORD=$(openssl rand -hex 24)')
   })
 
-  it('gives nobody but the backup credential a reason to hold the object store keys', () => {
+  it('gives nobody but the two backup paths a reason to hold the object store keys', () => {
     for (const service of ['ingest', 'api', 'bootstrap', 'clickhouse']) {
       expect(serviceBlock(service), service).not.toContain('BACKUP_S3_')
     }
+  })
+
+  it('dumps the Postgres from a container of its own, so a slow dump blocks no task', () => {
+    const backup = serviceBlock('backup')
+
+    expect(backup).toContain('command: ["node", "apps/jobs/src/backup.ts"]')
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a compose placeholder, not a JS template
+    expect(backup).toContain('BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}')
+    expect(backup).toMatch(/\n {4}mem_limit: /)
+    expect(backup).not.toContain('ports:')
+    expect(serviceBlock('jobs')).not.toContain('BACKUP_AGE_RECIPIENT')
+  })
+
+  it('never writes a readable dump, and never ships the key that would read one', () => {
+    expect(DOCKERFILE).toContain('postgresql18-client age rclone')
+    expect(EXAMPLE).toContain('BACKUP_AGE_RECIPIENT=')
+    expect(EXAMPLE).toContain('keep the private half off this machine')
+    expect(COMPOSE).not.toContain('BACKUP_AGE_IDENTITY')
+    expect(UP).toContain('BACKUP_AGE_RECIPIENT=')
   })
 
   it('terminates TLS for both addresses it serves', () => {

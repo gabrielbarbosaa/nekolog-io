@@ -100,7 +100,7 @@ trabalho real está em A5, A6 e A7.
 | B6 | Containers para `apps/web` e `apps/docs` no compose | **não existem**; o self-host não tem nenhum dos dois | M |
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
-| B9 | Mover o backup do Postgres do Actions para a máquina | o `backup.yml` roda no GitHub | P |
+| B9 | Mover o backup do Postgres do Actions para a máquina | **feito** — container `backup`, `pg_dump \| gzip \| age \| rclone` num cano só; o workflow ficou só com o teste de restauração | P |
 | B10 | Deploy: como o código chega na VPS | some a integração de git da Vercel | M |
 | B11 | Limitar a memória do ClickHouse e ligar swap | ver a nota sobre o KVM 1 | P |
 | B12 | Monitor externo (Better Stack free) no heartbeat dos jobs | o `HEARTBEAT_URL` já existe e não aponta para nada | P |
@@ -121,9 +121,23 @@ Três coisas continuam sendo decisão sua, e sem elas o backup não existe:
 3. **Um teste de restauração de verdade**, depois que a VPS existir. Backup que
    ninguém restaurou é esperança.
 
-O **B9** (tirar o backup do Postgres do GitHub Actions) ficou de fora de
-propósito: é outro mecanismo — `pg_dump | gzip | age` — e misturar os dois numa
-mudança só esconde qual deles quebrou.
+### O B9 veio logo depois, e achou um bug que nunca tinha aparecido
+
+O dump do Postgres saiu do GitHub por dois motivos: o Postgres da VPS não
+publica porta nenhuma, então um runner do GitHub não o alcança sem expor o banco
+na internet; e os minutos do Actions passaram a ser contados quando o
+repositório virou privado.
+
+Ao rodar de verdade pela primeira vez, o `pg_dump` falhou: o workflow mandava a
+connection string inteira em `PGDATABASE`, e a libpq trata essa variável como
+**nome de banco**, não como URI — então ele ignorava host, usuário e senha e
+tentava o socket local. **O backup do Postgres nunca teria funcionado.** Ninguém
+tinha visto porque o workflow está atrás de uma variável que não existe.
+
+O teste de restauração **continua no Actions**, à mão. Restaurar numa máquina
+diferente da que fez o backup é a única versão desse teste que vale: ela
+exercita a chave privada do `age`, que é o ponto de falha mais provável de
+todos.
 
 ### Sobre começar no KVM 1
 

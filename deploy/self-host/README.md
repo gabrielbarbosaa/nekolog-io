@@ -1,6 +1,6 @@
 # The stack
 
-Seven containers that run everything in this repository on one machine. This is
+Eight containers that run everything in this repository on one machine. This is
 the composition the hosted service runs, not a demonstration of it.
 
 **Nothing is backed up until you say where to.** See
@@ -88,8 +88,36 @@ in [the runbook](../../docs/runbooks/restauracao-de-backup.md#35-restaurar-o-cli
 the short version is that you restore into a **new** database and compare counts
 before trusting it.
 
-The Postgres backup is still the one in `.github/workflows/backup.yml`, which
-runs on GitHub and not here.
+### The Postgres goes to the same bucket, by a different route
+
+`BACKUP_AGE_RECIPIENT` turns on the `backup` container, which runs
+`pg_dump | gzip | age | rclone rcat` as **one pipe** — no readable `.sql` ever
+exists, not even for a moment, not even inside the container. It checks the
+bucket on each wake rather than remembering anything, so a restart does not
+produce a second dump, and **it deletes nothing on a day it failed to write
+one**.
+
+It is a container of its own and that is the point: a `pg_dump` can take
+minutes, and a task inside the jobs scheduler would hold every other task —
+alerts, spool, quota — for its whole duration.
+
+`BACKUP_AGE_RECIPIENT` is the **public** half of an age key pair. Keep the
+private half off this machine. That is what makes the difference on the day
+somebody gets in: they reach the bucket, and the backups stay unreadable.
+
+```bash
+docker compose run --rm backup age-keygen -o identity.key   # keep this offline
+docker compose run --rm backup age-keygen -y identity.key   # paste this in .env
+```
+
+Note the asymmetry, which is deliberate and written down as **I15** in the
+threat model: the Postgres dump is encrypted with a key that is not on this
+machine, while the ClickHouse backup is written by ClickHouse itself and is only
+as private as the bucket.
+
+`.github/workflows/backup.yml` no longer dumps anything. It kept the **restore
+test**, by hand, because restoring on a different machine than the one that made
+the backup is the only version of that test worth running.
 
 ## What is deliberately not here
 

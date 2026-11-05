@@ -173,6 +173,25 @@ services:
     command: ["node", "apps/jobs/src/serve.ts"]
     logging: *logging
 
+  backup:
+    <<: *image
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://nekolog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/nekolog
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_ENVIRONMENT: ${BACKUP_ENVIRONMENT:-prod}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-}
+      OPS_DISCORD_WEBHOOK_URL: ${OPS_DISCORD_WEBHOOK_URL:-}
+    mem_limit: ${APP_MEM_LIMIT:-256m}
+    command: ["node", "apps/jobs/src/backup.ts"]
+    logging: *logging
+
   proxy:
     image: caddy:2.10-alpine
     restart: unless-stopped

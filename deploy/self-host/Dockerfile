@@ -3,7 +3,8 @@ FROM node:24-alpine
 ENV COREPACK_HOME=/opt/corepack
 ENV CI=1
 
-RUN corepack enable && apk add --no-cache tini
+RUN corepack enable \
+  && apk add --no-cache tini postgresql18-client age rclone
 
 WORKDIR /app
 COPY . .
