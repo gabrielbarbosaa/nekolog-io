@@ -11,13 +11,8 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 import { createIngestApp } from './app.ts'
 import { createKeyAuthenticator } from './authenticate.ts'
+import { DEFAULT_EVENTS_PER_MINUTE, eventsPerMinuteFrom } from './rate.ts'
 import { createLogStoreSink, type LogStoreSinkOptions, type SpooledBatch } from './sink.ts'
-import {
-  assertEnv,
-  buildIngestApp,
-  DEFAULT_EVENTS_PER_MINUTE,
-  eventsPerMinuteFrom,
-} from './worker.ts'
 
 const KEY = generateApiKey('secret')
 
@@ -313,85 +308,17 @@ describe('waitUntil', () => {
   })
 })
 
-describe('the worker entry', () => {
-  const ENV = {
-    KEYS: {
-      async get() {
-        return null
-      },
-      async put() {},
-      async delete() {},
-    },
-    SPOOL: {
-      async put() {
-        return undefined
-      },
-      async get() {
-        return null
-      },
-      async delete() {},
-      async list() {
-        return { objects: [], truncated: false }
-      },
-    },
-    CLICKHOUSE_URL: 'http://clickhouse.test:8123',
-    CLICKHOUSE_DB: 'nekolog_dev',
-    CLICKHOUSE_INSERT_USER: 'nekolog_ingest',
-    CLICKHOUSE_INSERT_PASSWORD: 'secret',
-  }
-
-  it('accepts a complete environment', () => {
-    expect(assertEnv(ENV)).toBe(ENV)
-  })
-
-  it.each([
-    'KEYS',
-    'SPOOL',
-    'CLICKHOUSE_URL',
-    'CLICKHOUSE_DB',
-    'CLICKHOUSE_INSERT_USER',
-    'CLICKHOUSE_INSERT_PASSWORD',
-  ] as const)('refuses an environment missing %s, and says which', (name) => {
-    const broken = { ...ENV, [name]: undefined }
-
-    expect(() => assertEnv(broken)).toThrow(new RegExp(name))
-  })
-
-  it('names every missing binding at once, not just the first', () => {
-    expect(() => assertEnv({})).toThrow(/KEYS.*CLICKHOUSE_URL/)
-  })
-
-  it('treats an empty string as missing', () => {
-    expect(() => assertEnv({ ...ENV, CLICKHOUSE_URL: '' })).toThrow(/CLICKHOUSE_URL/)
-  })
-
-  it.each(['nope', '0', '-1', '2.5'])(
-    'refuses to boot on the rate limit %s rather than guess one',
-    (limit) => {
-      expect(() => assertEnv({ ...ENV, INGEST_EVENTS_PER_MINUTE: limit })).toThrow(
-        /INGEST_EVENTS_PER_MINUTE/,
-      )
-    },
-  )
-
+describe('the burst brake the entries configure', () => {
   it('falls back to the shipped rate limit when none is configured', () => {
     expect(eventsPerMinuteFrom(undefined)).toBe(DEFAULT_EVENTS_PER_MINUTE)
     expect(eventsPerMinuteFrom('')).toBe(DEFAULT_EVENTS_PER_MINUTE)
     expect(eventsPerMinuteFrom('750')).toBe(750)
   })
 
-  it('builds an app that refuses an unknown key', async () => {
-    const app = buildIngestApp(assertEnv(ENV))
-
-    const response = await app.request(post())
-
-    expect(response.status).toBe(401)
-    expect(await response.json()).toMatchObject({ error: { code: 'invalid_key' } })
-  })
-
-  it('answers the health check without any binding being reachable', async () => {
-    const app = buildIngestApp(assertEnv(ENV))
-
-    expect((await app.request('https://ingest.nekolog.io/health')).status).toBe(200)
-  })
+  it.each(['nope', '0', '-1', '2.5'])(
+    'refuses to boot on the rate limit %s rather than guess one',
+    (limit) => {
+      expect(() => eventsPerMinuteFrom(limit)).toThrow(/INGEST_EVENTS_PER_MINUTE/)
+    },
+  )
 })

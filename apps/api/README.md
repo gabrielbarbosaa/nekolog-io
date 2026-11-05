@@ -89,30 +89,27 @@ are awake.
 ## Running it
 
 ```
-pnpm --filter @apps/api serve                       # against the dev stack, on :8789
-node internal/deploy/src/render-cli.ts \
-  --config apps/api/wrangler.json --environment dev \
-  --out apps/api/wrangler.generated.json
-pnpm --filter @apps/api deploy:dry-run -- --config wrangler.generated.json --env dev
+pnpm --filter @apps/api serve     # against the dev stack, on :8789
 ```
 
 `serve.ts` reads the keys from `.nekolog-seed.json` and talks to Postgres over TCP with
-`postgres`. The Worker reads the keys from Workers KV and talks to Postgres over HTTP
-with Neon's driver, behind the same `SqlRunner` interface — which is the only reason a
-Worker can serve issues at all.
+`postgres`. `serve-self-host.ts` is the same thing inside the container, listening on
+every interface because the Caddy in front of it is the only thing that can reach it.
+
+Until 2026-11-05 there was a third entry, a Cloudflare Worker that read the keys from
+Workers KV and reached Postgres over HTTP with Neon's driver. It went with item D4,
+along with the `SqlRunner` implementation that existed only for it.
 
 ## Environment
 
 | Name | Where | What for |
 | --- | --- | --- |
-| `KEYS` | Worker | KV namespace the key hashes live in. |
-| `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | both | Vars, rendered per environment. |
+| `CLICKHOUSE_URL`, `CLICKHOUSE_DB` | both | Where the logs are. |
 | `CLICKHOUSE_READ_USER`, `CLICKHOUSE_READ_PASSWORD` | both | **Secrets.** `nekolog_reader`. |
 | `DATABASE_URL` | both | **Secret.** Required: without it `/v1/issues` would quietly 404. |
 | `API_REQUESTS_PER_MINUTE` | both | Optional, defaults to 120. |
-| `API_PORT`, `API_HOST`, `API_SEED_FILE` | Node | Defaults `8789`, `127.0.0.1`, `.nekolog-seed.json`. |
-| `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | both | **Secrets**, when ClickHouse sits behind Access. |
+| `API_PORT`, `API_HOST`, `API_SEED_FILE` | both | Defaults `8789`, `127.0.0.1`, `.nekolog-seed.json`. |
+| `SOURCEMAPS_DIR` | self-host | The volume `POST /v1/sourcemaps` writes into. |
 
-The hostname is not in `wrangler.json`: `api-<env>.nekolog.io` is a
-`cloudflare_workers_custom_domain` in `infra/modules/environment`, next to the
-ingestion's.
+The hostname is `api.<domain>`, an A record `infra/vps` publishes at the machine, and
+the Caddy there routes it to this container. Nothing here publishes a port.

@@ -13,8 +13,20 @@ decisões explícitas, nada de "é só ajustar a configuração".
 
 ## Estado destes runbooks
 
-A infraestrutura descrita aqui **ainda não existe** — a VM, o ClickHouse, o
-Neon, o Cloudflare e os segredos são criados a partir do M1. Portanto:
+**Eles descrevem a plataforma anterior, e ela não existe mais.** Em 05/11/2026
+o item D4 removeu o Cloudflare Workers, o Workers KV, o Tunnel, o Access, a VM
+da Oracle e a Vercel; o Neon e o Upstash saíram junto, porque o Postgres e o
+Redis passaram a ser containers na mesma máquina. Tudo roda numa VPS. Então
+cada passo que diz "painel do Cloudflare Zero Trust", "branch do Neon",
+"cota do Worker" ou "reverta pela Vercel" está errado hoje.
+
+Reescrevê-los é parte do item **D5**, e faz sentido fazer isso **junto com a
+máquina** (itens B2 e B3): um runbook escrito antes de existir o que ele
+descreve é o rascunho que esta seção já advertia ser. O que continua válido é
+a forma — passos numerados, decisões explícitas — e a parte do
+`rotacao-de-segredos.md` sobre o `TF_ENCRYPTION`, que é a mesma.
+
+Além disso, e desde antes:
 
 - **Os comandos não foram executados.** São o procedimento pretendido, derivado
   do plano, não um passo a passo testado. Trate-os como rascunho a conferir.

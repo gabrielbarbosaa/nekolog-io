@@ -5,103 +5,81 @@ A infraestrutura como código, em OpenTofu
 
 ```
 modules/
-  workers-kv/    namespace KV com as keys que a ingestão lê
-  r2-buckets/    contingência (spool) e source maps
-  tunnel/        Cloudflare Tunnel e o CNAME que aponta para ele
-  access/        service token dos Workers, políticas e a aplicação Access
-  workers-domain/ o hostname que o Worker de ingestão atende
-  environment/   junta os cinco; é o que cada ambiente chama
-  oracle-vm/     a VM, a rede sem entrada e o cloud-init
-  ssh-access/    a aplicação Access na frente do SSH da máquina
-  vercel-project/ um projeto na Vercel, seus domínios e suas variáveis
-envs/{dev,qa,prod}/   uma raiz por ambiente, um estado por ambiente
-repo/                 rulesets do GitHub; não é um ambiente, é o repositório
-vm/                   a VM; também não é um ambiente — é uma máquina para os três
-vercel/               os três projetos da Vercel; também não é por ambiente
-email/                SPF, DKIM, DMARC e o encaminhamento; o domínio é um só
+  email-dns/       SPF, DKIM, DMARC e o encaminhamento do domínio
+  vps-dns/         os registros A que apontam cada nome para a máquina
+  backup-bucket/   o bucket fora da máquina, e a regra que expira o backup
+repo/              rulesets do GitHub; não é um ambiente, é o repositório
+email/             SPF, DKIM, DMARC e o encaminhamento; o domínio é um só
+vps/               os nomes da máquina e o bucket de backup
 ```
+
+## O que saiu, e por quê
+
+Até 05/11/2026 havia mais oito módulos e cinco raízes: `envs/{dev,qa,prod}`
+descrevia o namespace KV, os buckets R2, o túnel, o Access e o domínio do
+Worker de cada ambiente; `vm` descrevia uma instância ARM da Oracle com uma
+rede sem entrada; `vercel` descrevia três projetos.
+
+Nada disso é o desenho de hoje. **Tudo roda numa VPS**: a ingestão, a API, os
+jobs, o site e a documentação são containers atrás de um Caddy, o spool e os
+source maps são arquivos em volumes, e a borda é o Cloudflare Free
+([`docs/COMERCIAL.md`](../docs/COMERCIAL.md), tabelas B e D). As três raízes
+foram removidas junto com os Workers que as consumiam — e **nenhuma delas
+chegou a ser aplicada uma única vez**, então não há estado órfão em lugar
+nenhum. O que elas diziam continua no histórico do git.
 
 ## E-mail: o domínio é um só, então a raiz é uma só
 
 `infra/email` publica o subdomínio de envio (`mail.nekolog.io`), o SPF e o DKIM
-que a Resend exige, o DMARC do apex e o Email Routing que encaminha `security@`,
-`dmarc@` e `contato@`. Nada disso é por ambiente: é o mesmo domínio para os três.
+que o provedor exige, o DMARC do apex e o Email Routing que encaminha
+`security@`, `dmarc@` e `contato@`.
 
 O DMARC começa em `p=none` por variável, não por acidente — subir direto para
 `reject` sem ler relatório nenhum derruba e-mail legítimo que você ainda nem sabe
 que existe. `adkim=s` e `aspf=s` ficam estritos desde o começo, porque o envio é
 de um subdomínio nosso, não de um provedor compartilhado.
 
-As chaves DKIM só existem depois que o domínio é adicionado na Resend, então elas
-entram por variável (`TF_VAR_dkim_records`) e não têm default. **O endereço para
-onde o Email Routing encaminha é secret separado**, porque é uma caixa pessoal e
-apareceria no plano — mesmo motivo da separação entre nome e valor na Vercel.
+As chaves DKIM só existem depois que o domínio é adicionado no provedor, então
+elas entram por variável (`TF_VAR_dkim_records`) e não têm default. **O endereço
+para onde o Email Routing encaminha é secret separado**, porque é uma caixa
+pessoal e apareceria no plano.
 
-## Por que a Vercel não tem uma raiz por ambiente
+## A máquina: o nome é declarado, o endereço é comprado
 
-Nas outras raízes, ambiente é diretório. Na Vercel não dá: a unidade lá é o
-**projeto**, e um projeto já contém os três — produção é a `main`, e `qa` e
-`dev` são preview de branch. Três projetos por aplicação dariam três histórias
-de deploy desconectadas para a mesma aplicação, e domínio de preview por branch
-é o recurso que a Vercel oferece exatamente para isso.
+`infra/vps` faz duas coisas.
 
-Então `infra/vercel` declara **três projetos**: o site (`apps/web`), a
-documentação (`apps/docs`) e o dashboard, que vem do repositório privado —
-porque toda a infraestrutura mora aqui, mesmo a de lá.
+**Os registros A.** Um por nome que o Caddy da máquina atende, todos
+*proxied* — é isso que o item B5 chama de "Cloudflare Free na frente". O
+endereço entra por `TF_VAR_vps_ipv4`, porque a VPS é comprada à mão no hPanel
+e não existe provider para ela que valha a pena.
 
-O que separa os ambientes é o segredo, não o projeto, e o módulo recusa
-configuração que não separe:
+A lista de nomes tem default (`@`, `ingest`, `api`) e é guardada por teste:
+`internal/infra/src/vps.test.ts` falha se o Caddyfile do self-host passar a
+atender um nome que não tem registro, ou se existir um registro que o Caddy não
+atende. Um nome sem bloco no Caddy não é inofensivo — é um certificado que o
+Let's Encrypt nunca consegue emitir.
 
-- variável sem nenhum `target` não chega a deployment nenhum;
-- variável de produção com `git_branch` faria produção ler o valor de uma
-  branch;
-- **variável sensível com `target = ["preview"]` e sem `git_branch`** é a mesma
-  senha em `dev` e em `qa`, que é o que a etapa 2.22 pede para não acontecer;
-- domínio fora da zona que o módulo administra.
+**O bucket de backup.** O item B8 entregou o backup do ClickHouse e deixou três
+coisas para o operador; esta raiz fecha duas: o bucket existe, e ele tem regra
+de ciclo de vida. A terceira — restaurar de verdade, da máquina — continua
+sendo trabalho de quem tem a máquina.
 
-**Nome e valor são duas variáveis diferentes, e isso não é estilo.** O
-`for_each` do OpenTofu não aceita valor sensível — a chave do recurso apareceria
-em claro —, então `*_variables` diz só quais variáveis existem e onde cada uma
-chega, e `*_values` carrega os valores. A primeira vem de uma *variable* do
-repositório e aparece no plano; a segunda vem de um *secret* e não aparece. O
-módulo recusa declaração sem valor e valor sem declaração, que é o jeito de as
-duas não se separarem na prática.
+A regra expira **só o prefixo `clickhouse/`**, e isso não é descuido. O backup
+do Postgres apaga os próprios arquivos antigos (`BACKUP_KEEP_DAYS`, em
+`internal/backup`); uma regra no bucket inteiro seria uma segunda retenção
+sobre os mesmos objetos, com outro número, e ninguém saberia qual venceu. O
+teste compara o prefixo da regra com o `BACKUP_KEY_PREFIX` do
+`@nekolog-io/clickhouse/backup` e falha se os dois se separarem.
 
-O provedor da Vercel é instalado sem assinatura GPG: o registro do OpenTofu não
-tem chave publicada para ele. O que prende a versão é o `.terraform.lock.hcl`
-com os hashes do artefato, gerado pelo CI e commitado, como nas outras raízes.
-
-## A documentação sai do site, mas não pelo mesmo CSP
-
-`nekolog.io/docs` é reescrito para o projeto da documentação
-(`next.config.ts`, `rewrites`), porque o Astro é construído com `base: '/docs'`
-e o plano diz que site e docs moram no mesmo endereço.
-
-Por isso o `proxy.ts` do `apps/web` **exclui `/docs` do matcher**: o CSP com
-nonce do site e o CSP com hashes da documentação não podem valer para a mesma
-resposta, e se o do site ganhasse, todo script do Starlight seria bloqueado —
-página em branco, sem erro de build.
-
-O teste que guarda isso lê o `functions-config-manifest.json` do build e confere
-em quais caminhos o proxy **foi compilado** para rodar. Foi a segunda tentativa:
-a primeira pedia `/docs/...` ao servidor de produção e conferia que não vinha
-`content-security-policy` — e passava dos dois jeitos, porque sem a documentação
-no ar a reescrita falha antes e a resposta sai sem cabeçalho nenhum. Um teste que
-não distingue as duas configurações não guarda nada. **O comportamento em
-produção, com o destino da reescrita existindo, continua sem verificação até
-haver conta na Vercel.**
-
-A `vm` lê os três estados de ambiente com `terraform_remote_state`, para montar
-o arquivo de credenciais de cada `cloudflared`. Ela aplica depois deles, e só
-pela `main`. O que roda dentro da máquina está em
-[`deploy/vm/`](../deploy/vm/README.md).
+O bucket tem `prevent_destroy`. Um `tofu destroy` distraído não leva os backups
+junto.
 
 ## Nada disso foi aplicado ainda
 
-Esta etapa entrega o **código e o pipeline**, não a infraestrutura. O `apply` só
-roda quando a variável de repositório `INFRA_ENABLED` for `true`, e ela não
-existe. Sem ela o workflow faz só `fmt` e `validate`, que não precisam de
-credencial nenhuma.
+Esta parte do repositório entrega o **código e o pipeline**, não a
+infraestrutura. O `apply` só roda quando a variável de repositório
+`INFRA_ENABLED` for `true`, e ela não existe. Sem ela o workflow faz só `fmt` e
+`validate`, que não precisam de credencial nenhuma.
 
 Isso é de propósito: não há conta Cloudflare configurada, nem bucket de estado,
 e o `apply` do `infra/repo` mexeria nas proteções de branch deste repositório.
@@ -112,20 +90,17 @@ Ligar isso é uma decisão sua, não um efeito colateral de mergear um PR.
 ### 1. O bucket do estado existe antes do OpenTofu
 
 Problema do ovo e da galinha: o estado mora no R2, e o R2 é gerenciado pelo
-OpenTofu. O bucket do estado **não** é gerenciado por ele — crie à mão, uma vez:
-
-```bash
-wrangler r2 bucket create nekolog-tfstate
-```
+OpenTofu. O bucket do estado **não** é gerenciado por ele — crie à mão, uma vez,
+pelo painel da Cloudflare ou por API.
 
 Gere um token de API do R2 (S3) com leitura e escrita nesse bucket. Ele vira
 `TOFU_STATE_ACCESS_KEY_ID` e `TOFU_STATE_SECRET_ACCESS_KEY`.
 
 ### 2. A frase secreta do estado
 
-O estado guarda o segredo do túnel e o client secret do service token em claro.
-Por isso a criptografia nativa do OpenTofu é **obrigatória**: cada raiz declara
-`enforced = true` para estado e plano.
+O estado guarda valores sensíveis em claro. Por isso a criptografia nativa do
+OpenTofu é **obrigatória**: cada raiz declara `enforced = true` para estado e
+plano.
 
 A chave em si vem da variável de ambiente `TF_ENCRYPTION`, nunca do código:
 
@@ -158,16 +133,9 @@ Um token de conta com, no mínimo:
 
 | Permissão | Para quê |
 |---|---|
-| `Workers KV Storage` — edição | o namespace das keys |
-| `Workers R2 Storage` — edição | os buckets |
-| `Cloudflare Tunnel` — edição | o túnel |
-| `Access: Apps and Policies` — edição | a aplicação e as políticas |
-| `Access: Service Tokens` — edição | o token que os Workers usam |
-| `Zone` → `DNS` — edição, na zona `nekolog.io` | o CNAME do túnel |
-| `Workers Scripts` — edição | o `wrangler deploy` e o domínio do Worker |
-
-O mesmo token serve para o workflow `Workers`. Se preferir separar, o do deploy
-precisa só de `Workers Scripts` — edição.
+| `Zone` → `DNS` — edição, na zona `nekolog.io` | os registros da máquina e os do e-mail |
+| `Email Routing` — edição | o encaminhamento de `security@`, `dmarc@` e `contato@` |
+| `Workers R2 Storage` — edição | o bucket de backup |
 
 ### 4. O token do GitHub
 
@@ -178,15 +146,15 @@ Só para `infra/repo`: um token com `administration:write` no repositório. O
 
 Variáveis de repositório: `INFRA_ENABLED`, `TOFU_STATE_BUCKET`,
 `TOFU_STATE_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`),
-`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID` e `OPERATOR_EMAILS` (um JSON de
-lista, porque o tipo da variável é `list(string)`: `["voce@exemplo.com"]`).
+`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`, `VPS_IPV4`, `MAIL_FROM_HOST` e
+`MAIL_DMARC_POLICY`.
 
 Segredos: `TF_ENCRYPTION`, `TOFU_STATE_ACCESS_KEY_ID`,
-`TOFU_STATE_SECRET_ACCESS_KEY`, `CLOUDFLARE_API_TOKEN` e `INFRA_GITHUB_TOKEN`.
+`TOFU_STATE_SECRET_ACCESS_KEY`, `CLOUDFLARE_API_TOKEN`, `INFRA_GITHUB_TOKEN`,
+`MAIL_DKIM_RECORDS` e `MAIL_FORWARD_TO`.
 
-Crie os *environments* `dev`, `qa` e `prod` no GitHub, com aprovação manual no
-`prod`. O `apply` usa o environment da branch; é o que dá o passo manual que o
-plano pede para produção.
+Crie o *environment* `prod` no GitHub, com aprovação manual. O `apply` o usa; é
+o que dá o passo manual que o plano pede para produção.
 
 ## O que o `validate` pega, e o que não
 
@@ -205,30 +173,23 @@ Mas tem um limite, e ele foi medido quebrando o código de propósito:
 | `enforced = true` removido | sim, pela guarda do workflow |
 | **atributo opcional escrito errado dentro de objeto aninhado** | **não** |
 
-O último é o que importa saber. Escrever `serivce_token` em vez de
-`service_token` dentro de um `include` passa batido: a conversão de objeto do
-HCL **descarta** atributo que o tipo de destino não tem, e como todos ali são
-opcionais, sobra uma regra vazia. O resultado seria uma política que não deixa
-ninguém entrar — não é um buraco de segurança, mas é um apply quebrado que o CI
-não anuncia.
-
-Por isso as duas políticas do módulo `access` têm `postcondition`: elas afirmam
-que o `include` resultante é exatamente o service token, e exatamente os
-e-mails de operador. **Essas verificações só rodam no `plan`**, que depende da
-conta existir. O `validate` não as executa.
+O último é o que importa saber: a conversão de objeto do HCL **descarta**
+atributo que o tipo de destino não tem, e quando todos são opcionais sobra um
+bloco vazio que o `validate` aceita. É por isso que o que dá para afirmar em
+`validation` e `precondition` está afirmado ali — mas **`precondition` só roda
+no `plan`**, que depende da conta existir.
 
 ## O fluxo
 
 | Quando | O que roda |
 |---|---|
-| PR que toca `infra/` | `fmt -check` e `validate` nas cinco raízes |
-| mesmo PR, com `INFRA_ENABLED` | `plan` nas cinco raízes |
-| merge na `dev` | `apply` em `envs/dev` |
-| merge na `qa` | `apply` em `envs/qa` |
-| merge na `main` | `apply` em `envs/prod`, em `repo` e na `vm` |
+| PR que toca `infra/` | `fmt -check` e `validate` nas três raízes |
+| mesmo PR, com `INFRA_ENABLED` | `plan` nas três raízes |
+| merge na `main` | `apply` nas três |
 
-Os rulesets do repositório só mudam pela `main`, de propósito: são a proteção
-que impede qualquer uma das outras branches de fazer o que quiser.
+Tudo passa pela `main`, de propósito: os rulesets do repositório são a proteção
+que impede qualquer uma das outras branches de fazer o que quiser, e os nomes
+de DNS e o bucket de backup são de produção — não existe um DNS de `dev`.
 
 ## Os rulesets já existem
 
@@ -250,78 +211,22 @@ conferência.
 export TF_ENCRYPTION='key_provider "pbkdf2" "state" { … }'
 export AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=…
 export TF_VAR_cloudflare_api_token=… TF_VAR_cloudflare_account_id=…
-export TF_VAR_cloudflare_zone_id=… TF_VAR_operator_emails='["voce@exemplo.com"]'
+export TF_VAR_cloudflare_zone_id=… TF_VAR_vps_ipv4=…
 
 cat > backend.hcl <<'EOF'
 bucket    = "nekolog-tfstate"
 endpoints = { s3 = "https://<account>.r2.cloudflarestorage.com" }
 EOF
 
-tofu -chdir=infra/envs/dev init -backend-config=../../../backend.hcl
-tofu -chdir=infra/envs/dev plan
+tofu -chdir=infra/vps init -backend-config=../../backend.hcl
+tofu -chdir=infra/vps plan
 ```
 
 `backend.hcl` e qualquer `*.tfvars` estão no `.gitignore`. Os
 `.terraform.lock.hcl` **não** estão: eles fixam o hash de cada provider, e o CI
 falha se um deles mudar sozinho.
 
-### 6. A Oracle, para a `vm`
-
-Uma chave de API do OCI, com o par OCID da tenancy, OCID do usuário,
-*fingerprint* e a chave privada. Variáveis: `OCI_TENANCY_OCID`, `OCI_USER_OCID`,
-`OCI_FINGERPRINT`, `OCI_REGION`, `OCI_COMPARTMENT_OCID` e `VM_SSH_PUBLIC_KEY`;
-segredo: `OCI_PRIVATE_KEY`.
-
-A `vm` também precisa de `TOFU_STATE_BUCKET` e `TOFU_STATE_ENDPOINT` como
-variáveis **de entrada** (`TF_VAR_state_bucket` e `TF_VAR_state_endpoint`), além
-de backend: ela lê os três estados de ambiente para montar as credenciais do
-`cloudflared`. Desde a 1.18 ela também fala com a Cloudflare, para o quarto
-túnel e a aplicação Access do SSH: precisa de `TF_VAR_cloudflare_api_token`,
-`TF_VAR_cloudflare_account_id`, `TF_VAR_cloudflare_zone_id` e
-`TF_VAR_operator_emails`.
-
-## A ordem no primeiro apply
-
-O domínio do Worker aponta para um Worker **pelo nome**, e a Cloudflare recusa
-apontar para um que não existe. Então, da primeira vez, a ordem é:
-
-1. `WORKERS_DEPLOY_ENABLED=true` e um merge: o `wrangler deploy` cria
-   `nekolog-ingest-<ambiente>`. A verificação de `/health` no fim vai falhar,
-   porque ainda não existe hostname — é esperado.
-2. `INFRA_ENABLED=true` e o `apply` do ambiente: aí nasce
-   `ingest-<ambiente>.nekolog.io`.
-3. O próximo deploy passa inteiro, `/health` incluído.
-
-Depois disso a ordem não importa mais. Deixar o `wrangler` criar o domínio
-sozinho evitaria esse passo, mas colocaria duas ferramentas escrevendo na mesma
-zona; a seção 18 do plano diz que as rotas ficam aqui.
-
-## SSH, que não tem porta aberta
-
-A lista de segurança da OCI continua **só com saída**. O caminho até o `sshd` é
-um quarto túnel (`ssh.nekolog.io`), e na frente dele uma aplicação Access cuja
-política só aceita os e-mails de operador:
-
-```bash
-cloudflared access ssh --hostname ssh.nekolog.io
-```
-
-O service token dos Workers **não** alcança essa aplicação: ela é outra, com
-outra política, e uma `postcondition` afirma que ela tem exatamente uma política
-— a dos operadores. Um token de serviço entrar ali seria um robô com shell.
-
-## O que ainda não está aqui
-
-- **Vercel, Turnstile, Email Routing, Neon e Upstash** — o plano os prevê
-  (seção 15.5); entram quando houver o que configurar.
-
 ## Saídas
 
-Cada ambiente devolve o que os Workers e a VM precisam: `kv_namespace_id`,
-`spool_bucket`, `sourcemaps_bucket`, `ingest_hostname`, `clickhouse_url`,
-`tunnel_id`, `tunnel_account_tag`, `tunnel_secret`, `access_client_id` e
-`access_client_secret`. As três últimas são `sensitive` — saem com `tofu output
--raw`, e vão para os segredos do Worker, nunca para um arquivo.
-
-A `vm` devolve `instance_id`, `public_ip`, `ssh_hostname` e
-`clickhouse_passwords` (sensível).
+`infra/vps` devolve `names`, `proxied`, `backup_bucket` e
+`backup_expiring_prefix`. `infra/email` devolve `send_domain` e `dmarc`.

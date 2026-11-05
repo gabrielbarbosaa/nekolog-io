@@ -156,8 +156,9 @@ declaram só `enforced = true`.
 antiga, e o próximo `init` não consegue abrir. A troca é em dois passos, porque
 o estado precisa ser **recriptografado**:
 
-1. Faça backup do estado atual: `wrangler r2 object get` de cada
-   `<ambiente>/terraform.tfstate`, guardado fora do GitHub.
+1. Faça backup do estado atual: baixe `repo/terraform.tfstate`,
+   `email/terraform.tfstate` e `vps/terraform.tfstate` do bucket (qualquer
+   cliente S3 serve) e guarde fora do GitHub.
 2. Monte um `TF_ENCRYPTION` com os **dois** provedores de chave, o novo como
    método principal e o antigo como `fallback`:
 

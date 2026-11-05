@@ -35,6 +35,19 @@ import { assertKnownParams, parseCount, parseMoment, parsePeriod } from './perio
 export const DEFAULT_REQUESTS_PER_MINUTE = 120
 export const RATE_WINDOW_SECONDS = 60
 
+export function requestsPerMinuteFrom(value: string | undefined): number {
+  if (value === undefined || value === '') {
+    return DEFAULT_REQUESTS_PER_MINUTE
+  }
+  const limit = Number(value)
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error(
+      `API_REQUESTS_PER_MINUTE must be a positive whole number, got ${JSON.stringify(value)}`,
+    )
+  }
+  return limit
+}
+
 export const LOG_PARAMS: readonly string[] = ['from', 'to', 'limit', 'order', 'q']
 export const HISTOGRAM_PARAMS: readonly string[] = ['from', 'to', 'bucket', 'q']
 export const ISSUE_PARAMS: readonly string[] = ['limit', 'status', 'cursor', 'since', 'until']

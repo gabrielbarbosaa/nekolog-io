@@ -5,7 +5,7 @@ export const privacy: LegalDocument = {
   title: 'Política de privacidad',
   summary:
     'Qué recopilamos, qué nunca guardamos a propósito, quién trata los datos con nosotros y cómo obligarnos a borrarlos.',
-  updated: '2026-11-03',
+  updated: '2026-11-05',
   sections: [
     {
       id: 'who-is-responsible',
@@ -73,11 +73,8 @@ export const privacy: LegalDocument = {
         'Usamos infraestructura de terceros, cada una para una sola finalidad, y ninguna recibe tus datos para fines propios:',
       ],
       items: [
-        'Cloudflare: recibe y enruta las solicitudes, guarda los hashes de las claves y los archivos de exportación',
-        'Oracle Cloud: la máquina virtual donde funciona la base de logs',
-        'Neon: la base con cuentas, organizaciones, proyectos y claves',
-        'Upstash: el almacenamiento temporal de sesiones y códigos de inicio de sesión',
-        'Vercel: sirve este sitio y el panel',
+        'Hostinger: el servidor donde funciona todo: los logs, las cuentas, los proyectos, las claves y las sesiones',
+        'Cloudflare: recibe y enruta las solicitudes antes de que lleguen al servidor, y guarda las copias de seguridad',
         'Resend: entrega nuestros correos',
       ],
     },
@@ -85,7 +82,7 @@ export const privacy: LegalDocument = {
       id: 'international-transfer',
       heading: 'Datos fuera de Brasil',
       paragraphs: [
-        'Esos proveedores operan servidores fuera de Brasil, así que operar el servicio implica una transferencia internacional de datos (LGPD, artículo 33). Elegimos proveedores que se comprometen contractualmente con una protección equivalente a la que exige la LGPD, y enviamos a cada uno solo lo que su única finalidad necesita.',
+        'Parte de esos proveedores opera servidores fuera de Brasil, así que operar el servicio implica una transferencia internacional de datos (LGPD, artículo 33). Elegimos proveedores que se comprometen contractualmente con una protección equivalente a la que exige la LGPD, y enviamos a cada uno solo lo que su única finalidad necesita.',
       ],
     },
     {

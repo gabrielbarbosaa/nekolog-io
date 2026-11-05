@@ -55,6 +55,7 @@ export {
   portFrom,
   startLocalIngest,
 } from './local.ts'
+export { DEFAULT_EVENTS_PER_MINUTE, eventsPerMinuteFrom } from './rate.ts'
 export type { RowContext } from './rows.ts'
 export {
   clickHouseTimestamp,
@@ -76,10 +77,3 @@ export {
 } from './self-host.ts'
 export type { LogStoreSinkOptions, SpooledBatch } from './sink.ts'
 export { createLogStoreSink } from './sink.ts'
-export type { ExecutionContextLike, IngestEnv } from './worker.ts'
-export {
-  assertEnv,
-  buildIngestApp,
-  DEFAULT_EVENTS_PER_MINUTE,
-  eventsPerMinuteFrom,
-} from './worker.ts'

@@ -97,9 +97,9 @@ que não está fechada, e está marcada como tal.
 
 | Item | Como está | Onde |
 |---|---|---|
-| Segredo fora do repositório | Sim; `assertNoSecretVars` recusa um segredo no `wrangler.json` | ameaça I11 |
+| Segredo fora do repositório | Sim; toda senha do compose vem do `.env`, e `grants.test.ts` falha se um `<password>` literal aparecer no arquivo de usuários do ClickHouse | ameaça I11 |
 | Cabeçalhos de segurança de uma fonte só | Sim, `@internal/security-headers`, sites e APIs | ameaças T8, T9, I13 |
-| Serviço não expõe porta que não precisa | Sim na VM (só saída, nada publicado); no self-host é de quem instalou | ameaça E9, lista de aceitas |
+| Serviço não expõe porta que não precisa | Sim no compose: só o Caddy publica 80 e 443; o hardening do host é o item B2, ainda por fazer | ameaça E9, lista de aceitas |
 | Credencial de banco com *grant* mínimo, por papel e por ambiente | Sim, com teste que falha se algum alargar | ameaças E10, E11 |
 | Nenhuma rota dispara trabalho agendado | Sim, e um teste falha se alguém adicionar uma | ameaça E12 |
 | Varredura automatizada de vulnerabilidade | Parcial: CodeQL e Scorecard em todo PR; o ZAP é manual até existir `qa` | [zap/README.md](zap/README.md) |

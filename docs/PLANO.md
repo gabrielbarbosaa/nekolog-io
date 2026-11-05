@@ -8,6 +8,25 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 
 É um projeto pessoal e de estudo, **open-core**: SDKs, ingestão, jobs e API de leitura são open source (MIT) e rodam só em serviços gratuitos na nuvem, com self-host completo via Docker. **O dashboard é fechado**, vive no repositório privado [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard) e só roda na instância hospedada na nuvem — não faz parte do self-host. Veja a decisão completa na seção 1 e o detalhe em `docs/adr/` quando o ADR for escrito.
 
+> **Este documento está atrasado em relação às decisões de 05/11/2026, e não é
+> pouco.** O produto deixou de ser open-core: a licença é proprietária e o
+> repositório é privado (tabela A de [COMERCIAL.md](COMERCIAL.md), ADR
+> [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)). E a
+> plataforma descrita abaixo — Cloudflare Workers, Workers KV, R2, Tunnel,
+> Access, VM da Oracle, Neon, Upstash e Vercel — **foi substituída por uma VPS
+> só**, onde tudo roda em containers atrás de um Caddy, com o Cloudflare Free
+> na frente apenas como DNS e proxy. O item D4 removeu o código daquela
+> infraestrutura em 05/11/2026; ele não chegou a ser aplicado nenhuma vez.
+>
+> As seções 3, 4, 5, 14, 15, 17, 18 e 19 descrevem o desenho antigo e ainda
+> precisam ser reescritas — é o item **D5**. O que vale hoje está em
+> [COMERCIAL.md](COMERCIAL.md), em [`infra/README.md`](../infra/README.md) e em
+> [`deploy/self-host/README.md`](../deploy/self-host/README.md). O que continua
+> valendo deste documento são os contratos e os princípios: o formato do
+> payload, a linguagem de busca, o fingerprint, os alertas, a privacidade por
+> padrão, e a regra de que todo comportamento de fornecedor fica atrás de uma
+> interface — foi ela que tornou esta troca possível.
+
 ---
 
 ## 1. Decisões tomadas
@@ -787,7 +806,8 @@ packages/       # publicados no npm
                 # mesmo ClickHouse (ADR 0016). internal/auth (senhas, OTP, JWT,
                 # sessões) é exclusivo do dashboard e vive só lá, não aqui.
 apps/
-  ingest/       # Hono → Cloudflare Workers e Node
+  ingest/       # Hono em Node, num container
+  api/          # API pública de leitura: busca, histograma, issues
   jobs/         # alertas, issues, uso e cotas
   web/          # site público (landing page), tema, i18n — não é o dashboard
   docs/         # Starlight (i18n nativo)
@@ -797,18 +817,16 @@ internal/       # não publicados: só fazem sentido dentro deste repositório
   spool/        # formato da contingência entre ingest e jobs
   seed/         # cria org, projeto, ambientes e keys antes de existir o dashboard
   tracking/     # projeta o docs/ETAPAS.md no GitHub (milestones e issues)
-  deploy/       # resolve a configuração do wrangler na hora do deploy
-  self-host/    # os adaptadores de arquivo que substituem R2 e KV numa máquina
+  infra/        # confere o que está declarado em infra/ contra o que roda
+  self-host/    # os adaptadores de arquivo que guardam o spool e os bloqueios
   security-headers/ # uma política de cabeçalhos, lida pelo site, pela doc e pelas APIs
   backup/       # nomes, retenção e verificação do dump cifrado
   load/         # scripts do k6, o corpus que eles mandam e os limites da plataforma
   compat/       # a matriz de runtimes, rodada sobre o dist e não sobre o fonte
   release/      # o SBOM de cada pacote publicado e a conferência da release
 examples/       # express, nestjs, next, react-vite (também nos testes e2e)
-deploy/         # docker-compose (dev e self-host), cloud-init da VM, segredos do deploy
-                # O wrangler.json de cada Worker fica junto do app, porque o
-                # caminho do entry point e os tipos são relativos a ele.
-infra/          # OpenTofu: módulos e um diretório por ambiente
+deploy/         # docker-compose (dev e self-host), Caddyfile, Dockerfiles
+infra/          # OpenTofu: repositório, e-mail e os nomes da máquina
 docs/adr/       # registro das decisões de arquitetura
 docs/security/  # modelo de ameaças e checklists
 docs/runbooks/  # incidentes, rotação de segredos, restauração de backup

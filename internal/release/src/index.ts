@@ -1,3 +1,5 @@
+export type { JsonObject, JsonValue } from './json.ts'
+export { isJsonObject, parseJsonObject, readJsonObject } from './json.ts'
 export type { SbomDocument, SbomReport, WorkspaceProject } from './sbom.ts'
 export {
   assertComplete,

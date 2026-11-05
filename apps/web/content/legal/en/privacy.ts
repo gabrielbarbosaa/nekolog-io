@@ -5,7 +5,7 @@ export const privacy: LegalDocument = {
   title: 'Privacy Policy',
   summary:
     'What we collect, what we deliberately never store, who processes it with us, and how to make us delete it.',
-  updated: '2026-11-03',
+  updated: '2026-11-05',
   sections: [
     {
       id: 'who-is-responsible',
@@ -73,11 +73,8 @@ export const privacy: LegalDocument = {
         'We use third-party infrastructure, each for a single purpose, and none of them receives your data for purposes of their own:',
       ],
       items: [
-        'Cloudflare — receives and routes the requests, stores API key hashes and export files',
-        'Oracle Cloud — the virtual machine where the log database runs',
-        'Neon — the database holding accounts, organizations, projects and keys',
-        'Upstash — the short-lived session and login-code store',
-        'Vercel — serves this site and the dashboard',
+        'Hostinger — the server everything runs on: the logs, the accounts, the projects, the keys and the sessions',
+        'Cloudflare — receives and routes the requests before they reach the server, and holds the backups',
         'Resend — delivers our e-mail',
       ],
     },
@@ -85,7 +82,7 @@ export const privacy: LegalDocument = {
       id: 'international-transfer',
       heading: 'Data outside Brazil',
       paragraphs: [
-        'Those providers operate servers outside Brazil, so running the service involves an international transfer of data (LGPD, article 33). We choose providers that commit contractually to protection equivalent to what the LGPD requires, and we send each of them only what its single purpose needs.',
+        'Some of those providers operate servers outside Brazil, so running the service involves an international transfer of data (LGPD, article 33). We choose providers that commit contractually to protection equivalent to what the LGPD requires, and we send each of them only what its single purpose needs.',
       ],
     },
     {
