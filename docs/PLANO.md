@@ -602,7 +602,7 @@ Paleta **Grafite**: interface neutra (zinco), com tema claro e escuro. O arquivo
 - **Dashboard:** `next-intl`. O idioma vem da preferência salva no perfil (`users.locale`) ou, no primeiro acesso, do navegador. Datas e números usam `Intl`, no idioma e no fuso do usuário.
 - **E-mails:** templates do React Email nos três idiomas, enviados no idioma de cada usuário.
 - **Documentação:** Starlight com i18n nativo (`/`, `/pt-br/`, `/es/`).
-- **README:** `README.md` em inglês, com `README.pt-BR.md` e `README.es.md`.
+- **README:** `README.md`, só em inglês. As versões em português e espanhol foram removidas em 05/11/2026 (ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)): com o repositório privado, o README deixou de ser vitrine e virou documento interno, lido por um grupo só. A regra dos três idiomas continua valendo inteira para o que o cliente lê — site, documentação, dashboard e e-mails —, que é o que a [0011](adr/0011-tres-idiomas.md) queria de fato.
 - **Código, commits, branches e PRs:** em inglês. Issues em português e espanhol são bem-vindas.
 - **Mensagens do SDK** (avisos no console): só em inglês.
 - **Qualidade:** um teste no CI falha se uma chave de tradução existir num idioma e faltar em outro.
@@ -850,15 +850,42 @@ A redação **não** foi otimizada, embora seja o segundo maior custo (1,7 ms so
 pula valores, e um controle de privacidade que silenciosamente deixa de redigir
 é pior que um que redige demais — a mesma regra da seção 14.
 
-## 20. Open source
+## 20. Licença e distribuição
 
-- **Open-core:** este repositório (SDKs, ingestão, jobs, site, docs) é open source sob MIT. O dashboard (`nekolog-dashboard`) é fechado e só roda na instância hospedada — ver seção 1.
-- **Licença:** MIT em todo este repositório.
-- **Arquivos da comunidade:** `README` em inglês (com versões em português e espanhol), com GIF e quickstart, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY.md` (com o private vulnerability reporting do GitHub), templates de issue e PR, label `good first issue`, Discussions, roadmap público no GitHub Projects.
-  - **Saiu na 6.8**, menos o GIF: ele mostraria o dashboard, que é fechado e não tem instância rodando. Gravar um GIF da API de leitura respondendo JSON não venderia nada que o quickstart já não conte melhor, então o lugar dele é junto com a demo pública, no outro repositório. O que o `README` ganhou no lugar foi a seção de números medidos — incluindo o orçamento de 5 kB que o SDK de navegador **não** cumpre.
-- **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da seção 1.
-- **Demo pública** com dados falsos e sessão somente leitura.
-- **Divulgação na 1.0:** TabNews, dev.to e Show HN. O texto está em [docs/launch/](launch/README.md), em inglês e em português, com o que precisa acontecer antes de publicar. Não há versão em espanhol de propósito: a regra dos três idiomas vale para o que alguém lê para usar o projeto, e um post é escrito para um site específico — os dois que vão recebê-lo são em inglês e em português.
+> Esta seção era "Open source" e descrevia um projeto MIT com arquivos de
+> comunidade e divulgação pública. A ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)
+> substituiu a [0002](adr/0002-open-core-com-dashboard-fechado.md) em 05/11/2026:
+> o projeto é privado e pago. O histórico do que havia aqui está no git.
+
+- **Licença proprietária**, todos os direitos reservados, com **uma concessão
+  estreita**: os pacotes de SDK podem ser instalados, usados e redistribuídos
+  sem modificação como componente da aplicação de quem contrata, apenas para
+  mandar telemetria ao serviço. Sem essa concessão o produto seria inutilizável,
+  não protegido. O servidor, as bibliotecas compartilhadas e a infraestrutura não
+  têm concessão nenhuma.
+- **Repositório privado.** O código-fonte não é entregue a ninguém.
+- **O cliente recebe duas coisas:** a lib, de um registro, e um login no
+  dashboard hospedado. Ele nunca roda o servidor, então o self-host deixa de ser
+  funcionalidade e vira a ferramenta de deploy da própria instância.
+- **MIT histórica:** o texto que valeu até o commit `966f509` fica em
+  `LICENSES/MIT-historical.txt`. Não é revogável para o material que cobriu, e
+  nenhum pacote chegou a ser publicado sob ela.
+- **Arquivos na raiz:** `README.md` (interno, em inglês), `LICENSE` e
+  `SECURITY.md`. O `CONTRIBUTING.md` e o `CODE_OF_CONDUCT.md` foram removidos —
+  o primeiro descreve contribuição externa que não existe, e o fluxo de trabalho
+  já mora em [docs/process/branching.md](process/branching.md); o segundo governa
+  uma comunidade que não existe.
+- **O `SECURITY.md` não é mais lido por ninguém de fora**, porque o repositório
+  é privado. A política continua valendo e a cópia que o cliente lê precisa ir
+  para o site. O *private vulnerability reporting* do GitHub deixou de ser opção:
+  é recurso de repositório público.
+- **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da
+  seção 1.
+- **Divulgação:** não há. Sem presença pública a distribuição é por convite, e o
+  texto em [docs/launch/](launch/README.md) perdeu o destino — ele afirma MIT,
+  open-core e self-host em todos os parágrafos.
+- **O que falta para cobrar** está em [COMERCIAL.md](COMERCIAL.md), com esforço
+  por item.
 
 ---
 

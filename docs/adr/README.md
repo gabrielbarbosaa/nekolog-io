@@ -10,7 +10,7 @@ consequências que se aceitou conviver.
 | # | Decisão | Status |
 |---|---|---|
 | [0001](0001-registrar-decisoes-de-arquitetura.md) | Registrar decisões de arquitetura | Aceita |
-| [0002](0002-open-core-com-dashboard-fechado.md) | Open-core, com o dashboard fechado | Aceita |
+| [0002](0002-open-core-com-dashboard-fechado.md) | Open-core, com o dashboard fechado | Substituída pela [0017](0017-licenca-proprietaria-e-repositorio-privado.md) |
 | [0003](0003-so-servicos-gratuitos.md) | Rodar só em serviços gratuitos | Aceita |
 | [0004](0004-clickhouse-em-vm-oracle.md) | ClickHouse numa VM Oracle Always Free | Aceita |
 | [0005](0005-ingestao-hono-em-workers.md) | Ingestão com Hono no Cloudflare Workers | Aceita |
@@ -25,6 +25,7 @@ consequências que se aceitou conviver.
 | [0014](0014-ordem-do-pipeline-de-privacidade-do-sdk.md) | Ordem do pipeline de privacidade e amostragem no SDK | Aceita |
 | [0015](0015-fingerprint-calculado-na-ingestao.md) | Fingerprint de erro calculado na ingestão | Aceita |
 | [0016](0016-pacotes-compartilhados-no-npm.md) | Pacotes compartilhados publicados no npm | Aceita |
+| [0017](0017-licenca-proprietaria-e-repositorio-privado.md) | Licença proprietária e repositório privado | Aceita |
 
 ## O que vira ADR e o que não vira
 

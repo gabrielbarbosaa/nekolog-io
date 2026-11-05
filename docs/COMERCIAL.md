@@ -62,19 +62,25 @@ mais trabalho e protege mais.
 
 Esforço: **P** até um dia, **M** dois a cinco dias, **G** mais que uma semana.
 
-| # | O que fazer | Por quê | Esforço | Depende |
-|---|---|---|---|---|
-| A1 | **Escolher a licença** | trava tudo abaixo e o npm | P | — |
-| A2 | Decidir a licença por grupo de pacote | SDK não pode ser restritivo | P | A1 |
-| A3 | Trocar `LICENSE` e guardar o MIT histórico em `LICENSES/` | o que já saiu continua MIT | P | A1 |
-| A4 | Campo `license` em 17 `package.json` | é o que o npm mostra | P | A2 |
-| A5 | Reescrever `README` ×3, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY` | todos afirmam MIT e open-core | M | A1 |
-| A6 | Reescrever a documentação: introdução, quickstart, self-host, versionamento, privacidade — **nos três idiomas** | mesma coisa | M | A1 |
-| A7 | Reescrever a landing (`apps/web`, 3 locales) e o post de lançamento | a página diz "o que é aberto e o que não é" | M | A1 |
-| A8 | Consertar `readme.test.ts` e `claims.test.ts` | **eles verificam essas frases e vão apontar o que falta** | P | A5–A7 |
-| A9 | ADR novo revogando o [0002](adr/0002-open-core-com-dashboard-fechado.md) | ADR não se edita, se supera | P | A1 |
-| A10 | Decidir: CLA para contribuição externa, ou fechar PR de terceiro | sem isso, contribuição de fora complica a licença | P | A1 |
-| A11 | Regerar os SBOM | o CycloneDX carrega a licença | P | A4 |
+| # | O que fazer | Estado | Esforço |
+|---|---|---|---|
+| A1 | Escolher a licença | **feito** — proprietária, todos os direitos reservados | P |
+| A2 | Decidir a licença por grupo de pacote | **feito** — uma só, inclusive nos SDKs, com a concessão estreita da seção 3 | P |
+| A3 | Trocar `LICENSE` e guardar o MIT histórico | **feito** — `966f509` é o commit de corte | P |
+| A4 | Campo `license` nos `package.json` | **feito** — 18 manifests | P |
+| A5 | `README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY` | **feito, e menor que o previsto** — as duas traduções do README e os dois arquivos de comunidade foram **removidos**, não reescritos | M |
+| A6 | A documentação: introdução, quickstart, self-host, versionamento, privacidade — **nos três idiomas** | pendente; a parte de self-host **sai** em vez de ser reescrita | M |
+| A7 | A landing (`apps/web`, 3 locales) e o post de lançamento | pendente; o post perdeu o destino | M |
+| A8 | Consertar `readme.test.ts` e `claims.test.ts` | `readme.test.ts` **feito**; `claims.test.ts` vai com A7 | P |
+| A9 | ADR superando a [0002](adr/0002-open-core-com-dashboard-fechado.md) | **feito** — [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md) | P |
+| A10 | CLA, ou fechar PR de terceiro | **resolvido por consequência** — repositório privado, não há PR de terceiro | P |
+| A11 | Regerar os SBOM | nada a fazer: o CycloneDX lê a licença do manifest | P |
+
+O `readme.test.ts` deixou de conferir as frases antigas e passou a guardar as
+novas: os arquivos removidos **não podem voltar**, nada na raiz pode chamar o
+projeto de MIT, open source ou open core, e a concessão do SDK não pode sumir
+do `LICENSE` — sem ela o produto não é vendável. Verificado por sabotagem nas
+três.
 
 **60 arquivos `.md` mencionam MIT, open-core ou self-host.** A maior parte é
 CHANGELOG e ADR, que são registro histórico e **não devem ser mexidos**. O
