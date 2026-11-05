@@ -855,9 +855,10 @@ pula valores, e um controle de privacidade que silenciosamente deixa de redigir
 - **Open-core:** este repositório (SDKs, ingestão, jobs, site, docs) é open source sob MIT. O dashboard (`nekolog-dashboard`) é fechado e só roda na instância hospedada — ver seção 1.
 - **Licença:** MIT em todo este repositório.
 - **Arquivos da comunidade:** `README` em inglês (com versões em português e espanhol), com GIF e quickstart, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY.md` (com o private vulnerability reporting do GitHub), templates de issue e PR, label `good first issue`, Discussions, roadmap público no GitHub Projects.
+  - **Saiu na 6.8**, menos o GIF: ele mostraria o dashboard, que é fechado e não tem instância rodando. Gravar um GIF da API de leitura respondendo JSON não venderia nada que o quickstart já não conte melhor, então o lugar dele é junto com a demo pública, no outro repositório. O que o `README` ganhou no lugar foi a seção de números medidos — incluindo o orçamento de 5 kB que o SDK de navegador **não** cumpre.
 - **ADRs** em [docs/adr/](adr/README.md), cobrindo as decisões arquiteturais da seção 1.
 - **Demo pública** com dados falsos e sessão somente leitura.
-- **Divulgação na 1.0:** TabNews, dev.to e Show HN.
+- **Divulgação na 1.0:** TabNews, dev.to e Show HN. O texto está em [docs/launch/](launch/README.md), em inglês e em português, com o que precisa acontecer antes de publicar. Não há versão em espanhol de propósito: a regra dos três idiomas vale para o que alguém lê para usar o projeto, e um post é escrito para um site específico — os dois que vão recebê-lo são em inglês e em português.
 
 ---
 

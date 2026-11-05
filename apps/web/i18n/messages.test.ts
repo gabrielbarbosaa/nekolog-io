@@ -29,6 +29,8 @@ function flattenEntries(messages: Messages, prefix = ''): [string, string][] {
 
 const translatedLocales = locales.filter((locale) => locale !== defaultLocale)
 
+const THE_SAME_IN_EVERY_LANGUAGE = ['HomePage.title', 'HomePage.footer.github']
+
 describe('dashboard message i18n parity', () => {
   it('defines the same keys in every locale', async () => {
     const source = flattenKeys(await loadMessages(defaultLocale)).sort()
@@ -46,6 +48,36 @@ describe('dashboard message i18n parity', () => {
         extra,
         `${locale}.json has keys absent from ${defaultLocale}.json: ${extra.join(', ')}`,
       ).toEqual([])
+    }
+  })
+
+  it('has no translation that is still the English sentence', async () => {
+    const source = new Map(flattenEntries(await loadMessages(defaultLocale)))
+
+    for (const locale of translatedLocales) {
+      const untranslated = flattenEntries(await loadMessages(locale))
+        .filter(([key, value]) => source.get(key) === value)
+        .map(([key]) => key)
+        .filter((key) => !THE_SAME_IN_EVERY_LANGUAGE.includes(key))
+
+      expect(
+        untranslated,
+        `${locale}.json still carries the English text at: ${untranslated.join(', ')}`,
+      ).toEqual([])
+    }
+  })
+
+  it('knows that the allow-list is for names, not for sentences', async () => {
+    const source = await loadMessages(defaultLocale)
+    const values = new Map(flattenEntries(source))
+
+    for (const key of THE_SAME_IN_EVERY_LANGUAGE) {
+      const value = values.get(key)
+
+      expect(value, `${key} is on the allow-list but is not a message`).toBeDefined()
+      expect((value as string).split(' ').length, `${key} is a sentence, not a name`).toBeLessThan(
+        3,
+      )
     }
   })
 

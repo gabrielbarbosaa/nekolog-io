@@ -1,8 +1,70 @@
 {
   "HomePage": {
     "title": "NekoLog",
-    "tagline": "Logging platform for JavaScript and TypeScript applications.",
-    "comingSoon": "The dashboard is just getting started."
+    "tagline": "Logging for JavaScript and TypeScript applications, front-end and back-end.",
+    "lede": "SDKs that batch and send what your application already writes, an ingestion API, ClickHouse for storage, background jobs for alerts, and an HTTP API to read it all back.",
+    "status": "Version 1.0. Nothing is published to npm yet and there is no hosted service — what you can do today is run it yourself.",
+    "runIt": "Run it yourself",
+    "readTheDocs": "Read the docs",
+    "sourceOnGitHub": "Source on GitHub",
+    "sampleLabel": "Three lines in your application",
+    "readLabel": "And read it back, with no dashboard involved",
+    "features": {
+      "title": "What it does",
+      "sdks": {
+        "title": "12 SDKs over one core",
+        "body": "Browser, Node, React, Next, Express, Fastify, Hono, NestJS, plus bridges for pino and winston, a CLI and a bundler plugin. One implementation underneath, so they cannot drift."
+      },
+      "privacy": {
+        "title": "Privacy before the network call",
+        "body": "Passwords, tokens, card numbers and CPFs are stripped inside your process, before anything is sent — and again on the server, from a closed list of patterns per environment."
+      },
+      "search": {
+        "title": "A search language, not a substring",
+        "body": "level:error service:api @status>=500 \"timeout\". Parsed, bounded and compiled to parameters, never interpolated into SQL."
+      },
+      "issues": {
+        "title": "Errors grouped at ingestion",
+        "body": "The fingerprint is computed where the event arrives, so grouping never needs a second pass over the table. An issue that was fixed and happens again reopens; one you ignored stays quiet."
+      },
+      "alerts": {
+        "title": "Alerts that fail safe",
+        "body": "Every rule of an environment is measured in one query. A measurement that failed never resolves a firing alert, and a webhook address is checked for SSRF when it is saved and again when it is used."
+      },
+      "otlp": {
+        "title": "OpenTelemetry, if you prefer",
+        "body": "POST /v1/otlp/logs takes OTLP/HTTP and converts it before anything else runs, so an OTLP record goes through exactly the same validation and redaction as a native one."
+      }
+    },
+    "open": {
+      "title": "What is open and what is not",
+      "body": "This repository is MIT: the SDKs, the ingestion, the jobs, the public read API, this page and the documentation. The dashboard — the screens — is closed-source and runs only on the hosted service.",
+      "line": "The line is drawn on purpose. Everything that touches your data, your process and your logs is open and auditable. Self-host gives you ingestion, storage, search, issue grouping and alerts through an HTTP API; what it does not give you is a screen to look at them in.",
+      "selfHostTitle": "In the self-host",
+      "selfHostBody": "Ingestion, OTLP, redaction, sampling, minimum level, quotas, issue grouping, alerts to a webhook, and the read API.",
+      "hostedTitle": "Only on the hosted service",
+      "hostedBody": "The dashboard: the explorer, the charts, the issue screens, saved views, source-map resolution and the export download."
+    },
+    "data": {
+      "title": "What it does with your data",
+      "ip": "The IP address is never written. Not hashed, not truncated — the row carries the country, and a test fails if an address header reaches storage.",
+      "client": "Sensitive values are stripped inside your process, after your own beforeSend hook, so the hook cannot undo it.",
+      "server": "And again on the server, from a closed list of named patterns. You cannot supply a regular expression, because a third party's regex on a Worker with a 10 ms CPU budget is a denial of service you write for yourself.",
+      "url": "A click breadcrumb records the selector, never the element's text. page.url drops the query string, because reset tokens live there.",
+      "link": "What is stored"
+    },
+    "numbers": {
+      "title": "Measured, not claimed",
+      "deps": "@nekolog-io/core has zero runtime dependencies, by contract — and every published package ships a CycloneDX bill of materials built from the lockfile, so a dependency arriving there fails the release.",
+      "size": "The browser SDK does not meet its own size budget. The target was 5 kB gzip; init is 12.05 kB. Most of that is the privacy pipeline, which is not optional. The miss is written down rather than rounded away.",
+      "cpu": "The biggest batch the protocol allows did not fit a free Worker: 500 events cost 10.8 ms of CPU against a 10 ms limit. The client's default batch is 200 events now, and a test guards the budget in CI.",
+      "runtimes": "Node 22, 24 and 26, Bun, Deno, Chromium, Firefox and WebKit run the suite on every pull request — against the built package, not the source."
+    },
+    "footer": {
+      "docs": "Documentation",
+      "github": "GitHub",
+      "license": "MIT licensed"
+    }
   },
   "ThemeToggle": {
     "label": "Theme",
