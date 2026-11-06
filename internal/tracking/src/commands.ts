@@ -1,4 +1,4 @@
-﻿import type { PlannedIssue, PlannedLabel, PlannedMilestone, PlannedUpdate } from './plan.ts'
+import type { PlannedIssue, PlannedLabel, PlannedMilestone, PlannedUpdate } from './plan.ts'
 
 export function repoViewArgs(): string[] {
   return ['repo', 'view', '--json', 'nameWithOwner']

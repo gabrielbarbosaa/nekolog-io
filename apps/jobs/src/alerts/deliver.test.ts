@@ -1,4 +1,4 @@
-﻿import type { AlertChannel, EmailMessage, PendingAlert } from '@nekolog-io/adapters'
+import type { AlertChannel, EmailMessage, PendingAlert } from '@nekolog-io/adapters'
 import { newChannelSecret, SIGNATURE_HEADER, sealSecret, signPayload } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import {

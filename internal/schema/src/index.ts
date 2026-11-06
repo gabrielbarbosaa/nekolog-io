@@ -1,4 +1,4 @@
-﻿export {
+export {
   BATCH_ERROR_CODES,
   type BatchErrorCode,
   EVENT_REJECTION_CODES,

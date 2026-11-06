@@ -1,4 +1,4 @@
-﻿import type { AlertChannel, NoticeOutcome, PendingAlert } from '@nekolog-io/adapters'
+import type { AlertChannel, NoticeOutcome, PendingAlert } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import type { DeliveryOptions, Fetcher } from '../alerts/deliver.ts'
 import type { TaskContext } from '../task.ts'

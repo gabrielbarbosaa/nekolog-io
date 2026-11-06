@@ -1,4 +1,4 @@
-﻿import { parseBatch, uuidv7 } from '@internal/schema'
+import { parseBatch, uuidv7 } from '@internal/schema'
 import { describe, expect, it } from 'vitest'
 import {
   anyValue,

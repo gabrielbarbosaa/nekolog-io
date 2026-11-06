@@ -9,6 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
+    "dev": "node --env-file-if-exists=../../.env src/serve.ts",
     "serve": "node src/serve.ts",
     "serve:self-host": "node src/serve-self-host.ts"
   },

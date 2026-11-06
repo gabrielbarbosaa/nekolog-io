@@ -16,7 +16,11 @@ function reportToConsole(error: unknown): void {
 }
 
 async function main(): Promise<void> {
-  const config = localIngestConfigFrom(process.env)
+  const read = localIngestConfigFrom(process.env)
+  const config = {
+    ...read,
+    ...(read.kvDir === undefined ? {} : { kvDir: resolve(ROOT, read.kvDir) }),
+  }
   const seedFile = resolve(ROOT, config.seedFile)
 
   if (!existsSync(seedFile)) {
@@ -49,6 +53,16 @@ async function main(): Promise<void> {
   }
   write('')
   write(`Aponte NEKOLOG_ENDPOINT do SDK para ${server.url}`)
+
+  if (config.kvDir === undefined) {
+    write('')
+    write(
+      'KV_DIR não está definido, então as keys criadas no dashboard não chegam aqui: ' +
+        'só valem as do arquivo de seed acima.',
+    )
+  } else {
+    write(`keys do dashboard lidas de ${config.kvDir}, publicadas pelo key-sync dos jobs`)
+  }
 }
 
 try {

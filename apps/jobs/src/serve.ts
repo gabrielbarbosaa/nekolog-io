@@ -1,3 +1,5 @@
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
 import type { SqlRunner } from '@nekolog-io/adapters'
 import { ping } from '@nekolog-io/clickhouse/client'
@@ -13,6 +15,8 @@ import {
   selfHostJobTasks,
 } from './self-host.ts'
 import { write, writeSummary } from './wiring.ts'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
 function report(line: string): void {
   process.stdout.write(`${line}\n`)
@@ -31,7 +35,12 @@ function summaryWriter(config: SelfHostJobsConfig): (summary: RunSummary) => voi
 }
 
 async function main(): Promise<void> {
-  const config = selfHostJobsConfigFrom(process.env)
+  const read = selfHostJobsConfigFrom(process.env)
+  const config: SelfHostJobsConfig = {
+    ...read,
+    spoolDir: resolve(ROOT, read.spoolDir),
+    kvDir: resolve(ROOT, read.kvDir),
+  }
 
   if (!(await ping(config.clickHouse))) {
     throw new Error(`Nothing answered on ClickHouse at ${config.clickHouse.url}.`)

@@ -65,9 +65,26 @@ Nothing here costs anything to run.
 `deploy/self-host/.env` by hand from `.env.example` and run
 `docker compose up -d --build` instead.
 
-For day-to-day work on the packages, `pnpm dev` brings up the development
-stack — ClickHouse, Postgres, Valkey, Mailpit and Garage — plus the site on
-:3000 and the documentation on :4321/docs.
+For day-to-day work, `pnpm dev` is the one command. It writes a usable `.env`
+(generating a real Ed25519 signing key, among other things), brings up
+ClickHouse, Postgres, Valkey, Mailpit and Garage, waits for them, applies both
+sets of migrations, and then starts every app: the dashboard on :3001, the
+ingestion on :8787, the jobs on :8788, the read API on :8789, the site on :3000
+and the documentation on :4321/docs. `pnpm dev:doctor` says what is missing when
+something does not answer.
+
+A fresh database has no account, and signing up needs an invitation. Open the
+first one, which also prints the link:
+
+```bash
+pnpm seed init                               # a project, environments and keys
+pnpm seed invite --email you@example.com     # the first account
+```
+
+Sign up through that link, then run the same command again to be made the owner
+of that organisation. From the dashboard you can create your own organisation,
+a project, and the key the SDK below needs — it reaches the ingestion within a
+minute, which is how long the jobs take to publish it.
 
 Then send something:
 

@@ -1,4 +1,4 @@
-﻿import * as v from 'valibot'
+import * as v from 'valibot'
 import { type BatchErrorCode, type EventRejectionCode, rejectionCodeForField } from './codes.ts'
 import { DEFAULT_SERVICE, MAX_BATCH_BYTES, MAX_MESSAGE_BYTES } from './limits.ts'
 import {
