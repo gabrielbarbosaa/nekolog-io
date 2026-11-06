@@ -131,6 +131,44 @@ nesta ordem, e aceita token das duas enquanto a troca estiver em curso — o `ki
 pode trazer mais de um bloco PEM, e `\n` escapado vira quebra de linha, que é
 como um `.env` carrega uma chave.
 
+## Os testes num navegador de verdade
+
+```bash
+pnpm --filter @apps/dashboard build     # o playwright sobe o `next start`
+pnpm --filter @apps/dashboard test:e2e
+```
+
+`e2e/` cobre a lista da §11.11 do plano: código expirado, reusado, a quinta
+tentativa, **outro navegador**, a espera de reenvio, o sexto envio na hora;
+renovação normal, dez requisições paralelas com o mesmo token, reuso encerrando
+a sessão, teto de 30 dias, sair de todos os dispositivos, recuperação de senha
+encerrando sessões, e a ação sensível barrada logo depois da revogação.
+
+**Não há tela de login ainda**, então os testes chamam as rotas com `fetch` de
+dentro da página. Isso não é um atalho: o `fetch` é do navegador, então quem
+guarda os cookies é o Chromium, com as regras dele. É o que faz este nível
+enxergar coisas que nenhum teste abaixo enxerga.
+
+Uma sabotagem provou: tirar o `Secure` dos cookies de login deixou **143 de 143**
+testes de vitest passando e quebrou **8** aqui, porque o navegador recusa um nome
+com prefixo `__Host-` sem `Secure` e a sessão simplesmente não existe.
+
+Cada teste cria a própria conta, então ninguém espera os 60 s de reenvio de
+ninguém — a suíte inteira roda em 20 s. O que o teste precisa forçar (uma sessão
+além do teto de 30 dias, uma janela de graça fechada) ele escreve no Redis
+direto; o resto passa pelas rotas.
+
+O e-mail é lido pela API do Mailpit, e **a caixa é apagada antes de cada envio**.
+A primeira versão filtrava por horário com dois segundos de folga e lia o código
+do login anterior — o `DELETE /api/v1/message/{id}` do Mailpit não apaga nada, o
+certo é `DELETE /api/v1/messages` com os ids no corpo.
+
+**O reuso de token é pego pelo proxy, não pela rota.** O proxy renova antes de
+qualquer rota rodar, então é ele quem vê o token repetido, encerra a sessão,
+limpa os cookies e manda o aviso; a rota recebe uma requisição sem cookie nenhum
+e responde `signed_out`. O ramo `session_ended` do `/api/auth/refresh` continua
+certo para a entrada dele, mas nenhum navegador chega lá.
+
 ## Cinco regras de desenho
 
 Não são preferências: cada uma corrige algo que os mockups da 2.1 erraram, e a
