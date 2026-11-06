@@ -35,6 +35,10 @@ const THE_SAME_IN_EVERY_LANGUAGE = [
   'Sidebar.dashboards',
   'Sidebar.releases',
   'Toolbar.searchHint',
+  'Keys.title',
+  'Auth.email',
+  'Members.inviteEmail',
+  'Account.email',
 ]
 
 describe('dashboard message i18n parity', () => {

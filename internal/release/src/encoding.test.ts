@@ -18,7 +18,7 @@ const SKIP = new Set([
 const WATCHED = ['.ts', '.tsx', '.mjs', '.js', '.json', '.md', '.yml', '.yaml', '.css', '.sql']
 
 const BYTE_ORDER_MARK = 0xfeff
-const DOUBLE_ENCODED = /Ã[\u0080-¿]|â€[\u0080-\u009F“”™]|Â[ -¿]/
+const DOUBLE_ENCODED = /Ã[\u0080-¿]|â€[\u0080-\u009f“”™]|Â[\u0080-¿]/
 
 function filesUnder(directory: string): string[] {
   const found: string[] = []
@@ -49,11 +49,7 @@ function named(path: string): string {
   return relative(ROOT, path).split(sep).join('/')
 }
 
-const HOLDS_THE_PATTERN = [
-  'internal/release/src/encoding.test.ts',
-  'apps/docs/tests/encoding.test.ts',
-  'CLAUDE.md',
-]
+const HOLDS_THE_PATTERN = ['CLAUDE.md']
 
 function holdsThePatternOnPurpose(path: string): boolean {
   return HOLDS_THE_PATTERN.includes(named(path))
@@ -99,6 +95,14 @@ describe('how this repository is written to disk', () => {
       const text = readFileSync(join(ROOT, name), 'utf8')
       expect(DOUBLE_ENCODED.test(text), `${name} no longer needs an exception`).toBe(true)
     }
+  })
+
+  it('leaves a capital with a circumflex alone, which Portuguese spells words with', () => {
+    for (const word of ['Âmbar', 'Ângela', 'Ônibus', 'Única', 'Égua']) {
+      expect(DOUBLE_ENCODED.test(word), `${word} is a word, not corruption`).toBe(false)
+    }
+    const misread = Buffer.from([0xc2, 0xa0]).toString('latin1')
+    expect(DOUBLE_ENCODED.test(misread), 'those same two bytes read as cp1252 are not').toBe(true)
   })
 
   it('notices the shape of the corruption it is looking for', () => {

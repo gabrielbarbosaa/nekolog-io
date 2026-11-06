@@ -78,7 +78,7 @@ export async function POST(request: Request): Promise<Response> {
     }
   })
 
-  const response = NextResponse.json({ status: 'code-sent' })
+  const response = NextResponse.json({ status: 'code-sent', email: signed.email })
   response.cookies.set(
     CHALLENGE_COOKIE,
     sealChallenge(settings.otpSecret, signed.userId, signed.challenge),

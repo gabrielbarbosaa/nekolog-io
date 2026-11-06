@@ -84,7 +84,9 @@ export async function cookieValue(
   return (await context.cookies(BASE_URL)).find((cookie) => cookie.name === name)?.value
 }
 
-export async function anInvitedAddress(): Promise<{ email: string; token: string }> {
+export async function anInvitedAddress(
+  role: 'admin' | 'member' | 'viewer' = 'member',
+): Promise<{ email: string; token: string; organizationId: string }> {
   const email = anAddress()
   const organizationId = newId('org_')
   const token = randomBytes(32).toString('base64url')
@@ -95,11 +97,11 @@ export async function anInvitedAddress(): Promise<{ email: string; token: string
   ])
   await database().unsafe(
     `insert into invites (id, organization_id, email, role, token_hash, expires_at)
-     values ($1, $2, $3, 'member', $4, now() + interval '7 days')`,
-    [newId('inv_'), organizationId, email, createHash('sha256').update(token).digest('hex')],
+     values ($1, $2, $3, $5, $4, now() + interval '7 days')`,
+    [newId('inv_'), organizationId, email, createHash('sha256').update(token).digest('hex'), role],
   )
 
-  return { email, token }
+  return { email, token, organizationId }
 }
 
 export async function anAccount(page: Page): Promise<string> {
