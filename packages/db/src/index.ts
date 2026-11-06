@@ -114,11 +114,15 @@ export const organizations = pgTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    dailyEventQuota: integer('daily_event_quota').notNull().default(10_000),
+    maxRetentionDays: integer('max_retention_days').notNull().default(7),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
     check('organizations_id_shape', sql`id ~ '^org_[0-9A-HJKMNP-TV-Z]{26}$'`),
     check('organizations_name_is_not_blank', sql`length(btrim(name)) > 0`),
+    check('organizations_daily_event_quota_is_positive', sql`daily_event_quota > 0`),
+    check('organizations_max_retention_is_at_least_a_day', sql`max_retention_days >= 1`),
   ],
 )
 

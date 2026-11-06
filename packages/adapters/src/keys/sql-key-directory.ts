@@ -9,7 +9,10 @@ export const LIVE_KEYS = `
          environments.origin_allowlist, environments.redaction_rules
   from api_keys
   join environments on environments.id = api_keys.environment_id
+  join projects on projects.id = environments.project_id
+  join organizations on organizations.id = projects.organization_id
   where api_keys.revoked_at is null
+    and organizations.suspended_at is null
   order by api_keys.id
 `
 

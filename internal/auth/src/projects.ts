@@ -1,4 +1,5 @@
 import { parseRedactionRules, RedactionRuleError } from '@nekolog-io/adapters'
+import { retentionCap } from './members.ts'
 import { newId } from './signup.ts'
 import type { SqlRunner } from './users.ts'
 
@@ -282,6 +283,7 @@ const UPDATE_ENVIRONMENT = `
     origin_allowlist = $9::text[],
     redaction_rules = $10::text::jsonb
   where environments.id = $3 and ${BELONGS_TO}
+    and $5::int <= (select max_retention_days from organizations where organizations.id = $1)
   returning environments.id, environments.name
 `
 
@@ -520,6 +522,11 @@ export async function createEnvironment(
     : { outcome: 'created', environmentId: String(row.id), name: String(row.name) }
 }
 
+export type EnvironmentWritten =
+  | { outcome: 'written'; name: string }
+  | { outcome: 'over-the-cap'; cap: number }
+  | { outcome: 'no-such-environment' }
+
 export async function updateEnvironment(
   run: SqlRunner,
   input: {
@@ -528,8 +535,9 @@ export async function updateEnvironment(
     environmentId: string
     settings: EnvironmentSettings
   },
-): Promise<string | undefined> {
+): Promise<EnvironmentWritten> {
   const { settings } = input
+
   const rows = await run(UPDATE_ENVIRONMENT, [
     input.organizationId,
     input.projectId,
@@ -544,7 +552,24 @@ export async function updateEnvironment(
   ])
 
   const row = rows[0]
-  return row === undefined ? undefined : String(row.name)
+  if (row !== undefined) {
+    return { outcome: 'written', name: String(row.name) }
+  }
+
+  const theirs = await findEnvironment(
+    run,
+    input.organizationId,
+    input.projectId,
+    input.environmentId,
+  )
+  if (theirs === undefined) {
+    return { outcome: 'no-such-environment' }
+  }
+
+  const cap = (await retentionCap(run, input.organizationId)) ?? MAX_RETENTION_DAYS
+  return settings.retentionDays > cap
+    ? { outcome: 'over-the-cap', cap }
+    : { outcome: 'no-such-environment' }
 }
 
 export type EnvironmentRemoved =

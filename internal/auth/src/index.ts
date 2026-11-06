@@ -146,6 +146,29 @@ export {
   roleIn,
   transferOwnership,
 } from './members.ts'
+export type {
+  OperatedAccount,
+  OperatedOrganization,
+  OrganizationStarted,
+  Quota,
+  QuotaSet,
+} from './operator.ts'
+export {
+  ACCOUNT_PAGE,
+  DEFAULT_DAILY_EVENT_QUOTA,
+  DEFAULT_MAX_RETENTION_DAYS,
+  environmentsByOrganization,
+  isOperator,
+  listAccounts,
+  listOrganizations,
+  MAX_DAILY_EVENT_QUOTA,
+  MAX_RETENTION_DAYS as MAX_ORGANIZATION_RETENTION_DAYS,
+  readQuota,
+  setQuota,
+  startAnOrganization,
+  suspendOrganization,
+  suspendUser,
+} from './operator.ts'
 export {
   CODE_TTL_SECONDS,
   codeKey,
@@ -192,6 +215,7 @@ export {
   type PasswordRefusal,
   type PasswordVerdict,
 } from './policy.ts'
+export type { EnvironmentWritten } from './projects.ts'
 export {
   createEnvironment,
   createProject,

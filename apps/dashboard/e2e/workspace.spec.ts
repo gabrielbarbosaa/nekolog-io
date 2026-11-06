@@ -78,7 +78,7 @@ test('an environment setting is saved and comes back changed', async ({ page }) 
     .first()
     .click()
   const retention = page.getByLabel(/retention|retenção|retención/i)
-  await retention.fill('21')
+  await retention.fill('5')
   await page.getByRole('button', { name: /^save$|^salvar$|^guardar$/i }).click()
 
   await expect(page.getByRole('status')).toBeVisible()
@@ -87,7 +87,7 @@ test('an environment setting is saved and comes back changed', async ({ page }) 
     .getByRole('button', { name: /production/ })
     .first()
     .click()
-  await expect(page.getByLabel(/retention|retenção|retención/i)).toHaveValue('21')
+  await expect(page.getByLabel(/retention|retenção|retención/i)).toHaveValue('5')
 })
 
 test('the last environment cannot be removed from the screen either', async ({ page }) => {
