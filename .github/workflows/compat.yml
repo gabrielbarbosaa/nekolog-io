@@ -162,7 +162,7 @@ jobs:
 
       - name: Install the browser
         timeout-minutes: 8
-        run: pnpm --filter @nekolog-io/browser exec playwright install --with-deps ${{ matrix.browser }}
+        run: pnpm --filter @nekolog-io/browser exec playwright install ${{ matrix.browser }}
 
       - name: Run the browser tests
         run: pnpm --filter @nekolog-io/browser run test:browser

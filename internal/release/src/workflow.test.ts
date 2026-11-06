@@ -63,6 +63,18 @@ describe('the order the steps have to run in', () => {
   })
 })
 
+describe('what the browser job is allowed to download', () => {
+  const COMPAT = readFileSync(join(WORKFLOWS, 'compat.yml'), 'utf8')
+
+  it('installs the browser itself, from the CDN that serves it quickly', () => {
+    expect(COMPAT).toMatch(/playwright install \$\{\{ matrix\.browser \}\}/)
+  })
+
+  it('asks apt for nothing, because the runner image already carries the libraries', () => {
+    expect(COMPAT).not.toContain('--with-deps')
+  })
+})
+
 describe('what a hung job is allowed to cost', () => {
   const files = readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))
 
