@@ -143,7 +143,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 
 **Autenticação**
 
-- [ ] **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords.
+- [x] **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords. *(O `internal/auth` nasce aqui. O custo é lido de dentro do digest produzido, não só das constantes. A conta que não existe gasta uma verificação argon2 de verdade contra um digest hasheado uma vez — um digest de mentira voltaria rápido demais. A consulta ao Pwned Passwords manda cinco caracteres do SHA-1 e nada mais, pede `Add-Padding`, tem deadline de 2 s e **falha aberto**: está no modelo de ameaças, com o motivo.)*
 - [ ] **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
 - [ ] **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
 - [ ] **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
