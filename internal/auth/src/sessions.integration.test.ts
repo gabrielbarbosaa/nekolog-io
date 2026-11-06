@@ -188,6 +188,43 @@ describe.skipIf(!reachable)('rotating the refresh token', () => {
   it('refuses a refresh token with no session id in it', async () => {
     expect((await rotateRefresh(store, 'no-dot-here')).outcome).toBe('unknown')
   })
+
+  it('names the owner, so the new access token is signed for the session and not for a token', async () => {
+    const userId = user()
+    const session = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+    const rotated = await rotateRefresh(store, session.refreshToken)
+
+    expect(rotated).toMatchObject({ outcome: 'rotated', userId, remember: true })
+  })
+
+  it('names the owner of a stolen token too, which is who gets the warning', async () => {
+    const userId = user()
+    const session = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+    await rotateRefresh(store, session.refreshToken)
+
+    const reused = await rotateRefresh(store, session.refreshToken, {
+      now: Date.now() + GRACE_MS + 1,
+    })
+
+    expect(reused).toEqual({ outcome: 'reused', userId })
+  })
+
+  it('keeps an unremembered session on twelve hours, so renewing never promotes it', async () => {
+    const session = await createSession(store, { userId: user(), remember: false, ...SOMEWHERE })
+    const rotated = await rotateRefresh(store, session.refreshToken)
+
+    expect(rotated).toMatchObject({ outcome: 'rotated', remember: false })
+    expect(await raw.ttl(sessionKey(session.sid))).toBeLessThanOrEqual(UNREMEMBERED_SECONDS)
+    expect(await raw.ttl(sessionKey(session.sid))).toBeGreaterThan(UNREMEMBERED_SECONDS - 10)
+  })
+
+  it('pushes a remembered session back out to seven days every time it renews', async () => {
+    const session = await createSession(store, { userId: user(), remember: true, ...SOMEWHERE })
+    await raw.expire(sessionKey(session.sid), 60)
+
+    expect((await rotateRefresh(store, session.refreshToken)).outcome).toBe('rotated')
+    expect(await raw.ttl(sessionKey(session.sid))).toBeGreaterThan(REFRESH_IDLE_SECONDS - 10)
+  })
 })
 
 describe.skipIf(!reachable)('revoking', () => {

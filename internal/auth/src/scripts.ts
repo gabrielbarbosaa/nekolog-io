@@ -18,7 +18,8 @@ return failures
 export const CREATE_SESSION = `
 redis.call('HSET', KEYS[1], 'cur', ARGV[1], 'prev', '', 'prevUntil', '0',
   'absExp', ARGV[2], 'lastUsed', ARGV[3], 'userId', ARGV[4],
-  'device', ARGV[5], 'country', ARGV[6], 'createdAt', ARGV[3])
+  'device', ARGV[5], 'country', ARGV[6], 'createdAt', ARGV[3],
+  'remember', ARGV[10])
 redis.call('EXPIRE', KEYS[1], ARGV[7])
 redis.call('SADD', KEYS[2], ARGV[8])
 redis.call('EXPIRE', KEYS[2], ARGV[9])
@@ -26,23 +27,26 @@ return 1
 `.trim()
 
 export const ROTATE_REFRESH = `
-local s = redis.call('HMGET', KEYS[1], 'cur', 'prev', 'prevUntil', 'absExp')
-if not s[1] then return 0 end
+local s = redis.call('HMGET', KEYS[1], 'cur', 'prev', 'prevUntil', 'absExp', 'userId', 'remember')
+if not s[1] then return {0, '', ''} end
+
+local who = s[5] or ''
+local remembered = s[6] or ''
 
 if ARGV[1] == s[1] then
   local ttl = math.min(tonumber(ARGV[5]), math.floor((tonumber(s[4]) - tonumber(ARGV[3])) / 1000))
-  if ttl <= 0 then redis.call('DEL', KEYS[1]) return 0 end
+  if ttl <= 0 then redis.call('DEL', KEYS[1]) return {0, '', ''} end
   redis.call('HSET', KEYS[1], 'cur', ARGV[2], 'prev', s[1], 'prevUntil', ARGV[4], 'lastUsed', ARGV[3])
   redis.call('EXPIRE', KEYS[1], ttl)
-  return 1
+  return {1, who, remembered}
 end
 
 if ARGV[1] == s[2] then
-  if tonumber(ARGV[3]) <= tonumber(s[3]) then return 2 end
-  redis.call('DEL', KEYS[1]) return -1
+  if tonumber(ARGV[3]) <= tonumber(s[3]) then return {2, who, remembered} end
+  redis.call('DEL', KEYS[1]) return {-1, who, ''}
 end
 
-return 0
+return {0, '', ''}
 `.trim()
 
 export const REVOKE_SESSION = `

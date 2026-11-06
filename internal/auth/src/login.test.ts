@@ -1,4 +1,3 @@
-import type { RedisClient } from '@nekolog-io/adapters'
 import { describe, expect, it, vi } from 'vitest'
 import { finishLogin, type LoginDeps, resendCode, startLogin } from './login.ts'
 import { hashPassword } from './password.ts'

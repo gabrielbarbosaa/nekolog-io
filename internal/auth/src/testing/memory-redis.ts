@@ -51,10 +51,79 @@ export function memoryRedis(): RedisClient {
       return -1
     }
 
-    if (script.includes("redis.call('HSET', KEYS[1], 'cur'")) {
-      hashes.set(keys[0] as string, new Map([['cur', args[0] as string]]))
+    if (script.includes("redis.call('HSET', KEYS[1], 'cur', ARGV[1], 'prev', ''")) {
+      hashes.set(
+        keys[0] as string,
+        new Map([
+          ['cur', args[0] as string],
+          ['prev', ''],
+          ['prevUntil', '0'],
+          ['absExp', args[1] as string],
+          ['lastUsed', args[2] as string],
+          ['userId', args[3] as string],
+          ['device', args[4] as string],
+          ['country', args[5] as string],
+          ['createdAt', args[2] as string],
+          ['remember', args[9] as string],
+        ]),
+      )
       sets.set(keys[1] as string, (sets.get(keys[1] as string) ?? new Set()).add(args[7] as string))
       return 1
+    }
+
+    if (script.includes("'cur', 'prev', 'prevUntil', 'absExp', 'userId', 'remember'")) {
+      const stored = hashes.get(keys[0] as string)
+      const current = stored?.get('cur')
+      if (!stored || current === undefined || current === '') {
+        return [0, '', '']
+      }
+
+      const who = stored.get('userId') ?? ''
+      const remembered = stored.get('remember') ?? ''
+
+      if (args[0] === current) {
+        const ttl = Math.min(
+          Number(args[4]),
+          Math.floor((Number(stored.get('absExp')) - Number(args[2])) / 1000),
+        )
+        if (ttl <= 0) {
+          hashes.delete(keys[0] as string)
+          return [0, '', '']
+        }
+        stored.set('cur', args[1] as string)
+        stored.set('prev', current)
+        stored.set('prevUntil', args[3] as string)
+        stored.set('lastUsed', args[2] as string)
+        return [1, who, remembered]
+      }
+
+      if (args[0] === stored.get('prev') && stored.get('prev') !== '') {
+        if (Number(args[2]) <= Number(stored.get('prevUntil'))) {
+          return [2, who, remembered]
+        }
+        hashes.delete(keys[0] as string)
+        return [-1, who, '']
+      }
+
+      return [0, '', '']
+    }
+
+    if (script.includes("local owner = redis.call('HGET', KEYS[1], 'userId')")) {
+      const owner = hashes.get(keys[0] as string)?.get('userId')
+      hashes.delete(keys[0] as string)
+      if (owner !== undefined) {
+        sets.get(`sess:user:${owner}`)?.delete(args[0] as string)
+      }
+      return 1
+    }
+
+    if (script.includes("local sids = redis.call('SMEMBERS', KEYS[1])")) {
+      const sids = [...(sets.get(keys[0] as string) ?? [])]
+      for (const sid of sids) {
+        hashes.delete(`sess:${sid}`)
+      }
+      sets.delete(keys[0] as string)
+      return sids.length
     }
 
     throw new Error(`this fake does not know the script starting ${script.slice(0, 40)}`)

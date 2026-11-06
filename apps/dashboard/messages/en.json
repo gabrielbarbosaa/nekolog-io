@@ -42,6 +42,11 @@
       "name": "Health",
       "state": "/health answers, so the container can be watched."
     },
+    "session": {
+      "name": "Session",
+      "in": "Signed in. The access token renews on its own, ten minutes at a time.",
+      "out": "Signed out. There is no screen to sign in on yet."
+    },
     "next": "Next comes signing in, and then the log explorer."
   }
 }

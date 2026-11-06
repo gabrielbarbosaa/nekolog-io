@@ -38,6 +38,8 @@ export {
   kidOf,
   loadSigningKey,
   loadVerifyingKey,
+  loadVerifyingKeys,
+  publicKeyBlocks,
   type SigningKey,
   signAccessToken,
   type VerifyingKey,
@@ -120,6 +122,12 @@ export {
   recordFailure,
   waitAfter,
 } from './rate-limit.ts'
+export {
+  type Carried,
+  type Renewal,
+  type RenewDeps,
+  renewSession,
+} from './renew.ts'
 export {
   COUNT_ATTEMPT,
   CREATE_SESSION,

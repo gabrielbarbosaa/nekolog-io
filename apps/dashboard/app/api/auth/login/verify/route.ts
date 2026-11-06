@@ -13,6 +13,7 @@ import {
 } from '@internal/auth'
 import { NextResponse } from 'next/server'
 import { authSettings, loginDeps } from '@/lib/auth'
+import { clearCookie, cookieFrom } from '@/lib/cookies'
 import { booleanField, countryOf, deviceOf, jsonBody, stringField } from '@/lib/request'
 
 export const runtime = 'nodejs'
@@ -33,12 +34,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'bad_origin' }, { status: 403 })
   }
 
-  const cookie = request.headers
-    .get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${CHALLENGE_COOKIE}=`))
-    ?.slice(CHALLENGE_COOKIE.length + 1)
+  const cookie = cookieFrom(request.headers.get('cookie'), CHALLENGE_COOKIE)
 
   const attempt = openChallenge(settings.otpSecret, cookie)
   if (attempt === undefined) {
@@ -62,7 +58,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (finished.outcome === 'start-again') {
     const gone = NextResponse.json({ error: 'start_again' }, { status: 401 })
-    gone.cookies.delete(CHALLENGE_COOKIE)
+    clearCookie(gone, CHALLENGE_COOKIE)
     return gone
   }
 
@@ -84,7 +80,7 @@ export async function POST(request: Request): Promise<Response> {
     finished.session.refreshToken,
     cookieAttributes(remember ? idle : undefined),
   )
-  response.cookies.delete(CHALLENGE_COOKIE)
+  clearCookie(response, CHALLENGE_COOKIE)
 
   return response
 }
