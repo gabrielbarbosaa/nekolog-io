@@ -143,7 +143,9 @@ export {
   cachedKeyStore,
   DEFAULT_KEY_CACHE_SIZE,
   DEFAULT_KEY_CACHE_TTL_MS,
+  DEFAULT_KEY_MISS_TTL_MS,
 } from './keys/cached-key-store.ts'
+export { firstKeyStore } from './keys/first-key-store.ts'
 export type { ApiKey, ApiKeyKind } from './keys/format.ts'
 export {
   GENERATED_KEY_SECRET_CHARS,
@@ -160,6 +162,21 @@ export { KEY_PREFIX, kvKeyFor, kvKeyStore, parseKeyRecord } from './keys/kv-key-
 export type { MemoryKeyStore } from './keys/memory-key-store.ts'
 export { memoryKeyStore } from './keys/memory-key-store.ts'
 export { normaliseOrigin, originAllowed, originMatches } from './keys/origins.ts'
+export type { KeyIndex, Published, PublishedKey } from './keys/publish.ts'
+export {
+  KEY_INDEX_KEY,
+  keyDigest,
+  parseKeyIndex,
+  publishKeys,
+  readKeyIndex,
+} from './keys/publish.ts'
+export type { KeyDirectory, KeyUsageStamp } from './keys/sql-key-directory.ts'
+export {
+  keyRecordOf,
+  LIVE_KEYS,
+  STAMP_LAST_USED,
+  sqlKeyDirectory,
+} from './keys/sql-key-directory.ts'
 export type { KvNamespace } from './kv.ts'
 export type { MemoryRateLimiterOptions } from './limits/memory-rate-limiter.ts'
 export { DEFAULT_RATE_LIMIT_ENTRIES, memoryRateLimiter } from './limits/memory-rate-limiter.ts'

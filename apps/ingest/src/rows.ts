@@ -93,6 +93,7 @@ export async function rowsFor(
     return {
       project_id: principal.projectId,
       environment_id: principal.environmentId,
+      key_id: principal.keyId ?? '',
       timestamp: clickHouseTimestamp(
         boundedTimestampMs(clientAt, context.receivedAt, retentionDays),
       ),

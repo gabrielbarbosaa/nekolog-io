@@ -206,18 +206,40 @@ the backup is the only version of that test worth running.
 - **Redis.** Nothing here needs it: it exists for the dashboard's sessions.
 - **An object store.** The spool is a directory shared between two containers.
 
-## Why the spool and the block list are files
+## Why the spool, the keys and the block list are files
 
 `apps/ingest` writes a batch ClickHouse refused into the spool, and `apps/jobs`
-replays it a minute later. `apps/jobs` writes the quota block list and
-`apps/ingest` reads it. On Cloudflare those are R2 and Workers KV. Here they are
-two Docker volumes, through `@internal/self-host`'s `fileBlobStore` and
-`fileKvNamespace` — **not** Postgres, because the ingestion never depends on
-Postgres or Redis and the ingestion is what writes one and reads the other.
+replays it a minute later. `apps/jobs` writes the quota block list and the API
+keys, and `apps/ingest` reads both. On Cloudflare those were R2 and Workers KV.
+Here they are two Docker volumes, through `@internal/self-host`'s
+`fileBlobStore` and `fileKvNamespace` — **not** Postgres, because the ingestion
+never depends on Postgres or Redis and the ingestion is what writes one and
+reads the others.
 
 The mounts are not symmetric and that is on purpose: `ingest` mounts the KV
 read-only and the state read-only; only `jobs` writes the KV, and only
 `bootstrap` writes the state.
+
+## How a key minted in the dashboard reaches the ingestion
+
+The dashboard writes to Postgres and nothing else. The `key-sync` task in
+`apps/jobs` runs every minute, reads every live key with the settings of its
+environment, and publishes them to the KV; `apps/ingest` reads the KV behind a
+60-second cache. That is the "~60 s for a revocation to apply everywhere" in
+`docs/PLANO.md` §6, and it is why only `jobs` writes the KV even though the
+dashboard is what mints the key.
+
+Two consequences worth knowing. A key is **not** usable the instant it is
+created: it waits for the next sync, plus up to five seconds of the miss cache
+(a hit is cached for sixty). And the task keeps a `keys:index` document beside
+the records, because a `KvNamespace` cannot be listed — losing that document
+leaves whatever was published before it at the ingestion until each of those
+keys is seen again, so the volume is the thing to back up, not only Postgres.
+
+`.nekolog-seed.json` is still read, **after** the KV, so a machine that has
+only run `pnpm seed init` can ingest before the first sync. Once
+`pnpm seed sync-db` has put those keys in Postgres, the dashboard can revoke
+them like any other.
 
 ## Who may do what in ClickHouse
 

@@ -69,6 +69,23 @@ export function parseKeyRecord(raw: string): KeyRecord | null {
     record.retentionDays = retentionDays
   }
 
+  if (typeof candidate.keyId === 'string' && candidate.keyId !== '') {
+    record.keyId = candidate.keyId
+  }
+
+  if (typeof candidate.minLevel === 'string' && candidate.minLevel !== '') {
+    record.minLevel = candidate.minLevel
+  }
+
+  const sampleRate = candidate.sampleRate
+  if (typeof sampleRate === 'number' && Number.isFinite(sampleRate)) {
+    record.sampleRate = sampleRate
+  }
+
+  if (candidate.redaction !== undefined && candidate.redaction !== null) {
+    record.redaction = candidate.redaction
+  }
+
   return record
 }
 

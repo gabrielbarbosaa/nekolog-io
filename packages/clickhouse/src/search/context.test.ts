@@ -107,6 +107,8 @@ describe('what it refuses to build', () => {
   })
 })
 
+const ABOUT_THE_WRITE: readonly string[] = ['retention_days', 'key_id']
+
 describe('the limits this module pins', () => {
   it('are the numbers it documents', () => {
     expect(MAX_CONTEXT_ROWS).toBe(200)
@@ -144,7 +146,16 @@ describe('the limits this module pins', () => {
 
     expect(inTheTable.length).toBeGreaterThan(LOG_COLUMNS.length)
     expect([...LOG_COLUMNS].sort()).toEqual(
-      inTheTable.filter((name) => name !== 'retention_days').sort(),
+      inTheTable.filter((name) => !ABOUT_THE_WRITE.includes(name)).sort(),
     )
+    for (const name of ABOUT_THE_WRITE) {
+      expect(inTheTable, `${name} is not on the table any more`).toContain(name)
+    }
+  })
+
+  it('leaves out the columns that describe the write rather than the event', () => {
+    for (const name of ABOUT_THE_WRITE) {
+      expect(LOG_COLUMNS).not.toContain(name)
+    }
   })
 })

@@ -63,6 +63,25 @@ export {
   verifyAccessToken,
 } from './jwt.ts'
 export {
+  API_KEY_ID_PREFIX,
+  type ApiKeySummary,
+  findKey,
+  HINT_TAIL_CHARS,
+  hintFor,
+  isKeyKind,
+  KEY_SCOPES,
+  type KeyScope,
+  listKeys,
+  MAX_LIVE_KEYS_PER_ENVIRONMENT,
+  type Minted,
+  mintKey,
+  PUBLIC_SCOPES,
+  type Rotated,
+  readScopes,
+  revokeKey,
+  rotateKey,
+} from './keys.ts'
+export {
   type Finished,
   finishLogin,
   LOGIN_PURPOSE,

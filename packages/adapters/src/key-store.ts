@@ -1,6 +1,7 @@
 export interface KeyRecord {
   projectId: string
   environmentId: string
+  keyId?: string
   scopes: ReadonlyArray<'logs:write' | 'logs:read'>
   originAllowlist: ReadonlyArray<string> | null
   blocked: boolean

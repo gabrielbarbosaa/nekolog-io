@@ -6,13 +6,21 @@ import {
   sqlAlertRuleStore,
   sqlIssueActivity,
   sqlIssueStore,
+  sqlKeyDirectory,
 } from '@nekolog-io/adapters'
 import { type ClickHouseConfig, queryRows } from '@nekolog-io/clickhouse/client'
 import { clickHouseIssueSource } from '@nekolog-io/clickhouse/issues'
 import { operatorNotifier } from './alerts/operator.ts'
 import type { Task } from './task.ts'
 import { buildTasks, type TaskDeps } from './tasks.ts'
-import { type BackupWiring, coreTaskDeps, dailyQuotaFrom, write } from './wiring.ts'
+import {
+  type BackupWiring,
+  coreTaskDeps,
+  dailyQuotaFrom,
+  keyUsageReaderFor,
+  write,
+  writeKeySyncEvent,
+} from './wiring.ts'
 
 export const DEFAULT_JOBS_PORT = 8788
 
@@ -195,6 +203,10 @@ export function selfHostTaskDeps(wiring: SelfHostJobsWiring): TaskDeps {
     }),
     issueSource: clickHouseIssueSource(config.clickHouse),
     issues: sqlIssueStore(sql),
+    keyDirectory: sqlKeyDirectory(sql),
+    kv: fileKvNamespace(config.kvDir),
+    onKeySyncEvent: writeKeySyncEvent,
+    readKeyUsage: keyUsageReaderFor(config.clickHouse),
     alertRules: sqlAlertRuleStore(sql),
     issueActivity: sqlIssueActivity(sql),
     alertTarget: { database: config.clickHouse.database },

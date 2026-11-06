@@ -124,6 +124,68 @@ describe('the routes that ask for the password again', () => {
   })
 })
 
+describe('an API key, which is a credential this screen hands out', () => {
+  const KEYS = SCOPED.filter((route) => route.name.includes('/keys'))
+
+  it('found the key routes, so none of this is passing on an empty list', () => {
+    expect(KEYS.map((route) => route.name).sort()).toEqual([
+      '[org]/projects/[project]/environments/[env]/keys',
+      '[org]/projects/[project]/keys',
+      '[org]/projects/[project]/keys/[key]/revoke',
+      '[org]/projects/[project]/keys/[key]/rotate',
+    ])
+  })
+
+  it.each(KEYS)(
+    '$name asks for keys:write, which the matrix gives an administrator',
+    ({ source }) => {
+      expect(permissionsAsked(source)).toEqual(['keys:write'])
+    },
+  )
+
+  it.each(KEYS)('$name never logs the key it handled', ({ source }) => {
+    for (const line of [...source.matchAll(/console\.(?:log|error|warn)\(([^\n]*)/g)]) {
+      expect(line[1]).not.toMatch(/\bvalue\b/)
+    }
+  })
+
+  it('writes the hint into the audit log and never the key', () => {
+    for (const route of KEYS) {
+      expect(route.source).not.toMatch(/metadata:[^}]*\bvalue\b/)
+    }
+  })
+
+  it('hands the key back on exactly the two answers that mint one', () => {
+    const handing = KEYS.filter((route) => route.source.includes('value: minted.value')).map(
+      (route) => route.name,
+    )
+    const rotating = KEYS.filter((route) => route.source.includes('value: rotated.value')).map(
+      (route) => route.name,
+    )
+
+    expect([...handing, ...rotating].sort()).toEqual([
+      '[org]/projects/[project]/environments/[env]/keys',
+      '[org]/projects/[project]/keys/[key]/rotate',
+    ])
+  })
+
+  it('never puts a key in the list a screen reads', () => {
+    const list = KEYS.find((route) => route.name === '[org]/projects/[project]/keys')
+
+    expect(list?.source).toContain('listKeys(run, org, project)')
+    expect(list?.source).not.toContain('value')
+  })
+
+  it('says a key is not revoked rather than leaving the field out', () => {
+    const list = KEYS.find((route) => route.name === '[org]/projects/[project]/keys')
+
+    expect(list?.source, 'an absent revokedAt reads as "live" by accident').toContain(
+      'revokedAt: key.revokedAt ?? null',
+    )
+    expect(list?.source).toContain('lastUsedAt: key.lastUsedAt ?? null')
+  })
+})
+
 describe('an action nobody can take on an owner', () => {
   it.each(['[org]/members/role', '[org]/members/remove'])('%s checks mayActOn first', (name) => {
     const route = SCOPED.find((candidate) => candidate.name === name)

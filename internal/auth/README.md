@@ -291,6 +291,27 @@ ignorado, porque um filtro que não faz nada se lê como um filtro que funciona.
 `readEnvironmentSettings` recusa nomeando a chave, e `REDACTION_FIELDS` está
 preso aos campos que o parser de fato lê.
 
+## Keys de API
+
+`src/keys.ts` cria, lista, revoga e rotaciona. A key aparece **uma vez**: o
+banco guarda só o hash SHA-256 e um `hint` (`nekolog_sk_…abcd`), e há teste
+afirmando que a lista que a tela lê não contém a key — nem o audit log.
+
+**Rotacionar é uma instrução só.** `ROTATE` aposenta a antiga e cria a nova
+dentro da mesma CTE, herdando o ambiente, o tipo e os escopos. Herdar importa:
+uma substituta num outro ambiente mudaria onde a aplicação grava sem ninguém
+pedir, e isso tem teste.
+
+**Uma key pública só escreve.** `readScopes` recusa qualquer outra coisa antes
+de chegar ao banco, e a *check constraint* `api_keys_public_only_writes`
+recusa de novo — a key pública vai no bundle do navegador, então um
+`logs:read` nela seria a leitura de todos os logs publicada.
+
+O escopo da organização está em toda instrução, como nos projetos: a rota de
+criação recebe o ambiente **no caminho**, nunca no corpo, porque um id vindo do
+corpo pularia o escopo do caminho. O teste de rotas recusa `stringField(body,
+'environment')` justamente por isso.
+
 ### Uma origem que nunca casaria
 
 A allowlist de origens é o que separa uma key pública de qualquer site. Um
