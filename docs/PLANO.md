@@ -60,7 +60,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 ## 2. Decisões em aberto
 
 - **Em aberto de verdade, e com relógio:** comprar a VPS (item B1 de [COMERCIAL.md](COMERCIAL.md)), escolher o modelo de cobrança (tabela C) e decidir se os pacotes compartilhados vão para o npm sob a licença nova ou saem do npm e o dashboard os consome por git.
-- **Logo e ícone:** o autor vai criar e adicionar depois; até lá, o projeto usa o nome em texto.
+- **Logo e ícone:** o gato enrolado, em [`docs/brand/`](brand/README.md), desde 06/11/2026. Duas versões — gato escuro para fundo claro, gato claro para fundo escuro —, trocadas por CSS e não por JavaScript, e um ícone quadrado com fundo próprio para a aba do navegador. Os aplicativos carregam cópias byte a byte, como no tema. Ainda **não há versão vetorial**.
 - **Mockups das telas:** aprovação antes das telas do dashboard. A etapa 2.1 está feita, em `docs/ui-mockups/`.
 
 **Decididas em 03/11/2026, antes do M2:**

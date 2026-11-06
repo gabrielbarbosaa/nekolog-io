@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { LocaleSwitcher } from '@/components/locale-switcher'
+import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { CONTACT_URL, DOCS_URL } from '@/lib/links'
 
@@ -10,8 +11,9 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-10 border-border/60 border-b bg-background/80 backdrop-blur">
       <nav className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
-        <Link href="/" className="font-mono font-semibold text-lg tracking-tight">
-          {t('title')}
+        <Link href="/" className="flex items-center gap-2.5">
+          <Logo />
+          <span className="font-mono font-semibold text-lg tracking-tight">{t('title')}</span>
         </Link>
         <div className="ml-auto flex items-center gap-2 sm:gap-4">
           <Link

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { LocaleSwitcher } from '@/components/locale-switcher'
+import { Wordmark } from '@/components/logo'
 import { SignOut } from '@/components/sign-out'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { signedIn } from '@/lib/workspace'
@@ -20,7 +21,7 @@ export default async function Page() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <span className="font-semibold text-section tracking-tight">NekoLog</span>
+        <Wordmark />
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />

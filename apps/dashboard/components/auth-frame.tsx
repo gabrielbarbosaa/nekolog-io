@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { LocaleSwitcher } from '@/components/locale-switcher'
+import { Wordmark } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export function AuthFrame({
@@ -16,7 +17,7 @@ export function AuthFrame({
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <span className="font-semibold text-section tracking-tight">NekoLog</span>
+        <Wordmark />
         <div className="flex items-center gap-1">
           <LocaleSwitcher />
           <ThemeToggle />

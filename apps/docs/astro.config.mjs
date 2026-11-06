@@ -9,6 +9,12 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'NekoLog',
+      logo: {
+        light: './public/logo-dark.png',
+        dark: './public/logo-light.png',
+        alt: '',
+      },
+      favicon: '/icon.png',
       defaultLocale: SOURCE_LOCALE.key,
       locales: starlightLocales,
       social: [

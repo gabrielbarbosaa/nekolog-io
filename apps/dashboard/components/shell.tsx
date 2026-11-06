@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { LocaleSwitcher } from '@/components/locale-switcher'
+import { Wordmark } from '@/components/logo'
 import { SignOut } from '@/components/sign-out'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { cn } from '@/lib/utils'
@@ -33,8 +34,8 @@ export async function Shell({
         aria-label={t('label')}
         className="hidden w-56 shrink-0 flex-col border-border border-r bg-sidebar p-2 md:flex"
       >
-        <Link href="/" className="px-2 py-3 font-semibold text-section tracking-tight">
-          NekoLog
+        <Link href="/" className="px-2 py-3">
+          <Wordmark />
         </Link>
 
         <Link

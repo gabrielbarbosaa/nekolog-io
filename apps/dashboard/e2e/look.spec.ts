@@ -36,6 +36,12 @@ test('what the screens look like', async ({ page }) => {
   await page.goto(`${BASE_URL}/login`)
   await page.screenshot({ path: 'test-results/look-login.png' })
 
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.reload()
+  await page.screenshot({ path: 'test-results/look-login-dark.png' })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.reload()
+
   await signedIn(page)
   await page.screenshot({ path: 'test-results/look-projects-empty.png' })
 
