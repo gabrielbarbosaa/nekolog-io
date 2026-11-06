@@ -7,6 +7,7 @@ import {
   matchesFilter,
   publishedFrom,
   SBOM_DIR,
+  SBOM_EXCLUDED,
   SbomRefused,
   sbomCommand,
 } from './sbom.ts'
@@ -57,16 +58,12 @@ describe('finding the workspace', () => {
 describe('what the release publishes', () => {
   const published = publishedFrom(workspaceProjects(ROOT))
 
-  it('is seventeen packages, all of them under the one scope', () => {
+  it('is thirteen packages, all of them under the one scope', () => {
     expect(published.map((project) => project.name).sort()).toEqual([
-      '@nekolog-io/adapters',
       '@nekolog-io/browser',
       '@nekolog-io/bundler-plugin',
       '@nekolog-io/cli',
-      '@nekolog-io/clickhouse',
-      '@nekolog-io/config',
       '@nekolog-io/core',
-      '@nekolog-io/db',
       '@nekolog-io/express',
       '@nekolog-io/fastify',
       '@nekolog-io/hono',
@@ -84,8 +81,16 @@ describe('what the release publishes', () => {
 
     expect(published.filter((project) => !matchesFilter(project.name))).toEqual([])
     expect(
-      all.filter((project) => matchesFilter(project.name) && project.private === true),
+      published.filter((project) => SBOM_EXCLUDED.includes(project.name)),
+      'the SBOM command excludes a package this release publishes',
     ).toEqual([])
+    expect(
+      all
+        .filter((project) => matchesFilter(project.name) && project.private === true)
+        .map((project) => project.name)
+        .sort(),
+      'a private package under the published scope that the SBOM command does not exclude',
+    ).toEqual([...SBOM_EXCLUDED].sort())
   })
 
   it('ships every package from its build, never from its source tree', () => {

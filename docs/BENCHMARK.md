@@ -125,7 +125,7 @@ agregação e hoje a plataforma não deixa ninguém agregar.
 | Relatório agendado | ✓ | ✓ | ✓ | ✓ |
 
 **Nós:** as tabelas `dashboards` e `saved_views` existem no Postgres desde a
-4.15; as telas são do repositório fechado e **continuam abertas** (#93, #94).
+ 4.15; as telas são do `apps/dashboard` e **continuam abertas** (#93, #94).
 Exportação agendada existe e é o que mais perto chega de relatório.
 
 ### 2.5 Detecção e alerta
@@ -341,7 +341,7 @@ revisão não levanta tudo de novo.
 Nada disto é novidade — está no `ETAPAS.md` e no `PLANO.md` —, mas a comparação
 mostra onde dói:
 
-- **7 telas abertas no repositório fechado.** Sem dashboard, 14 das 21 linhas
+- **7 telas abertas no `apps/dashboard`.** Sem dashboard, 14 das 21 linhas
   da tabela de lacunas são inalcançáveis, porque não há onde exibi-las. É a
   dependência mais cara do projeto.
 - **Cinco tarefas manuais de conta e domínio.** Enquanto não existirem, nada do

@@ -13,7 +13,7 @@ saved_views     dashboards      releases      exports     export_schedules
 
 É a [seção 7 do plano](../../docs/PLANO.md#7-modelo-de-dados) na parte do
 Postgres. A segunda linha é a etapa 4.15: as tabelas do M4. Elas moram aqui
-mesmo quando só o dashboard lê, porque os dois repositórios escrevem neste banco
+mesmo quando só o dashboard lê, porque os jobs e o dashboard escrevem neste banco
 e esquema duplicado é a única divergência que teste nenhum dos dois lados pega.
 
 Duas que **não** estão aqui, e isso é escolha: `issues` entra com a 4.6, junto
@@ -24,7 +24,7 @@ desenhada no escuro.
 ## As regras ficam no banco, não só no código
 
 O schema carrega **check constraints** de propósito, em vez de confiar que toda
-escrita passe pelo mesmo caminho de aplicação. Dois repositórios escrevem neste
+escrita passe pelo mesmo caminho de aplicação. Dois programas escrevem neste
 banco — este e o do dashboard — e um deles pode ganhar um caminho novo amanhã.
 Constraint é a única regra que vale para os dois sem combinação.
 
@@ -71,21 +71,29 @@ leva projetos, ambientes e keys em cascata, mas apagar um **usuário** só anula
 `actor_user_id` do audit log — a entrada fica. Auditoria que some quando o autor
 sai não é auditoria.
 
-## Os tipos saem do fonte, e isso é de propósito
+## Não vai ao npm
 
-Este é o único pacote publicado aqui que **não** gera `.d.ts`. O
-`publishConfig.types` aponta para `./src/index.ts`, e o fonte vai no tarball.
+Este pacote é `private: true` e nunca é publicado — ADR
+[0019](../../docs/adr/0019-um-repositorio-so.md). A ADR
+[0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md) o tinha feito
+nascer publicado porque o dashboard vivia noutro repositório e escrevia no mesmo
+Postgres. O dashboard veio para cá, e publicar este pacote sempre foi o caso mais
+grave dos quatro: ele publicava o `src/index.ts` **como os tipos**, ou seja, o
+esquema inteiro do banco em TypeScript legível no npm público.
 
-O motivo é o mesmo que vale para todo o repositório: desde o TypeScript 7 as
-declarações são emitidas pelo Oxc, que exige `isolatedDeclarations` — anotação
-explícita em todo valor exportado. Um `pgTable(...)` devolve um
-`PgTableWithColumns<…>` que ninguém escreve à mão, e manter essa anotação por
-coluna, em oito tabelas, seria pior que o problema.
+O motivo de não gerar `.d.ts` continua existindo e vale para quem for mexer
+aqui: desde o TypeScript 7 as declarações são emitidas pelo Oxc, que exige
+`isolatedDeclarations` — anotação explícita em todo valor exportado. Um
+`pgTable(...)` devolve um `PgTableWithColumns<…>` que ninguém escreve à mão, e
+manter essa anotação por coluna, em oito tabelas, seria pior que o problema. O
+`exports` aponta para `./src/index.ts` e quem consome é este mesmo workspace.
 
-Isso impõe uma regra ao `src/index.ts`: **ele não importa nenhum arquivo
-vizinho**. Quem consome compila esse fonte com as próprias opções, e um
-`import './tables.ts'` dependeria do `allowImportingTsExtensions` do outro lado.
-O `packaging.test.ts` falha se um import relativo aparecer aqui.
+A regra que disso saía — **o `src/index.ts` não importa nenhum arquivo
+vizinho** — deixou de valer: ela existia porque um consumidor de fora compilava
+esse fonte com as próprias opções, e um `import './tables.ts'` dependeria do
+`allowImportingTsExtensions` do outro lado. Não há mais consumidor de fora. O
+arquivo continua como está porque não há motivo para mexer, mas nada mais o
+obriga.
 
 ## Migrations
 

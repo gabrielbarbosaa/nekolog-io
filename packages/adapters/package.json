@@ -1,6 +1,7 @@
 {
   "name": "@nekolog-io/adapters",
   "version": "1.0.0",
+  "private": true,
   "description": "Vendor-neutral interfaces NekoLog runs on: KeyStore, RateLimiter, BlobStore, QuotaStore and Mailer, with the memory, Workers KV and R2 implementations.",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -17,38 +18,18 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "files": [
-    "dist",
-    "CHANGELOG.md"
-  ],
   "exports": {
     ".": "./src/index.ts"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      }
-    },
-    "main": "./dist/index.mjs",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
   },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsdown",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run",
-    "lint": "pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
-    "publint": "^0.3.25",
-    "tsdown": "^0.23.2",
     "vitest": "^5.0.5",
     "ioredis": "^6.0.0",
     "nodemailer": "^10.3.1"

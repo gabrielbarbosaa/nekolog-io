@@ -8,8 +8,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
 const SHARED = ['adapters', 'clickhouse', 'config', 'db']
 
-const TYPES_FROM_SOURCE = ['db']
-
 function manifestOf(folder: string): JsonObject {
   return readJsonObject(join(ROOT, 'packages', folder, 'package.json'))
 }
@@ -67,87 +65,68 @@ describe('every package this repository publishes', () => {
   })
 })
 
-describe('the packages the dashboard consumes', () => {
-  it.each(SHARED)('%s resolves to its source inside this workspace', (folder) => {
-    for (const target of exportTargets(manifestOf(folder).exports)) {
+describe('the server libraries, which this repository never publishes', () => {
+  it.each(SHARED)('%s is private, so changeset publish cannot reach it', (folder) => {
+    expect(manifestOf(folder).private).toBe(true)
+  })
+
+  it.each(SHARED)('%s keeps nothing that pretends it is published', (folder) => {
+    const manifest = manifestOf(folder)
+
+    expect(manifest.publishConfig, `${folder} still maps a dist/ for npm`).toBeUndefined()
+    expect(manifest.files, `${folder} still lists files to pack`).toBeUndefined()
+
+    const scripts = manifest.scripts as JsonObject
+    expect(scripts.lint, `${folder} still packs a tarball to lint`).toBeUndefined()
+    expect(scripts.build, `${folder} still builds a dist nothing reads`).toBeUndefined()
+  })
+
+  it.each(SHARED)('%s resolves to its source, which is what runs with no build step', (folder) => {
+    const targets = exportTargets(manifestOf(folder).exports)
+
+    expect(targets.length).toBeGreaterThan(0)
+    for (const target of targets) {
       expect(target.startsWith('./src/')).toBe(true)
       expect(target.endsWith('.ts')).toBe(true)
     }
   })
 
-  it.each(SHARED)('%s runs from its build once published', (folder) => {
-    const config = manifestOf(folder).publishConfig
+  it('is depended on by nothing that goes to npm', () => {
+    const names = SHARED.map((folder) => manifestOf(folder).name as string)
 
-    expect(isJsonObject(config)).toBe(true)
-    const entries = (config as JsonObject).exports as JsonObject
-    const runtime = Object.values(entries).map((entry) =>
-      typeof entry === 'string' ? entry : ((entry as JsonObject).default as string),
-    )
-
-    expect(runtime.length).toBeGreaterThan(0)
-    for (const target of runtime) {
-      expect(target.startsWith('./dist/')).toBe(true)
-    }
-  })
-
-  it.each(SHARED.filter((folder) => !TYPES_FROM_SOURCE.includes(folder)))(
-    '%s publishes generated declarations',
-    (folder) => {
-      const entries = (manifestOf(folder).publishConfig as JsonObject).exports as JsonObject
-
-      for (const entry of Object.values(entries)) {
-        expect((entry as JsonObject).types).toMatch(/^\.\/dist\/.+\.d\.mts$/)
+    for (const [folder, manifest] of published()) {
+      for (const dependency of dependenciesOf(manifest)) {
+        expect(
+          names,
+          `${folder} is published and depends on ${dependency}, which is not`,
+        ).not.toContain(dependency)
       }
-    },
-  )
-
-  it.each(TYPES_FROM_SOURCE)('%s publishes its source as the types, and says why', (folder) => {
-    const entries = (manifestOf(folder).publishConfig as JsonObject).exports as JsonObject
-    const source = join(ROOT, 'packages', folder, 'src', 'index.ts')
-
-    for (const entry of Object.values(entries)) {
-      expect((entry as JsonObject).types).toBe('./src/index.ts')
     }
-    expect(readFileSync(join(ROOT, 'packages', folder, 'README.md'), 'utf8')).toContain(
-      'isolatedDeclarations',
-    )
-    expect(
-      readFileSync(source, 'utf8'),
-      'the published source cannot import a sibling: the consumer compiles it with its own settings',
-    ).not.toMatch(/from '\.\.?\//)
   })
 
-  it.each(SHARED)('%s is checked against the tarball, not the directory', (folder) => {
-    const scripts = manifestOf(folder).scripts as JsonObject
-
-    expect(scripts.lint).toContain('pnpm pack')
-    expect(scripts.lint).toContain('publint package.tgz')
-    expect(scripts.lint).toContain('attw package.tgz')
+  it('keeps the adapters free of runtime dependencies, which the SBOM used to prove', () => {
+    expect(manifestOf('adapters').dependencies).toBeUndefined()
   })
 })
 
 describe('the ClickHouse package, which carries more than code', () => {
   const manifest = manifestOf('clickhouse')
 
-  it('ships the migrations the runner reads at runtime', () => {
-    expect(manifest.files).toContain('migrations')
-
+  it('keeps the migrations the runner reads at runtime', () => {
     const sql = readdirSync(join(ROOT, 'packages', 'clickhouse', 'migrations'))
+
     expect(sql.length).toBeGreaterThan(0)
     expect(sql.every((file) => file.endsWith('.sql'))).toBe(true)
   })
 
-  it('exposes the runner as a command, with the shebang that makes it one', () => {
-    const bin = (manifest.publishConfig as JsonObject).bin as JsonObject
-    const entry = Object.values(bin)[0]
-
-    expect(entry).toBe('./dist/cli.mjs')
+  it('runs the runner from source, with the shebang that makes it a command', () => {
+    expect((manifest.scripts as JsonObject).ch).toBe('node src/cli.ts')
     expect(readFileSync(join(ROOT, 'packages', 'clickhouse', 'src', 'cli.ts'), 'utf8')).toMatch(
       /^#!\/usr\/bin\/env node\n/,
     )
   })
 
-  it('keeps the entry points a Worker needs away from the one that reads the disk', () => {
+  it('keeps the entry point that reads the disk apart from the ones that do not', () => {
     const targets = Object.keys(manifest.exports as JsonObject)
 
     expect(targets).toContain('./log-store')

@@ -1,6 +1,7 @@
 {
   "name": "@nekolog-io/config",
   "version": "1.0.0",
+  "private": true,
   "description": "Environment variable schemas and loader shared by the NekoLog apps, following specification 2.",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -17,41 +18,21 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "files": [
-    "dist",
-    "CHANGELOG.md"
-  ],
   "exports": {
     ".": "./src/index.ts"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      }
-    },
-    "main": "./dist/index.mjs",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
   },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "lint": "pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+    "test": "vitest run"
   },
   "dependencies": {
     "valibot": "^1.5.0"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
-    "publint": "^0.3.25",
-    "tsdown": "^0.23.2",
     "vitest": "^5.0.5"
   }
 }

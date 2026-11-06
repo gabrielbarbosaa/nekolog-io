@@ -98,7 +98,7 @@ trabalho real está em A5, A6 e A7.
 | B4 | **Proxy reverso com TLS** (Caddy) na frente da ingestão e da API | **o código está feito** — entrou junto com o B6: o Caddy termina TLS para `ingest.`, `api.` e o domínio, pede certificado ao Let's Encrypt com `ACME_EMAIL` e é o **único** container que publica porta para fora; as aplicações continuam em HTTP puro, mas só na loopback. Falta a máquina | P |
 | B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P — **declarado** em `infra/vps`; falta a conta |
 | B6 | Containers para `apps/web` e `apps/docs` no compose | **feito** — Next em standalone (299 MB) e a documentação estática num Caddy próprio (89 MB); o proxy roteia `/docs` direto, sem passar pelo Next | M |
-| B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
+| B7 | Container do dashboard e como o build dele chega na máquina | `apps/dashboard` | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
 | B9 | Mover o backup do Postgres do Actions para a máquina | **feito** — container `backup`, `pg_dump \| gzip \| age \| rclone` num cano só; o workflow ficou só com o teste de restauração | P |
 | B10 | Deploy: como o código chega na VPS | **feito** — clone na máquina, `deploy.sh` com `git pull --ff-only` e build local; a imagem caiu de 2,09 GB para 1,05 GB, que é o que torna isso viável num 1 vCPU ([ADR 0018](adr/0018-deploy-por-git-pull-na-maquina.md)) | M |
@@ -208,7 +208,7 @@ barato é o pior dos dois mundos.
 | C7 | Webhook do provedor (assinatura criada, pagamento falhou, cancelada) | — | M |
 | C8 | Suspender quem não pagou | **o `quota-block` já sabe bloquear ambiente pelo KV** — é reaproveitar | P |
 | C9 | Cadastro self-serve | hoje a instância é **por convite** | M |
-| C10 | Telas de plano, pagamento e faturas | repositório fechado | G |
+| C10 | Telas de plano, pagamento e faturas | `apps/dashboard` | G |
 | C11 | Termos pagos, política de reembolso, SLA, contrato de tratamento de dados | os atuais são de um serviço gratuito de estudo e nunca passaram por advogado | M |
 
 **O que já está construído e serve:** o `usage_per_minute` agrupa por
@@ -223,8 +223,8 @@ retenção já é coluna. Já existe audit log, matriz de papéis e chave com es
 
 | # | O que fazer | Onde | Esforço |
 |---|---|---|---|
-| D1 | As 7 telas abertas | repositório fechado | G |
-| D2 | Multi-tenant: criar organização, projeto e ambiente pela interface — hoje o self-host semeia **uma** de cada | repositório fechado | G |
+| D1 | As 7 telas abertas | `apps/dashboard` — mockups aprovados na 2.1 | G |
+| D2 | Multi-tenant: criar organização, projeto e ambiente pela interface — hoje o self-host semeia **uma** de cada | `apps/dashboard` | G |
 | D3 | A fiação que falta: nível mínimo, amostragem e redação no servidor não chegam ao `KeyRecord` do self-host | **feito** — documento do seed na versão 2, `seed set`, e a ingestão relendo o arquivo sem reiniciar | M |
 | D4 | Destino de `infra/vercel`, `infra/envs` e `infra/vm` | **feito** — removidas, junto com os Workers que as consumiam; entrou `infra/vps` no lugar | M |
 | D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | **feito** — plano e runbooks reescritos para a máquina; `internal/self-host/src/runbooks.test.ts` falha se um runbook voltar a citar provedor removido, apontar para arquivo que não existe ou inventar variável. Nenhum foi **exercitado**: isso só acontece com a máquina (B2/B3) | M |
