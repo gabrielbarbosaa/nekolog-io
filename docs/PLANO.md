@@ -13,10 +13,10 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 > em 05/11/2026 a plataforma deixou de ser Cloudflare Workers, Workers KV, R2,
 > Tunnel, Access, VM da Oracle, Neon, Upstash e Vercel — tudo isso foi removido
 > pelo item D4 sem nunca ter sido aplicado. As seções 4, 5, 14, 15, 17, 18 e 19
-> já descrevem a máquina que existe. **Os `docs/runbooks/` ainda não**: eles
-> mandam abrir painel do Cloudflare e criar branch no Neon, e serão reescritos
-> junto com a compra da máquina (itens B2 e B3), porque runbook escrito antes de
-> existir o que ele descreve é rascunho.
+> já descrevem a máquina que existe, e os [`docs/runbooks/`](runbooks/README.md)
+> também, desde 05/11/2026 — mas **nenhum deles foi executado**, porque a
+> máquina ainda não foi comprada (item B1). São procedimento derivado do que o
+> código faz, não passo a passo testado.
 
 ---
 
@@ -639,7 +639,7 @@ Segurança é prioridade em todas as camadas: a plataforma recebe dados de terce
 - **Checklist OWASP ASVS nível 2** para autenticação, sessão, controle de acesso, validação de entrada e configuração.
 - **PRs sensíveis:** os que tocam `internal/auth`, `apps/ingest` ou permissões recebem o label `security` e passam por um checklist próprio antes do merge.
 - **`SECURITY.md`** com o private vulnerability reporting do GitHub, prazo de resposta e reconhecimento público de quem reportar.
-- **Runbooks** em [docs/runbooks/](runbooks/README.md): [incidente](runbooks/incidente.md), [vazamento de key](runbooks/vazamento-de-key.md), [rotação de segredos](runbooks/rotacao-de-segredos.md) (JWT, HMAC dos códigos, senhas do ClickHouse, tokens de deploy) e [restauração de backup](runbooks/restauracao-de-backup.md).
+- **Runbooks** em [docs/runbooks/](runbooks/README.md): [incidente](runbooks/incidente.md), [vazamento de key](runbooks/vazamento-de-key.md), [rotação de segredos](runbooks/rotacao-de-segredos.md) (senhas do ClickHouse e do Postgres, `ENCRYPTION_KEY`, segredo de webhook, credenciais do bucket de backup, tokens de provedor e `TF_ENCRYPTION`) e [restauração de backup](runbooks/restauracao-de-backup.md).
 
 ### 14.2 Dependências, repositório e publicação
 

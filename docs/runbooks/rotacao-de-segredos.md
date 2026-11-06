@@ -7,54 +7,70 @@ Dois contextos, com regras diferentes:
 - **Rotina** (a cada 6 meses, ou quando alguém perde acesso ao ambiente): dá
   para fazer sem derrubar ninguém, aceitando a chave antiga por um período.
 - **Comprometimento**: a chave antiga precisa parar de funcionar **agora**,
-  mesmo que isso derrube sessões. Veja
+  mesmo que isso derrube alguma coisa. Veja
   [vazamento de key](vazamento-de-key.md) primeiro.
 
-Onde cada segredo vive está na especificação 2
-([ESPECIFICACOES.md](../ESPECIFICACOES.md)). Segredos de aplicação ficam nos
-cofres de cada serviço (GitHub Environments, Cloudflare, Vercel), separados por
-ambiente.
+## Onde cada segredo mora
 
-**Rotacione sempre `dev` → `qa` → `prod`.** Se o procedimento tem um erro, você
-descobre em `dev`.
+Não há mais ambientes separados nem cofre por provedor. São dois lugares:
+
+| Lugar | Quais | Como se troca |
+|---|---|---|
+| `deploy/self-host/.env`, na máquina, `0600` | senhas do ClickHouse e do Postgres, `ENCRYPTION_KEY`, credenciais do bucket de backup, `OPS_DISCORD_WEBHOOK_URL`, `HEARTBEAT_URL` | editar o arquivo e `docker compose up -d` |
+| GitHub (segredos e variáveis do repositório) | `TF_ENCRYPTION`, `TOFU_STATE_*`, `CLOUDFLARE_API_TOKEN`, `INFRA_GITHUB_TOKEN` | pela interface do GitHub, e rodar o workflow que usa |
+
+**Não existe `dev` → `qa` → `prod`.** O ambiente `qa` deixou de existir junto com
+a plataforma anterior; `SEED_ENVIRONMENTS` nomeia os ambientes **do cliente**
+dentro de um projeto, que é outra coisa. Então não há onde ensaiar: leia o
+procedimento inteiro antes de começar, e faça o backup que o passo 1 pedir.
+
+O que diz respeito a login — `AUTH_JWT_*`, `AUTH_OTP_SECRET` — **não está aqui**.
+O dashboard é fechado e mora em outro repositório; nenhuma dessas variáveis
+existe nesta máquina, e a rotação delas é de lá.
 
 ---
 
-## 1. Chave do JWT (`AUTH_JWT_*`)
+## 1. Senhas do ClickHouse
 
-É a única rotação que foi **desenhada para não derrubar sessão** — o `kid` no
-token existe exatamente para isso.
+São cinco usuários com permissões distintas, declarados em
+[`clickhouse-users.xml`](../../deploy/self-host/clickhouse-users.xml), cada um
+lendo a senha do ambiente (`from_env`) e nunca do arquivo:
 
-1. Gere um par Ed25519 novo:
+| Usuário | Para quê |
+|---|---|
+| `nekolog_ingest` | grava log |
+| `nekolog_reader` | lê log (a API pública) |
+| `nekolog_jobs` | alertas, issues, cota, exportação |
+| `nekolog_backup` | só `BACKUP` e `WRITE ON S3`; não lê uma linha |
+| `nekolog_migrator` | o único com DDL |
+
+Trocar uma senha é trocar a variável e reiniciar quem a usa. O arquivo está
+montado em `users.d/`, então o ClickHouse recarrega sem perder o volume.
+
+1. Gere a senha: `openssl rand -hex 24` (ou `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`).
+2. Troque a linha no `.env`.
+3. `docker compose up -d` — o Compose recria só os containers cujo ambiente
+   mudou. Reiniciar o `clickhouse` é o que aplica a senha nova.
+4. **Confirme antes de considerar feito**: `curl localhost:8787/health` para a
+   ingestão, `localhost:8789/health` para a API, e mande um log de teste.
+
+> **Rotacione uma por vez.** Com as cinco juntas, um erro de digitação derruba
+> tudo ao mesmo tempo e você não sabe qual foi.
+
+## 2. Senha do Postgres (`POSTGRES_PASSWORD`)
+
+O Postgres guarda a senha no volume no primeiro start — mudar a variável
+**não** muda a senha do banco que já existe. A ordem é inversa à do ClickHouse:
+
+1. Troque no banco primeiro:
    ```bash
-   openssl genpkey -algorithm Ed25519 -out jwt-new.pem
-   openssl pkey -in jwt-new.pem -pubout -out jwt-new.pub
+   docker compose exec postgres psql -U nekolog -c "ALTER USER nekolog PASSWORD '«nova»'"
    ```
-2. **Mova a pública atual** para `AUTH_JWT_PREVIOUS_PUBLIC_KEY`.
-3. Grave a nova em `AUTH_JWT_PRIVATE_KEY` / `AUTH_JWT_PUBLIC_KEY`, com um
-   `AUTH_JWT_KID` **novo**.
-4. Deploy. A partir daí tokens novos usam a chave nova; tokens emitidos antes
-   continuam válidos porque a pública anterior ainda é aceita.
-5. **Espere mais que a validade do access token (10 min).** Na prática, espere
-   algumas horas.
-6. Remova `AUTH_JWT_PREVIOUS_PUBLIC_KEY`. A chave antiga morre aqui.
+2. Só então troque no `.env` e rode `docker compose up -d`.
 
-> **Se for comprometimento:** pule o passo 2. Não aceitar a chave anterior
-> derruba todas as sessões — que é exatamente o que se quer, porque a chave
-> vazada forja qualquer sessão.
-
-## 2. Segredo dos códigos de login (`AUTH_OTP_SECRET`)
-
-Os códigos são guardados como HMAC desse segredo, com TTL de 10 minutos.
-
-1. Gere: `openssl rand -base64 32`
-2. Substitua e faça deploy.
-3. **Códigos em voo param de validar na hora.** Quem estava no meio de um login
-   precisa pedir outro código. Com TTL de 10 min, o impacto é pequeno — prefira
-   um horário de baixo uso.
-
-Não há mecanismo de duas chaves aqui, e não vale a pena construir um para 10
-minutos de impacto.
+Entre os dois passos a `api`, os `jobs` e o `backup` ficam sem alcançar o banco.
+Faça em horário de baixo uso: a ingestão não depende do Postgres, então os logs
+continuam entrando.
 
 ## 3. Chave de criptografia do banco (`ENCRYPTION_KEY`)
 
@@ -62,7 +78,8 @@ minutos de impacto.
 tokens de canal guardados no Postgres.
 
 ⚠️ **Trocar a chave sem recriptografar torna esses dados ilegíveis
-permanentemente.** Não existe recuperação.
+permanentemente.** Não existe recuperação, e nem o backup ajuda — o backup
+guarda o texto cifrado, não a chave.
 
 Procedimento:
 
@@ -79,7 +96,7 @@ Procedimento:
 4. **Rodar duas vezes não faz mal.** Um segredo já na chave nova é reconhecido
    e deixado quieto, contado em `alreadyNew`. Isso é o que permite retomar uma
    execução interrompida no meio.
-5. Só depois remova a chave antiga.
+5. Só depois troque a `ENCRYPTION_KEY` no `.env` e rode `docker compose up -d`.
 
 O segredo em rotação (`previous_sealed_secret`) é movido junto, então uma
 rotação de chave do banco no meio de uma rotação de segredo de webhook não
@@ -106,55 +123,50 @@ uma janela:
 Nunca há três: o código recusa mandar mais de duas assinaturas, porque uma
 janela que acumula é uma janela que ninguém fecha.
 
-## 4. Senhas do ClickHouse
+## 4. Credenciais do bucket de backup
 
-São três usuários com permissões distintas: `INSERT` (ingestão), `SELECT`
-(dashboard) e jobs.
+`BACKUP_S3_ACCESS_KEY_ID` e `BACKUP_S3_SECRET_ACCESS_KEY` alcançam **todos os
+backups do ClickHouse** — leitura e remoção. Rotacionar é no painel do
+Cloudflare, e a ordem importa pouco porque o backup roda de hora em hora:
 
-1. Crie o usuário novo **antes** de remover o antigo, para não haver janela sem
-   acesso:
-   ```sql
-   -- «conferir sintaxe na versão em uso»
-   CREATE USER nekolog_insert_v2 IDENTIFIED BY '«nova-senha»';
-   GRANT INSERT ON nekolog_«ambiente».* TO nekolog_insert_v2;
-   ```
-2. Atualize o secret no cofre do serviço que usa aquele usuário.
-3. Deploy.
-4. Confirme que o acesso funciona (envie um log de teste; confira o `/health`).
-5. **Só então** remova o usuário antigo: `DROP USER nekolog_insert;`
+1. Crie o token novo no R2, com acesso só àquele bucket.
+2. Troque as duas variáveis no `.env` e rode `docker compose up -d`.
+3. **Confirme na próxima hora** que um backup novo apareceu no bucket. Um
+   backup que parou de acontecer não avisa sozinho a não ser pelo
+   `OPS_DISCORD_WEBHOOK_URL`.
+4. Revogue o token antigo **no Cloudflare**. Tirar do `.env` não revoga nada.
 
-Se fizer na ordem inversa, a ingestão para entre o `DROP` e o deploy.
+A `BACKUP_AGE_RECIPIENT` é a metade **pública** de um par `age` — ela não é
+segredo e não se rotaciona por comprometimento. Trocar o par significa que os
+dumps antigos só abrem com a chave privada antiga: **guarde as duas** enquanto
+houver backup antigo dentro da retenção.
 
-## 5. Tokens de deploy e de provedor
+## 5. Tokens de provedor
 
-`CLOUDFLARE_API_TOKEN`, `INFRA_GITHUB_TOKEN`, `VERCEL_API_TOKEN`, `OCI_*`,
-`CF_KV_API_TOKEN`, e as credenciais S3 do bucket de estado
-(`TOFU_STATE_ACCESS_KEY_ID` e `TOFU_STATE_SECRET_ACCESS_KEY`).
-
-O `CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET` dos Workers **não** entram
-aqui: eles são saída do OpenTofu. Rotacionar é subir o
-`client_secret_version` do `cloudflare_zero_trust_access_service_token`, aplicar
-e levar a saída nova para os segredos do Worker.
+`CLOUDFLARE_API_TOKEN`, `INFRA_GITHUB_TOKEN` e as credenciais S3 do bucket de
+estado (`TOFU_STATE_ACCESS_KEY_ID` e `TOFU_STATE_SECRET_ACCESS_KEY`). Todos são
+segredos do repositório no GitHub, usados só pelo workflow
+[`infra.yml`](../../.github/workflows/infra.yml).
 
 1. Crie o token novo no provedor, **com o menor escopo que funcione** — a
    rotação é uma boa hora para perceber que o token antigo tinha permissão
    demais.
-2. Atualize no GitHub Environment correspondente.
-3. Rode o workflow que o usa, para confirmar.
+2. Atualize o segredo no GitHub.
+3. Rode o workflow que o usa, para confirmar. Um `plan` basta: ele lê o estado
+   e fala com o provedor sem mudar nada.
 4. Revogue o antigo **no provedor**. Remover do GitHub não revoga nada.
 
 ## 6. `TF_ENCRYPTION`
 
-Decifra o estado do OpenTofu, que contém o segredo do túnel e o client secret
-do service token do Access. Tratar como a chave mestra.
+Decifra o estado do OpenTofu. Tratar como a chave mestra.
 
 O segredo guarda o HCL inteiro da criptografia, não só a frase — ver
 [infra/README.md](../../infra/README.md). Ele nunca aparece no código: as raízes
 declaram só `enforced = true`.
 
-**Não troque a frase editando o segredo.** O estado no R2 continua cifrado com a
-antiga, e o próximo `init` não consegue abrir. A troca é em dois passos, porque
-o estado precisa ser **recriptografado**:
+**Não troque a frase editando o segredo.** O estado no bucket continua cifrado
+com a antiga, e o próximo `init` não consegue abrir. A troca é em dois passos,
+porque o estado precisa ser **recriptografado**:
 
 1. Faça backup do estado atual: baixe `repo/terraform.tfstate`,
    `email/terraform.tfstate` e `vps/terraform.tfstate` do bucket (qualquer
@@ -180,8 +192,9 @@ o estado precisa ser **recriptografado**:
    }
    ```
 
-3. Rode `tofu apply` em **cada** raiz — `envs/dev`, `envs/qa`, `envs/prod` e
-   `repo`. É a escrita do estado que o recriptografa; um `plan` não basta.
+3. Rode `tofu apply` em **cada** raiz — `repo`, `email` e `vps`. É a escrita do
+   estado que o recriptografa; um `plan` não basta. O workflow aplica as três,
+   e há um teste que falha se uma raiz nova ficar de fora.
 4. Só então tire o `fallback` e o `key_provider` antigo, e rode de novo para
    confirmar que abre sem ele.
 5. Guarde a nova fora do GitHub também. Perdê-la significa perder o controle do
@@ -190,7 +203,10 @@ o estado precisa ser **recriptografado**:
 ## 7. Depois de qualquer rotação
 
 - [ ] A credencial antiga **não funciona mais** (teste, não presuma).
-- [ ] Os três ambientes foram rotacionados, ou está registrado por que não.
+- [ ] A máquina voltou inteira: `docker compose ps` sem nada reiniciando, e
+      `/health` respondendo nas três portas.
+- [ ] O `.env` continua `0600` e tem cópia fora da máquina. A `ENCRYPTION_KEY`
+      não é recuperável do banco.
 - [ ] `.env.example` atualizado, se o nome de alguma variável mudou.
 - [ ] Registro no `audit_log`.
 - [ ] Se foi por comprometimento, o

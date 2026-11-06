@@ -6,16 +6,26 @@
 
 | Dado | Backup | Se perder |
 |---|---|---|
-| **Postgres** (usuários, orgs, projetos, ambientes, keys, alertas, audit log) | `pg_dump` diário **pela própria máquina**, cifrado com `age`, num bucket S3, retenção de 30 dias | Restaurar. |
-| **ClickHouse** (logs) | `BACKUP DATABASE` diário para um bucket S3 fora da máquina, se configurado | Restaurar. É o dado pelo qual o cliente paga. |
-| **Redis** (códigos, sessões) | **Nenhum**, por decisão | Todo mundo faz login de novo. |
-| **R2** (source maps, exportações) | Nenhum | Exportações são regeneráveis; source maps são reenviados no próximo deploy do cliente. |
+| **Postgres** (orgs, projetos, ambientes, keys, issues, alertas, audit log) | `pg_dump` diário **pela própria máquina**, cifrado com `age`, no bucket sob `postgres/`, retenção de `BACKUP_KEEP_DAYS` | Restaurar. |
+| **ClickHouse** (logs) | `BACKUP DATABASE` diário para o mesmo bucket, sob `clickhouse/`, se configurado | Restaurar. É o dado pelo qual o cliente paga. |
+| **Volume do spool** (`nekolog_spool`) | **Nenhum** | Os batches que ainda não foram reenviados somem. Vale minutos de log, não dias. |
+| **Volume do KV** (`nekolog_kv`) | **Nenhum** | A lista de bloqueio é recalculada pelos jobs no minuto seguinte. |
+| **Volume dos source maps** (`nekolog_sourcemaps`) | **Nenhum** | São reenviados no próximo deploy do cliente. |
+| **`.nekolog-seed.json`** (volume `nekolog_state`) | **Nenhum automático** | Ninguém consegue mandar log: a ingestão lê as keys daí. **Copie esse arquivo para fora da máquina.** |
 
 A linha do ClickHouse dizia "nenhum, por decisão — perda aceita: logs são
 descartáveis". Isso valia para um projeto de estudo e **deixou de valer no dia
 em que alguém paga para guardar esses logs**. Hoje existe backup; o que não
 existe é obrigação de configurá-lo, e um container de jobs sem destino avisa
 isso em toda partida.
+
+**Os dois backups vão para o mesmo bucket e têm retenções diferentes, por
+mecanismos diferentes.** O do Postgres apaga os próprios arquivos antigos por
+`BACKUP_KEEP_DAYS`; o do ClickHouse não apaga nada, porque o ClickHouse não sabe
+apagar objeto em S3 — quem expira é uma regra de ciclo de vida declarada em
+[`infra/vps`](../../infra/vps), e ela mira **só** o prefixo `clickhouse/`. Uma
+regra para o bucket inteiro seria uma segunda retenção sobre os mesmos arquivos,
+com outro número.
 
 ## 1. Decidir se é para restaurar
 
@@ -25,50 +35,79 @@ Restauração **sobrescreve dados**. Antes de começar:
    banco inteiro perdido? Para um registro só, editar direto costuma ser melhor
    que restaurar tudo.
 2. **Quanto se perde?** O backup é diário. Restaurar significa perder tudo
-   depois do último dump — contas criadas, keys geradas, regras de alerta.
-3. **Branch do Neon em vez de sobrescrever.** O Neon permite criar uma branch do
-   banco. **Restaure numa branch nova, confira, e só então aponte a aplicação
-   para ela.** Nunca restaure por cima do banco de produção às cegas.
+   depois do último dump — projetos criados, keys geradas, regras de alerta.
+3. **Nunca restaure por cima do banco em produção.** Não há branch de banco para
+   onde fugir como havia no provedor anterior: aqui o Postgres é um container, e
+   o lugar seguro é **outro** container, ao lado, com um volume descartável.
+   Confira lá, e só então troque.
 
-## 2. Restaurar
+## 2. Restaurar o Postgres
 
 > Comandos não executados — conferir antes de usar em produção.
 
-1. **Localize o dump** no R2, bucket de backups, pela data desejada.
-2. **Decifre com `age`.** A chave privada está **offline, com o autor** — só a
-   pública (`BACKUP_AGE_RECIPIENT`) fica no CI, justamente para que o CI
-   comprometido não consiga ler backup.
+1. **Pare quem escreve**, para que a restauração não compita com os jobs:
    ```bash
-   age --decrypt -i «chave-privada» -o dump.sql backup-«data».sql.age
+   cd «clone»/deploy/self-host
+   docker compose stop jobs api backup
    ```
-3. **Crie uma branch do banco no Neon** a partir do estado atual (preserva o
-   que existe hoje, caso a restauração seja a decisão errada).
-4. **Restaure na branch:**
+   A ingestão continua: ela não depende do Postgres, e parar de aceitar log é um
+   dano maior que o que você está consertando.
+2. **Localize o dump** no bucket, sob `postgres/`, pela data desejada.
+3. **Decifre com `age`.** A chave privada está **offline, com o autor** — só a
+   pública (`BACKUP_AGE_RECIPIENT`) fica na máquina, justamente para que quem
+   alcança a máquina e o bucket não consiga ler backup.
    ```bash
-   psql "«DATABASE_URL-da-branch»" < dump.sql
+   age --decrypt -i «chave-privada» -o dump.sql.gz backup-«data».sql.gz.age
+   gunzip dump.sql.gz
    ```
-5. **Confira antes de apontar a aplicação.** No mínimo: contagem de `users`,
-   `organizations` e `api_keys` bate com o esperado? O audit log tem registro
-   até a data do dump?
-6. **Aponte a aplicação** para a branch restaurada, atualizando `DATABASE_URL`
-   no ambiente correspondente.
+4. **Suba um Postgres descartável** e restaure nele primeiro:
+   ```bash
+   docker run --rm -d --name pg-restore -e POSTGRES_PASSWORD=restore \
+     -p 15432:5432 postgres:18
+   psql "postgres://postgres:restore@localhost:15432/postgres" < dump.sql
+   ```
+5. **Confira antes de trocar qualquer coisa.** No mínimo: contagem de
+   `organizations`, `projects`, `environments` e `api_keys` bate com o esperado?
+   O `audit_log` tem registro até a data do dump?
+   ```sql
+   SELECT 'orgs', count(*) FROM organizations
+   UNION ALL SELECT 'keys', count(*) FROM api_keys
+   UNION ALL SELECT 'audit', max(created_at)::text FROM audit_log
+   ```
+6. **Só então** restaure no banco de verdade, com o container parado e o volume
+   recriado — restaurar por cima de tabelas que já existem mistura dois estados:
+   ```bash
+   docker compose stop postgres
+   docker volume rm «projeto»_nekolog_postgres
+   docker compose up -d postgres
+   docker compose exec -T postgres psql -U nekolog nekolog < dump.sql
+   docker compose up -d
+   ```
+7. Apague o container descartável: `docker rm -f pg-restore`.
 
 ## 3. Reconciliar
 
 Restaurar o Postgres deixa o resto do sistema fora de sincronia:
 
-- **KV das keys.** Keys criadas depois do dump sumiram do Postgres mas podem
-  continuar no KV (funcionando sem registro), e keys revogadas depois podem ter
-  voltado a existir. **Ressincronize o KV a partir do Postgres restaurado.**
-- **Sessões no Redis.** Apontam para usuários que podem não existir mais.
-  Encerrar todas as sessões é o caminho seguro.
+- **As keys.** O Postgres tem os hashes, mas quem a ingestão lê é o
+  `.nekolog-seed.json`. Keys criadas depois do dump sumiram do Postgres e
+  **continuam valendo** na ingestão; keys revogadas depois voltaram a existir no
+  Postgres. Ressincronize numa direção só:
+  ```bash
+  docker compose run --rm --entrypoint sh bootstrap \
+    -c 'pnpm seed sync-db --file $SEED_FILE'
+  ```
+  Isso escreve o documento do seed por cima do Postgres, e é a direção certa:
+  o arquivo é a verdade para a ingestão.
 - **Logs no ClickHouse** referenciam `project_id` e `environment_id` que talvez
-  não existam mais no Postgres. Isso aparece como log órfão no dashboard.
+  não existam mais no Postgres. Isso aparece como log órfão, e faz o rollup de
+  issues falhar com violação de chave estrangeira — o `sync-db` acima é o que
+  resolve.
 - **Agendamentos** (exportações, regras de alerta) voltam ao estado do dump:
   regras criadas depois precisam ser recriadas, regras apagadas voltam a
-  disparar.
+  disparar. Um alerta que estava `firing` volta a `ok` e **dispara de novo**.
 
-## 3.5. Restaurar o ClickHouse
+## 3.5 Restaurar o ClickHouse
 
 Cada backup é um objeto por conta própria em `clickhouse/<carimbo>` dentro do
 bucket, onde o carimbo é o momento da tentativa (`2026-11-05T03-00-00Z`). Não há
@@ -95,8 +134,12 @@ SELECT
 
 `usage_per_minute` é o que mede consumo para cobrança, e `_migrations` é o que
 diz em qual versão de schema aquele backup estava — se as migrações do
-repositório estiverem à frente, rode o runner por cima do banco restaurado antes
-de usá-lo.
+repositório estiverem à frente, rode `pnpm ch:migrate` por cima do banco
+restaurado antes de usá-lo.
+
+**Cuidado com o disco.** Restaurar ao lado significa duas cópias do banco na
+mesma máquina. Confira `df -h /` antes de começar: não cabendo, o `RESTORE`
+morre no meio e você fica com um banco pela metade *e* o disco cheio.
 
 **Quem pode restaurar não é quem faz o backup.** O `nekolog_backup` só tem
 `BACKUP`, `WRITE ON S3` e leitura de `system.backups`: ele escreve a cópia e não
@@ -110,23 +153,34 @@ de rotina deveria conseguir fazer.
 O plano exige **teste a cada marco** (seção 15.3). Um backup nunca restaurado
 não é um backup — é um arquivo.
 
-O teste é o procedimento acima inteiro, numa branch descartável do Neon:
+O teste do Postgres está automatizado e é um `workflow_dispatch`:
+[`backup.yml`](../../.github/workflows/backup.yml) baixa o backup mais recente,
+confere o cabeçalho `age-encryption.org`, restaura num Postgres descartável e
+consulta cada tabela, uma a uma. **Restaurar numa máquina diferente da que fez o
+backup é a única versão desse teste que vale** — ela exercita também a chave
+privada do `age`, que é o ponto de falha mais provável de todos.
 
-- [ ] O dump do dia existe no R2 e tem tamanho plausível.
-- [ ] A chave `age` decifra (**confirma que a chave offline ainda existe e é a
-      certa** — esse é o ponto de falha mais provável de todos).
-- [ ] O `psql` restaura sem erro.
-- [ ] As contagens batem com produção.
-- [ ] A branch é apagada ao fim.
+O do ClickHouse ainda é à mão, e é o procedimento de [§3.5](#35-restaurar-o-clickhouse):
+
+- [ ] O backup do dia existe sob `clickhouse/` e tem tamanho plausível.
+- [ ] O `RESTORE` termina sem erro, num banco com outro nome.
+- [ ] As contagens batem com a produção.
+- [ ] `_migrations` está na mesma versão que o repositório, ou o runner foi
+      rodado por cima.
+- [ ] O banco restaurado é apagado ao fim (`DROP DATABASE nekolog_restaurado`).
 
 Registre a data do último teste bem-sucedido. Se não houver registro, considere
-que não foi testado.
+que não foi testado. **Hoje não há registro de nenhum dos dois**: falta a
+variável `BACKUPS_ENABLED`, a máquina, o bucket e o par de chaves do `age`.
 
 ## 5. Se não houver backup utilizável
 
-- Usuários e organizações: perda total; é preciso recriar e avisar.
+- Organizações e projetos: perda total; é preciso recriar e avisar.
 - Keys: só o hash era guardado, então mesmo com backup ninguém recupera a key
-  original — todos os clientes precisam gerar novas.
+  original — todos os clientes precisam gerar novas. Se o
+  `.nekolog-seed.json` também se perdeu, **nem o hash sobrou**.
+- Logs: o que o ClickHouse perdeu sem backup não volta de lugar nenhum. É o
+  dado pelo qual o cliente paga.
 - Trate como incidente de segurança e siga
   [incidente §5](incidente.md#5-se-for-incidente-de-segurança): indisponibilidade
   prolongada de dado pessoal também tem implicação sob a LGPD.
@@ -143,16 +197,6 @@ Saiu do Actions por dois motivos. O primeiro é prático: o Postgres da VPS não
 publica porta nenhuma, então um runner do GitHub não tem como alcançá-lo sem
 expor o banco na internet. O segundo é de custo: o repositório é privado e os
 minutos do Actions passaram a ser contados.
-
-**O teste de restauração continua no Actions**, à mão
-([`backup.yml`](../../.github/workflows/backup.yml)): ele baixa o backup mais
-recente, confere a assinatura `age-encryption.org`, restaura num Postgres
-descartável e consulta cada tabela, uma a uma. **Restaurar numa máquina
-diferente da que fez o backup é a única versão desse teste que vale** — ela
-exercita também a chave privada do `age`, que é o ponto de falha mais provável.
-
-Nada disso roda ainda: falta a variável `BACKUPS_ENABLED`, a máquina, o bucket e
-o par de chaves do `age`.
 
 ### Uma coisa que esteve errada o tempo todo
 
@@ -181,5 +225,5 @@ Três coisas que valem saber:
   ClickHouse reiniciar, a tarefa esquece o que já fez e tira outro backup. Isso
   é de propósito — na dúvida, fazer backup demais.
 - **Nada aqui apaga backup velho**, porque o ClickHouse não sabe apagar objeto
-  em S3. A retenção é uma regra de ciclo de vida no bucket. Sem ela, o bucket
-  cresce para sempre.
+  em S3. A retenção é a regra de ciclo de vida do bucket, declarada em
+  [`infra/vps`](../../infra/vps). Sem ela, o bucket cresce para sempre.
