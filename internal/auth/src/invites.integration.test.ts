@@ -1,4 +1,7 @@
 import { randomBytes } from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { claimInvite, findOpenInvite, hashInviteToken, newInviteToken } from './invites.ts'
@@ -33,10 +36,31 @@ if (!reachable) {
   )
 }
 
+const MIGRATIONS = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'packages',
+  'db',
+  'migrations',
+)
+
+const DATABASE = `nekolog_invites_${process.pid}`
+
+function migrationStatements(): string[] {
+  return readdirSync(MIGRATIONS)
+    .filter((file) => file.endsWith('.sql'))
+    .sort()
+    .flatMap((file) =>
+      readFileSync(join(MIGRATIONS, file), 'utf8').split('--> statement-breakpoint'),
+    )
+    .map((statement) => statement.trim())
+    .filter((statement) => statement !== '')
+}
+
 let sql: ReturnType<typeof postgres>
 let run: SqlRunner
-const organizations: string[] = []
-const users: string[] = []
 
 function id(prefix: string): string {
   return newId(prefix)
@@ -48,7 +72,6 @@ async function anOrganization(): Promise<string> {
     organizationId,
     'Invites',
   ])
-  organizations.push(organizationId)
   return organizationId
 }
 
@@ -60,7 +83,6 @@ async function anAccount(email: string): Promise<string> {
     email,
     '$argon2id$v=19$m=19456,t=2,p=1$abc$def',
   ])
-  users.push(userId)
   return userId
 }
 
@@ -94,23 +116,39 @@ function address(): string {
   return `invite-${randomBytes(5).toString('hex')}@acme.test`
 }
 
-beforeAll(() => {
-  sql = postgres(URL, { max: 2, onnotice: () => {} })
+beforeAll(async () => {
+  if (!reachable) {
+    return
+  }
+
+  const admin = postgres(URL, { max: 1, onnotice: () => {} })
+  try {
+    await admin.unsafe(`create database "${DATABASE}"`)
+  } finally {
+    await admin.end()
+  }
+
+  sql = postgres(URL.replace(/\/[^/]*$/, `/${DATABASE}`), { max: 2, onnotice: () => {} })
+  for (const statement of migrationStatements()) {
+    await sql.unsafe(statement)
+  }
+
   run = async (text, params) =>
     (await sql.unsafe(text, params as never[])) as unknown as ReadonlyArray<Record<string, unknown>>
 })
 
 afterAll(async () => {
-  if (sql === undefined) {
+  if (!reachable) {
     return
   }
-  for (const userId of users) {
-    await sql.unsafe('delete from users where id = $1', [userId])
+
+  await sql?.end()
+  const admin = postgres(URL, { max: 1, onnotice: () => {} })
+  try {
+    await admin.unsafe(`drop database if exists "${DATABASE}" with (force)`)
+  } finally {
+    await admin.end()
   }
-  for (const organizationId of organizations) {
-    await sql.unsafe('delete from organizations where id = $1', [organizationId])
-  }
-  await sql.end({ timeout: 2 })
 })
 
 describe.skipIf(!reachable)('finding the invite behind a link', () => {
