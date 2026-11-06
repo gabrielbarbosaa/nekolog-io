@@ -43,9 +43,22 @@ describe('the auth routes that accept a POST', () => {
     expect(POSTS.map((route) => route.name).sort()).toContain('auth/login/start')
   })
 
+  it('has exactly one indirection for the origin check, and it does check', () => {
+    const guard = readFileSync(fileURLToPath(new URL('../lib/guard.ts', import.meta.url)), 'utf8')
+
+    expect(guard).toContain("originAllowed(request.headers.get('origin')")
+    expect(guard).toContain("refusal('bad_origin', 403)")
+  })
+
   it.each(POSTS)('$name refuses a request from another origin', ({ source }) => {
-    expect(source).toContain("originAllowed(request.headers.get('origin')")
-    expect(source).toContain('status: 403')
+    const inline =
+      source.includes("originAllowed(request.headers.get('origin')") &&
+      source.includes('status: 403')
+
+    expect(
+      inline || source.includes('await guard(request,'),
+      'a POST either checks the origin itself or goes through lib/guard.ts',
+    ).toBe(true)
   })
 
   it.each(POSTS)('$name runs on Node, where the crypto and the driver live', ({ source }) => {

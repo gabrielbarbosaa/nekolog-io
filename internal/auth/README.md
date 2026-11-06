@@ -216,6 +216,39 @@ da lista em vez de mostrá-lo. `revokeOwnSession` **confere o dono dentro do
 script** — sem isso, conhecer um `sid` bastaria para desconectar outra pessoa, e
 a sabotagem que tirou a comparação foi pega na hora.
 
+## Papéis, organizações e convites
+
+`src/permissions.ts` é a tabela da §10.2 em código, e **`src/permissions.test.ts`
+lê a tabela do próprio `docs/PLANO.md`** para conferir as 48 células. Não é um
+segundo registro da mesma coisa: se alguém alargar uma permissão aqui sem mexer
+no plano, o teste falha nomeando a célula. A sabotagem que deu `alert-channels`
+a um `member` foi pega assim.
+
+Duas regras ficam fora da tabela porque são a nota de rodapé dela: `mayActOn`
+impede um admin de mexer num owner, e `mayGrant` impede um admin de criar outro
+owner.
+
+**Ninguém fica sem owner.** Rebaixar ou remover o último owner é recusado pelo
+próprio `where` do `UPDATE`/`DELETE` — não por uma leitura anterior, que duas
+requisições simultâneas furariam. `transferOwnership` promove e rebaixa **numa
+instrução só**, pelo mesmo motivo.
+
+**O escopo da organização está em toda cláusula `where`.** Trocar um papel,
+remover alguém e revogar um convite recebem o id da organização e o id do alvo,
+e o alvo de outra organização simplesmente não casa. A sabotagem que tirou o
+`organization_id = $1` do `CHANGE_ROLE` quebrou três testes.
+
+Um convite para um endereço que já tem convite aberto **substitui** o anterior,
+num `on conflict` sobre o índice parcial do esquema — e o link antigo para de
+valer na hora, o que tem teste.
+
+### `$7::jsonb` grava o JSON duas vezes
+
+O metadado do audit log ia como texto e voltava como texto, não como objeto: o
+driver vê o `::jsonb` e serializa o parâmetro por conta própria, em cima do
+`JSON.stringify` que já estava lá. `$7::text::jsonb` resolve — o parâmetro entra
+como texto e o Postgres é quem o lê como JSON.
+
 ## Login
 
 `startLogin` e `finishLogin` são o fluxo da §11.1, sem HTTP: quem chama entrega

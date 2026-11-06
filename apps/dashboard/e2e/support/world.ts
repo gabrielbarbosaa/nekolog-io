@@ -135,6 +135,20 @@ export async function signIn(page: Page, email: string, password = PASSWORD): Pr
   return api(page, '/api/auth/login/verify', { code, remember: true })
 }
 
+export async function joinOrganization(
+  organizationId: string,
+  email: string,
+  role: string,
+): Promise<string> {
+  const id = newId('mem_')
+  await database().unsafe(
+    `insert into memberships (id, organization_id, user_id, role)
+     select $1, $2, id, $4 from users where email = $3`,
+    [id, organizationId, email, role],
+  )
+  return id
+}
+
 export async function userIdFor(email: string): Promise<string> {
   const rows = await database().unsafe('select id from users where email = $1', [email])
   const row = rows[0] as { id?: string } | undefined
