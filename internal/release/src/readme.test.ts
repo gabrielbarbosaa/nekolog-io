@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -56,6 +56,37 @@ describe('the files at the root', () => {
     }
 
     expect(broken).toEqual([])
+  })
+})
+
+describe('the skills this repository carries', () => {
+  const SKILLS = join(ROOT, '.claude', 'skills')
+
+  it('keeps each one where Claude Code looks for it, not beside the prose', () => {
+    expect(existsSync(SKILLS), '.claude/skills is missing').toBe(true)
+    expect(existsSync(join(ROOT, 'docs', 'SKILLS')), 'a skill under docs/ never loads').toBe(false)
+  })
+
+  it('gives every skill the two fields that make it discoverable', () => {
+    const found = readdirSync(SKILLS, { withFileTypes: true }).filter((entry) =>
+      entry.isDirectory(),
+    )
+
+    expect(found.length, 'no skill to check, so this proves nothing').toBeGreaterThan(0)
+    for (const skill of found) {
+      const file = join(SKILLS, skill.name, 'SKILL.md')
+
+      expect(existsSync(file), `${skill.name} has no SKILL.md`).toBe(true)
+      const text = readFileSync(file, 'utf8')
+
+      expect(
+        text,
+        `${skill.name} carries CRLF, which git rewrites on the next touch`,
+      ).not.toContain('\r\n')
+      const front = /^---\n([\s\S]*?)\n---/.exec(text)?.[1] ?? ''
+      expect(front, `${skill.name} declares no name`).toMatch(/^name: \S+/m)
+      expect(front, `${skill.name} declares no description`).toMatch(/^description: \S+/m)
+    }
   })
 })
 
