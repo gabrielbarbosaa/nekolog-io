@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keys — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">N</span> NekoLog</div>
+
+    <button class="picker" type="button">
+      <span><span class="picker-label">Organização</span><strong>Acme Ltda</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+    <button class="picker" type="button">
+      <span><span class="picker-label">Projeto</span><strong>checkout-api</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+
+    <nav class="nav">
+      <a class="nav-item" href="explorer.html">Logs</a>
+      <a class="nav-item" href="issues.html">Issues <span class="count">7</span></a>
+      <span class="nav-item">Dashboards</span>
+      <span class="nav-item">Alertas <span class="count">2</span></span>
+      <span class="nav-item">Releases</span>
+      <span class="nav-item">Exportações</span>
+      <a class="nav-item" href="keys.html" aria-current="page">Configurações</a>
+    </nav>
+
+    <div class="sidebar-foot">Mockup da etapa 2.1 — nada aqui funciona.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="badge env-pill env-production"><span class="dot"></span> production</span>
+      <div class="spacer"></div>
+      <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      <button class="btn" type="button">GA <span class="muted">⌄</span></button>
+    </header>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h1>Configurações · Keys</h1>
+          <div class="sub">A key decide o ambiente. O SDK nunca escolhe um.</div>
+        </div>
+        <div class="row">
+          <button class="btn" type="button">Geral</button>
+          <button class="btn" type="button">Ambientes</button>
+          <button class="btn btn-primary" type="button">Keys</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="row">
+            <span class="badge env-pill env-production"><span class="dot"></span> production</span>
+            <span class="sub">retenção 30 dias · nível mínimo <span class="mono">info</span> · amostragem <span class="mono">1.0</span></span>
+          </div>
+          <button class="btn" type="button">Criar key</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:92px">Tipo</th>
+              <th>Key</th>
+              <th class="nowrap" style="width:120px">Criada</th>
+              <th class="nowrap" style="width:130px">Último uso</th>
+              <th class="nowrap" style="width:216px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge">pública</span></td>
+              <td class="mono">nekolog_pk_8Q2W…zT4f</td>
+              <td class="nowrap muted">12/10/2026</td>
+              <td class="nowrap muted">há 4 s</td>
+              <td>
+                <div class="actions">
+                  <button class="btn" type="button">Rotacionar</button>
+                  <button class="btn btn-danger" type="button">Revogar</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge">secreta</span></td>
+              <td class="mono">nekolog_sk_5H7D…m1Kp</td>
+              <td class="nowrap muted">12/10/2026</td>
+              <td class="nowrap muted">há 11 s</td>
+              <td>
+                <div class="actions">
+                  <button class="btn" type="button">Rotacionar</button>
+                  <button class="btn btn-danger" type="button">Revogar</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge">secreta</span></td>
+              <td class="mono muted" style="text-decoration:line-through">nekolog_sk_9A1C…r6Xb</td>
+              <td class="nowrap muted">02/09/2026</td>
+              <td class="nowrap muted">revogada</td>
+              <td class="muted nowrap" style="text-align:right">revogada em 12/10</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="row">
+            <span class="badge env-pill env-staging"><span class="dot"></span> staging</span>
+            <span class="sub">retenção 7 dias · nível mínimo <span class="mono">debug</span> · amostragem <span class="mono">1.0</span></span>
+          </div>
+          <button class="btn" type="button">Criar key</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:92px">Tipo</th>
+              <th>Key</th>
+              <th class="nowrap" style="width:120px">Criada</th>
+              <th class="nowrap" style="width:130px">Último uso</th>
+              <th class="nowrap" style="width:216px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge">pública</span></td>
+              <td class="mono">nekolog_pk_3R8T…bN2v</td>
+              <td class="nowrap muted">12/10/2026</td>
+              <td class="nowrap muted">há 2 h</td>
+              <td>
+                <div class="actions">
+                  <button class="btn" type="button">Rotacionar</button>
+                  <button class="btn btn-danger" type="button">Revogar</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="row">
+            <span class="badge env-pill env-development"><span class="dot"></span> development</span>
+            <span class="sub">retenção 3 dias</span>
+          </div>
+          <button class="btn" type="button">Criar key</button>
+        </div>
+        <div class="empty">
+          <div class="empty-mark">🔑</div>
+          <div><strong>Nenhuma key neste ambiente</strong></div>
+          <div class="sub">Crie uma key pública para o navegador ou uma secreta para o servidor.</div>
+          <button class="btn btn-primary" type="button">Criar key</button>
+        </div>
+      </section>
+
+      <h2 style="margin-top:8px">Mostrada uma vez só</h2>
+      <div class="modal-backdrop">
+        <div class="modal">
+          <h2 style="margin-bottom:6px">Key criada</h2>
+          <p class="sub" style="margin:0 0 14px">Copie agora. Depois de fechar esta janela, o valor não aparece de novo em lugar nenhum — o banco guarda só o hash SHA-256.</p>
+          <div class="snippet">
+            <span class="mono" style="overflow-wrap:anywhere">nekolog_sk_5H7Dq2VxP0naLsc8m1Kp</span>
+            <button class="btn" type="button">Copiar</button>
+          </div>
+          <div class="banner" style="margin-top:14px">
+            <span class="level-warn">⚠</span>
+            <span>Key <strong>secreta</strong>: só no servidor. No navegador ela vira credencial publicada.</span>
+          </div>
+          <button class="btn btn-primary btn-block" type="button" style="margin-top:16px">Guardei a key</button>
+        </div>
+      </div>
+
+      <p class="mock-note">Revogar não tem botão mágico: a key sai da lista, o hash sai do KV e a ingestão passa a recusá-la. Rotacionar cria a nova antes de derrubar a velha, para o deploy não cair no meio.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

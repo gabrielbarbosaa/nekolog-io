@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primeiro log — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">N</span> NekoLog</div>
+
+    <button class="picker" type="button">
+      <span><span class="picker-label">Organização</span><strong>Acme Ltda</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+    <button class="picker" type="button">
+      <span><span class="picker-label">Projeto</span><strong>checkout-api</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+
+    <nav class="nav">
+      <a class="nav-item" href="explorer.html">Logs</a>
+      <a class="nav-item" href="issues.html">Issues</a>
+      <span class="nav-item">Dashboards</span>
+      <span class="nav-item">Alertas</span>
+      <span class="nav-item">Releases</span>
+      <span class="nav-item">Exportações</span>
+      <a class="nav-item" href="keys.html">Configurações</a>
+    </nav>
+
+    <div class="sidebar-foot">Mockup da etapa 2.1 — nada aqui funciona.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="badge env-pill env-development"><span class="dot"></span> development</span>
+      <div class="spacer"></div>
+      <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      <button class="btn" type="button">GA <span class="muted">⌄</span></button>
+    </header>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h1>Mande o primeiro log</h1>
+          <div class="sub mono">…/setup — a tela fica aberta esperando, em tempo real</div>
+        </div>
+        <span class="btn">Pular por enquanto</span>
+      </div>
+
+      <div class="split">
+        <section class="card">
+          <div class="card-body">
+            <div class="steps">
+              <div class="step step-done">
+                <div class="step-mark">✓</div>
+                <div>
+                  <h2>Projeto criado</h2>
+                  <p class="sub" style="margin:4px 0 0">checkout-api, com os ambientes production, staging e development.</p>
+                </div>
+              </div>
+
+              <div class="step step-done">
+                <div class="step-mark">✓</div>
+                <div>
+                  <h2>Sua key de development</h2>
+                  <p class="sub" style="margin:4px 0 10px">Esta é pública: pode ir para o navegador. Para servidor, use a secreta.</p>
+                  <div class="snippet">
+                    <span class="mono" style="overflow-wrap:anywhere">nekolog_pk_2Jd9Vq0XsLm4Tb7Ry1Pe</span>
+                    <button class="btn" type="button">Copiar</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step step-now">
+                <div class="step-mark">3</div>
+                <div>
+                  <h2>Instale e configure</h2>
+                  <p class="sub" style="margin:4px 0 10px">Um comando escreve o <span class="mono">.env</span> e instala o SDK do seu framework.</p>
+                  <div class="snippet">
+                    <span class="mono">npx @nekolog-io/cli init</span>
+                    <button class="btn" type="button">Copiar</button>
+                  </div>
+                  <p class="hint" style="margin:10px 0 0">Ele nunca sobrescreve uma variável que o <span class="mono">.env</span> já tem, e nunca põe uma key secreta numa variável <span class="mono">NEXT_PUBLIC_</span>.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-mark">4</div>
+                <div>
+                  <h2>Dispare um log</h2>
+                  <div class="snippet" style="display:block;margin-top:10px">
+<pre class="mono"><span class="json-key">import</span> { log } <span class="json-key">from</span> <span class="json-string">'@nekolog-io/node'</span>
+
+log.<span class="json-key">info</span>(<span class="json-string">'olá, NekoLog'</span>, { <span class="json-key">orderId</span>: <span class="json-string">'ord_7f3a91'</span> })</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <aside class="card">
+            <div class="card-head">
+              <h2>Esperando</h2>
+              <span class="route">estado 1</span>
+            </div>
+            <div class="card-body">
+              <div class="waiting">
+                <span class="pulse"></span>
+                <span>Nenhum log ainda. Esta tela avisa sozinha quando o primeiro chegar.</span>
+              </div>
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+                <span class="skeleton" style="width:100%"></span>
+                <span class="skeleton" style="width:84%"></span>
+                <span class="skeleton" style="width:62%"></span>
+              </div>
+            </div>
+          </aside>
+
+          <aside class="card">
+            <div class="card-head">
+              <h2>Chegou</h2>
+              <span class="route">estado 2</span>
+            </div>
+            <div class="card-body">
+              <div class="row" style="gap:10px">
+                <span class="badge status-resolved"><span class="dot"></span> primeiro log recebido</span>
+                <span class="muted">há 1 s</span>
+              </div>
+              <table style="margin-top:12px">
+                <tbody>
+                  <tr>
+                    <td class="mono nowrap muted" style="width:86px">15:04:22</td>
+                    <td style="width:66px"><span class="badge level level-info">info</span></td>
+                    <td class="truncate">olá, NekoLog</td>
+                  </tr>
+                </tbody>
+              </table>
+              <button class="btn btn-primary btn-block" type="button" style="margin-top:14px">Ir para os logs</button>
+            </div>
+          </aside>
+
+          <aside class="card">
+            <div class="card-head">
+              <h2>Chegou, mas torto</h2>
+              <span class="route">estado 3</span>
+            </div>
+            <div class="card-body">
+              <div class="banner">
+                <span class="level-warn">⚠</span>
+                <span>Recebemos um lote, mas a key era de <strong>production</strong> e você está vendo <strong>development</strong>.</span>
+              </div>
+              <p class="mock-note" style="margin:12px 0 0">É o erro mais comum do primeiro dia: a key decide o ambiente, então o log aparece em outro lugar e parece que não chegou.</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issues — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">N</span> NekoLog</div>
+
+    <button class="picker" type="button">
+      <span><span class="picker-label">Organização</span><strong>Acme Ltda</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+    <button class="picker" type="button">
+      <span><span class="picker-label">Projeto</span><strong>checkout-api</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+
+    <nav class="nav">
+      <a class="nav-item" href="explorer.html">Logs</a>
+      <a class="nav-item" href="issues.html" aria-current="page">Issues <span class="count">7</span></a>
+      <span class="nav-item">Dashboards</span>
+      <span class="nav-item">Alertas <span class="count">2</span></span>
+      <span class="nav-item">Releases</span>
+      <span class="nav-item">Exportações</span>
+      <a class="nav-item" href="keys.html">Configurações</a>
+    </nav>
+
+    <div class="sidebar-foot">Mockup da etapa 2.1 — nada aqui funciona.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="badge env-pill env-production"><span class="dot"></span> production</span>
+      <div class="search">
+        <span class="muted">⌕</span>
+        <span class="mono muted">buscar nas issues</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      <button class="btn" type="button">GA <span class="muted">⌄</span></button>
+    </header>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h1>Issues</h1>
+          <div class="sub">Erros agrupados por <span class="mono">fingerprint</span>, calculado na ingestão</div>
+        </div>
+        <div class="row">
+          <button class="btn" type="button">Abertas <span class="muted">⌄</span></button>
+          <button class="btn" type="button">Últimos 7 dias <span class="muted">⌄</span></button>
+        </div>
+      </div>
+
+      <section class="card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:100%">Erro</th>
+              <th class="nowrap" style="width:120px">Status</th>
+              <th class="nowrap" style="width:90px">Eventos</th>
+              <th class="nowrap" style="width:90px">Usuários</th>
+              <th class="nowrap" style="width:130px">Último</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr aria-selected="true">
+              <td class="truncate">
+                <div><strong>TypeError</strong> <span class="muted">checkout-api</span></div>
+                <div class="ellipsis muted mono" style="font-size:12px">Cannot read properties of undefined (reading 'id')</div>
+              </td>
+              <td><span class="badge status-open"><span class="dot"></span> aberta</span></td>
+              <td class="mono">1.843</td>
+              <td class="mono">212</td>
+              <td class="nowrap muted">há 2 min</td>
+            </tr>
+            <tr>
+              <td class="truncate">
+                <div><strong>FetchError</strong> <span class="muted">payments-gateway</span></div>
+                <div class="ellipsis muted mono" style="font-size:12px">request to https://api.pagamento.test/v1/charges failed, reason: ETIMEDOUT</div>
+              </td>
+              <td><span class="badge status-regressed"><span class="dot"></span> regressão</span></td>
+              <td class="mono">417</td>
+              <td class="mono">88</td>
+              <td class="nowrap muted">há 9 min</td>
+            </tr>
+            <tr>
+              <td class="truncate">
+                <div><strong>Error</strong> <span class="muted">worker-emails</span></div>
+                <div class="ellipsis muted mono" style="font-size:12px">connect ECONNREFUSED 10.0.3.4:587</div>
+              </td>
+              <td><span class="badge status-open"><span class="dot"></span> aberta</span></td>
+              <td class="mono">96</td>
+              <td class="mono">—</td>
+              <td class="nowrap muted">há 31 min</td>
+            </tr>
+            <tr>
+              <td class="truncate">
+                <div><strong>ValidationError</strong> <span class="muted">checkout-api</span></div>
+                <div class="ellipsis muted mono" style="font-size:12px">cep deve ter 8 dígitos</div>
+              </td>
+              <td><span class="badge status-ignored"><span class="dot"></span> ignorada</span></td>
+              <td class="mono">5.102</td>
+              <td class="mono">3.410</td>
+              <td class="nowrap muted">há 1 h</td>
+            </tr>
+            <tr>
+              <td class="truncate">
+                <div><strong>ChunkLoadError</strong> <span class="muted">web-app</span></div>
+                <div class="ellipsis muted mono" style="font-size:12px">Loading chunk 482 failed</div>
+              </td>
+              <td><span class="badge status-resolved"><span class="dot"></span> resolvida</span></td>
+              <td class="mono">1.204</td>
+              <td class="mono">640</td>
+              <td class="nowrap muted">há 3 d</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="page-head" style="margin-top:8px">
+        <div>
+          <h1>TypeError</h1>
+          <div class="sub mono">…/issues/iss_9fd2c4a1 · fingerprint 9798706835935588174</div>
+        </div>
+        <div class="row">
+          <button class="btn" type="button">Resolver</button>
+          <button class="btn" type="button">Ignorar</button>
+          <button class="btn" type="button">Abrir nos logs</button>
+        </div>
+      </div>
+
+      <div class="split">
+        <section class="card">
+          <div class="card-head">
+            <h2>Stack trace</h2>
+            <span class="badge"><span class="dot level-debug"></span> source map aplicado</span>
+          </div>
+          <div class="card-body">
+            <p class="sub" style="margin:0 0 12px">Release <span class="mono">2026.11.6-1</span> — o código original aparece porque o source map foi enviado no deploy; ele é aplicado na hora de exibir, nunca na ingestão.</p>
+            <div class="snippet" style="display:block">
+<pre class="mono">TypeError: Cannot read properties of undefined (reading 'id')
+    at <span class="json-key">applyCoupon</span> (src/checkout/coupon.ts:48:21)
+    at <span class="json-key">createOrder</span> (src/checkout/order.ts:112:9)
+    at <span class="json-key">POST</span> (src/routes/orders.ts:27:5)</pre>
+            </div>
+            <div class="snippet" style="display:block;margin-top:12px">
+<pre class="mono"><span class="muted">  46</span>   const cart = await loadCart(cartId)
+<span class="muted">  47</span>   const coupon = cart.coupons.at(0)
+<span class="level-error">  48</span>   return applyDiscount(cart, <span class="json-string">coupon.id</span>)
+<span class="muted">  49</span> }</pre>
+            </div>
+          </div>
+        </section>
+
+        <aside class="card">
+          <div class="card-head"><h2>Resumo</h2></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+            <dl class="kv">
+              <dt>Status</dt><dd><span class="badge status-open"><span class="dot"></span> aberta</span></dd>
+              <dt>Primeira vez</dt><dd>04/11/2026 09:12</dd>
+              <dt>Última vez</dt><dd>06/11/2026 14:52</dd>
+              <dt>Eventos</dt><dd class="mono">1.843</dd>
+              <dt>Usuários</dt><dd class="mono">212</dd>
+              <dt>Releases</dt><dd class="mono">2026.11.6-1, 2026.11.5-2</dd>
+            </dl>
+
+            <div>
+              <h3 style="margin-bottom:8px">Ambientes</h3>
+              <div class="row">
+                <span class="badge env-pill env-production"><span class="dot"></span> production <span class="muted">1.790</span></span>
+                <span class="badge env-pill env-staging"><span class="dot"></span> staging <span class="muted">53</span></span>
+              </div>
+            </div>
+
+            <p class="mock-note">Uma issue resolvida que acontece de novo <strong>reabre e ganha regressão</strong>, mas só quando o evento é mais novo que a correção. Uma ignorada nunca reabre.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estados de tela — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="centered" style="align-items:start">
+  <div class="stack" style="max-width:1100px">
+    <div class="page-head">
+      <div class="row">
+        <span class="brand-mark">N</span>
+        <div>
+          <h1>Estados de toda tela</h1>
+          <div class="sub">Os cinco que a seção 10.1 do plano exige, mais o aviso de relógio do cliente.</div>
+        </div>
+      </div>
+      <div class="row">
+        <a class="btn" href="index.html">Todos os mockups</a>
+        <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      </div>
+    </div>
+
+    <div class="variants">
+      <section class="card">
+        <div class="card-head"><h2>Carregando</h2><span class="route">skeleton</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+          <span class="skeleton" style="width:38%;height:18px"></span>
+          <span class="skeleton" style="width:100%"></span>
+          <span class="skeleton" style="width:92%"></span>
+          <span class="skeleton" style="width:76%"></span>
+          <span class="skeleton" style="width:88%"></span>
+          <span class="skeleton" style="width:54%"></span>
+          <p class="mock-note" style="margin-top:6px">Nunca um spinner no meio da tela: o esqueleto já tem a forma da tabela que vem.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Vazio</h2><span class="route">com o próximo passo</span></div>
+        <div class="empty">
+          <div class="empty-mark">∅</div>
+          <div><strong>Nenhum log neste período</strong></div>
+          <div class="sub">Troque o período, ou mande o primeiro log deste ambiente.</div>
+          <div class="row" style="justify-content:center">
+            <button class="btn" type="button">Últimas 24 horas</button>
+            <a class="btn btn-primary" href="first-log.html">Enviar o primeiro log</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Erro</h2><span class="route">503</span></div>
+        <div class="card-body">
+          <div class="banner banner-error">
+            <span class="level-error">✕</span>
+            <span>Não conseguimos consultar os logs agora.</span>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" type="button">Tentar de novo</button>
+            <span class="hint mono">ref: req_c41b8e20</span>
+          </div>
+          <p class="mock-note" style="margin-top:14px">A frase é sempre a mesma. A exceção de verdade pode citar uma coluna ou um valor, então vai para o log do servidor e não para a tela.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Sem permissão</h2><span class="route">viewer</span></div>
+        <div class="empty">
+          <div class="empty-mark">🔒</div>
+          <div><strong>Você não tem acesso a esta tela</strong></div>
+          <div class="sub">Seu papel nesta organização é <span class="badge">viewer</span> — peça a um admin.</div>
+          <button class="btn" type="button">Voltar para os logs</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Cota estourada</h2><span class="route">aviso no topo</span></div>
+        <div class="card-body">
+          <div class="banner">
+            <span class="level-warn">⚠</span>
+            <span><strong>production</strong> passou da cota diária e está bloqueado. Os logs voltam a entrar amanhã, ou agora se a cota for aumentada.</span>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn btn-primary" type="button">Ver uso e cotas</button>
+            <span class="hint">1.000.000 de 1.000.000 eventos hoje</span>
+          </div>
+          <p class="mock-note" style="margin-top:14px">O aviso fica no topo de toda tela do projeto, não só na de uso: quem está investigando um erro precisa saber que faltam eventos.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Relógio do cliente</h2><span class="route">aviso em linha</span></div>
+        <div class="card-body">
+          <div class="banner">
+            <span class="level-warn">⚠</span>
+            <span>O relógio deste cliente está <strong>7 min adiantado</strong>.</span>
+          </div>
+          <p class="mock-note" style="margin-top:14px">Acima de 5 min o dashboard avisa. O horário que o cliente mandou é sempre <span class="mono">received_at − clock_skew_ms</span>, mesmo quando o <span class="mono">timestamp</span> gravado foi limitado.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</body>
+</html>
