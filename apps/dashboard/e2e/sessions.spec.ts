@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { BASE_URL } from '../playwright.config'
 import { clearMail, codeFromMail, waitForMail } from './support/mail'
 import {
   anAccount,

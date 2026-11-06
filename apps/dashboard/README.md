@@ -131,6 +131,29 @@ nesta ordem, e aceita token das duas enquanto a troca estiver em curso — o `ki
 pode trazer mais de um bloco PEM, e `\n` escapado vira quebra de linha, que é
 como um `.env` carrega uma chave.
 
+## As rotas da organização
+
+`app/api/orgs/…`: listar e criar organizações, listar membros e convites,
+convidar, trocar papel, remover, revogar convite, transferir a propriedade,
+apagar, e o audit log.
+
+**Toda rota com `[org]` passa pelo `lib/guard.ts`, e ele faz quatro coisas em
+ordem.** Confere a origem (nos métodos que escrevem), confere se a sessão ainda
+existe no Redis, **lê o papel do banco para esta pessoa nesta organização** —
+nunca do token, que não carrega papel nenhum — e só então aplica a matriz.
+
+**Quem não é membro recebe 404, não 403.** Um 403 confirmaria que a organização
+existe. Só depois de a associação estar provada é que um 403 aparece, e
+`tests/org-routes.test.ts` falha se essa ordem inverter.
+
+Sair de uma organização **não** encerra a sessão da pessoa: ela pode estar em
+outra. Não precisa — o guard relê o papel a cada requisição, então o acesso
+àquela organização acaba na requisição seguinte.
+
+Transferir a propriedade e apagar a organização **pedem a senha de novo**, e um
+teste falha se uma terceira rota começar a pedir: se tudo pedir senha, pedir
+senha deixa de significar alguma coisa.
+
 ## Os testes num navegador de verdade
 
 ```bash

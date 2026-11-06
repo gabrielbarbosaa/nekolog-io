@@ -154,7 +154,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 
 **Produto**
 
-- [ ] **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR.
+- [x] **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR. *(O teste das 48 células **lê a tabela do próprio `docs/PLANO.md`**, então alargar uma permissão no código sem mexer no plano falha nomeando a célula. O `lib/guard.ts` lê o papel do banco para esta pessoa nesta organização — o token não carrega papel — e **quem não é membro recebe 404, não 403**, porque um 403 confirmaria que a organização existe. Ninguém fica sem owner: a recusa está no `where` do próprio `UPDATE`/`DELETE`, não numa leitura anterior que duas requisições simultâneas furariam. Sair de uma organização não encerra a sessão, porque o guard relê o papel a cada requisição. Seis testes novos no navegador, 21 no total. Três sabotagens: alargar uma célula, tirar o `organization_id` do `UPDATE`, e deixar um member passar pela matriz — essa última com **224 de 224** testes de vitest passando.)*
 - [ ] **2.15** `feat/projects-envs` — projetos e ambientes, com as configurações de cada um.
 - [ ] **2.16** `feat/api-keys-ui` — criar, mostrar uma vez, revogar e rotacionar keys; último uso; sincronização com o KV.
 - [ ] **2.17** `feat/explorer` — tabela virtualizada, filtros, período, detalhe em JSON com renderização segura, filtros na URL e fuso do usuário.

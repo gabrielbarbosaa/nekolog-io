@@ -84,12 +84,49 @@ export {
   localeFor,
 } from './mail/code-email.ts'
 export {
+  type InviteEmail,
+  type InviteNotice,
+  inviteEmail,
+  inviteLink,
+} from './mail/invite-email.ts'
+export {
   NOTICES,
   type NoticeEmail,
   type NoticeFor,
   noticeEmail,
   type SecurityNotice,
 } from './mail/notice-email.ts'
+export {
+  AUDIT_ID_PREFIX,
+  AUDIT_PAGE,
+  type AuditEntry,
+  changeRole,
+  createOrganization,
+  deleteOrganization,
+  INVITE_DAYS,
+  INVITE_ID_PREFIX,
+  type Invited,
+  inviteMember,
+  listAudit,
+  listInvites,
+  listMembers,
+  MAX_ORGANIZATION_NAME_CHARS,
+  type Member,
+  MIN_ORGANIZATION_NAME_CHARS,
+  type Moved,
+  membership,
+  ORGANIZATION_ID_PREFIX,
+  type Organization,
+  organizationsOf,
+  type PendingInvite,
+  readOrganizationName,
+  recordAudit,
+  removeMember,
+  renameOrganization,
+  revokeInvite,
+  roleIn,
+  transferOwnership,
+} from './members.ts'
 export {
   CODE_TTL_SECONDS,
   codeKey,
@@ -118,6 +155,18 @@ export {
   spendTheSameTime,
   verifyPassword,
 } from './password.ts'
+export {
+  isRole,
+  MATRIX,
+  may,
+  mayActOn,
+  mayGrant,
+  needsThePasswordAgain,
+  PERMISSIONS,
+  type Permission,
+  ROLES,
+  type Role,
+} from './permissions.ts'
 export {
   checkPassword,
   checkShape,
