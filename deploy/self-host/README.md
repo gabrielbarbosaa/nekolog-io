@@ -11,8 +11,15 @@ cd deploy/self-host
 ./up.sh
 ```
 
-**On Windows `up.sh` does not run** — it is `sh` and needs `openssl`. Copy
-`.env.example` to `.env`, fill in the passwords yourself, and run
+**On Windows, or anywhere without `openssl`, run `pnpm self-host:up` instead.**
+It does the same thing from Node — the secrets come from `node:crypto`, so there
+is no shell and no `openssl` — and `internal/self-host/src/first-run.test.ts`
+fails if the two stop writing the same variables with the same defaults. The
+machine keeps `up.sh`, because a server needs Docker and git and should not also
+need a toolchain.
+
+Neither one ever overwrites an `.env` that is already there. Without either,
+copy `.env.example` to `.env`, fill in the passwords yourself, and run
 `docker compose up -d --build`.
 
 ## How a new version gets here

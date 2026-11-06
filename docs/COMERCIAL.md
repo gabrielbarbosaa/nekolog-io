@@ -296,7 +296,7 @@ cada item abaixo é uma forma de perder.
 | E2 | `PaymentProvider` precisa de implementação de memória, como `Mailer` e `KeyStore` | a construir (C4) |
 | E3 | Turnstile no cadastro: usar as chaves de teste oficiais no local | a construir |
 | E4 | Nenhum teste pode exigir conta paga | vale hoje — preservar |
-| E5 | `deploy/self-host/up.sh` não roda no Windows: é `sh` e exige `openssl` | **quebrado hoje** |
+| E5 | `deploy/self-host/up.sh` não roda no Windows: é `sh` e exige `openssl` | **resolvido em 05/11/2026** — `pnpm self-host:up` faz a mesma primeira subida pelo Node, sem shell e sem `openssl`; `up.sh` continua para a máquina, e um teste falha se os dois deixarem de escrever as mesmas variáveis |
 
 ---
 
