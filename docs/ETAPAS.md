@@ -144,7 +144,7 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 **Autenticação**
 
 - [x] **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords. *(O `internal/auth` nasce aqui. O custo é lido de dentro do digest produzido, não só das constantes. A conta que não existe gasta uma verificação argon2 de verdade contra um digest hasheado uma vez — um digest de mentira voltaria rápido demais. A consulta ao Pwned Passwords manda cinco caracteres do SHA-1 e nada mais, pede `Add-Padding`, tem deadline de 2 s e **falha aberto**: está no modelo de ameaças, com o motivo.)*
-- [ ] **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
+- [x] **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação. *(O Redis guarda o HMAC de `challenge:código`, nunca o código. Código errado e código de outro navegador devolvem **a mesma coisa**, senão a resposta diria se há tentativa em curso. Os dois scripts rodam contra o Valkey de verdade, inclusive a expiração pela TTL. Os Lua ficam em `src/scripts.ts` e não em `lua/*.lua` como o plano dizia: o dashboard é Next, e ler arquivo ao lado do módulo depende do bundler — o motivo está no `internal/auth/README.md`.)*
 - [ ] **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
 - [ ] **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
 - [ ] **2.9** `feat/auth-tokens` — JWT Ed25519 com `kid`, rotação do refresh token e sessões no Redis.
