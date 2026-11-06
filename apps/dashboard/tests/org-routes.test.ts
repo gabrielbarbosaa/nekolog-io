@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PERMISSIONS } from '@internal/auth'
+import { needsThePasswordAgain, PERMISSIONS, type Permission } from '@internal/auth'
 import { describe, expect, it } from 'vitest'
 
 const ORGS = fileURLToPath(new URL('../app/api/orgs/', import.meta.url))
@@ -27,24 +27,34 @@ const ROUTES = routesUnder(ORGS).map((path) => ({
 
 const SCOPED = ROUTES.filter((route) => route.name.includes('[org]'))
 
+function permissionsAsked(source: string): Permission[] {
+  return [...source.matchAll(/guard\(request, org, '([^']+)'/g)].map(
+    (match) => match[1] as Permission,
+  )
+}
+
 describe('the gate every organization route goes through', () => {
   it('found the routes, so none of this is passing on an empty list', () => {
-    expect(ROUTES.length).toBeGreaterThanOrEqual(8)
-    expect(SCOPED.length).toBeGreaterThanOrEqual(7)
+    expect(ROUTES.length).toBeGreaterThanOrEqual(14)
+    expect(SCOPED.length).toBeGreaterThanOrEqual(13)
   })
 
   it.each(SCOPED)('$name asks the guard for a named permission', ({ source }) => {
-    const asked = /guard\(request, org, '([^']+)'/.exec(source)?.[1]
+    const asked = permissionsAsked(source)
 
-    expect(asked, 'the route does not call guard(request, org, …)').toBeDefined()
-    expect(PERMISSIONS as readonly string[]).toContain(asked)
+    expect(asked, 'the route does not call guard(request, org, …)').not.toEqual([])
+    for (const permission of asked) {
+      expect(PERMISSIONS as readonly string[]).toContain(permission)
+    }
   })
 
   it.each(SCOPED)(
     '$name takes the organization from the path, never from the body',
     ({ source }) => {
-      expect(source).toContain('const { org } = await params')
-      expect(source).not.toMatch(/stringField\(body, '(org|organization|organizationId)'\)/)
+      expect(source).toMatch(/const \{ org(?:, [a-z]+)* \} = await params/)
+      expect(source).not.toMatch(
+        /stringField\(body, '(org|organization|organizationId|project|projectId|env|environment|environmentId)'\)/,
+      )
     },
   )
 
@@ -83,21 +93,34 @@ describe('what the guard itself has to do', () => {
   })
 })
 
-describe('the two things that ask for the password again', () => {
-  it.each(['[org]/transfer', '[org]/delete'])('%s does', (name) => {
-    const route = SCOPED.find((candidate) => candidate.name === name)
+describe('the routes that ask for the password again', () => {
+  const ASKS = SCOPED.filter((route) => route.source.includes('theyTypedTheirPassword('))
 
-    expect(route, `${name} is not a route`).toBeDefined()
-    expect(route?.source).toContain('theyTypedTheirPassword(')
-    expect(route?.source).toContain("refusal('invalid_credentials', 401)")
+  it('found some, so none of this is passing on an empty list', () => {
+    expect(ASKS.length).toBeGreaterThanOrEqual(3)
   })
 
-  it('and nothing else asks, so the prompt keeps meaning something', () => {
-    const asking = SCOPED.filter((route) => route.source.includes('theyTypedTheirPassword(')).map(
-      (route) => route.name,
-    )
+  it.each(ASKS)('$name refuses a wrong password rather than carrying on', ({ source }) => {
+    expect(source).toContain("refusal('invalid_credentials', 401)")
+  })
 
-    expect(asking.sort()).toEqual(['[org]/delete', '[org]/transfer'])
+  it('asks exactly where the matrix says a password is asked again', () => {
+    const shouldAsk = SCOPED.filter((route) =>
+      permissionsAsked(route.source).some(needsThePasswordAgain),
+    ).map((route) => route.name)
+    const doesAsk = ASKS.map((route) => route.name)
+
+    expect(
+      doesAsk.sort(),
+      'the list is derived from needsThePasswordAgain, not written down',
+    ).toEqual(shouldAsk.sort())
+  })
+
+  it('and the permissions that demand it are the two the matrix names', () => {
+    expect(PERMISSIONS.filter(needsThePasswordAgain)).toEqual([
+      'projects:delete',
+      'organization:delete',
+    ])
   })
 })
 

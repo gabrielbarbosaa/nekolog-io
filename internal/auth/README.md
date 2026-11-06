@@ -249,6 +249,54 @@ driver vê o `::jsonb` e serializa o parâmetro por conta própria, em cima do
 `JSON.stringify` que já estava lá. `$7::text::jsonb` resolve — o parâmetro entra
 como texto e o Postgres é quem o lê como JSON.
 
+## Projetos e ambientes
+
+`src/projects.ts` é a seção 6 do plano: a hierarquia organização → projeto →
+ambiente, e as configurações de cada ambiente.
+
+**Um projeto nasce com os três ambientes numa instrução só.** `production`,
+`staging` e `development` entram num `insert ... select` sobre o `unnest` dos
+três ids, dentro da mesma CTE que cria o projeto. Não dá para existir projeto
+sem ambiente nenhum, nem por uma requisição que morreu no meio.
+
+**O escopo da organização está em toda instrução, e `projects.test.ts` confere
+isso lendo o próprio módulo.** Cada constante SQL ou cita `organization_id` ou
+interpola `BELONGS_TO`, que é o fragmento `exists (select 1 from projects ...)`
+ligando o ambiente ao projeto e o projeto à organização. O teste também falha
+se aparecer interpolação que não seja um desses fragmentos — o resto é
+parâmetro. A sabotagem que tirou o `organization_id` do `BELONGS_TO` quebrou
+**13 testes**, entre eles o que lê o módulo e nomeia o que faltou.
+
+Isso importa porque o id do ambiente sozinho seria suficiente para vazar: a
+rota recebe `/[org]/projects/[project]/environments/[env]`, e nomear a própria
+organização com o projeto de outra pessoa é o caminho óbvio. Há teste para esse
+caminho exato, no Postgres e no navegador.
+
+**Nenhum projeto fica sem ambiente.** Como no último owner, a recusa está no
+`where` do `DELETE`, não numa leitura anterior.
+
+**O limite de retenção aqui é sanidade, não política.** `MAX_RETENTION_DAYS` é
+365 porque o ClickHouse leva o número a sério no `TTL` e um valor maior que um
+ano é erro de digitação. O teto de 7 dias por organização da instância
+hospedada (§15) é da etapa 2.19, onde a coluna existe — este módulo não o
+inventa.
+
+### Uma chave que o parser descarta em silêncio
+
+`parseRedactionRules` ignora o que não conhece, então `{"regex": "(a+)+$"}`
+voltava `200` com a regra jogada fora. A *check constraint* do esquema nunca
+dispararia, porque o que se grava é o objeto já analisado — sem a chave. É a
+mesma regra que a API pública já segue: parâmetro desconhecido é recusado, não
+ignorado, porque um filtro que não faz nada se lê como um filtro que funciona.
+`readEnvironmentSettings` recusa nomeando a chave, e `REDACTION_FIELDS` está
+preso aos campos que o parser de fato lê.
+
+### Uma origem que nunca casaria
+
+A allowlist de origens é o que separa uma key pública de qualquer site. Um
+padrão com caminho, com credenciais ou com `*.com` é recusado na escrita, em
+vez de guardado para nunca casar — ou, no caso do `*.com`, para casar demais.
+
 ## Login
 
 `startLogin` e `finishLogin` são o fluxo da §11.1, sem HTTP: quem chama entrega
