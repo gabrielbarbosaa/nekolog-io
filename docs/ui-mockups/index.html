@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockups do dashboard — NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="centered" style="align-items:start">
+  <div class="stack">
+    <div class="page-head">
+      <div class="row">
+        <span class="brand-mark">N</span>
+        <div>
+          <h1>Mockups do dashboard</h1>
+          <div class="sub">Etapa 2.1 — para aprovação, antes de existir código de tela.</div>
+        </div>
+      </div>
+      <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+    </div>
+
+    <div class="index-grid">
+      <a class="index-card" href="login.html">
+        <strong>Login e código</strong>
+        <span class="sub">/login e /login/code, mais a demo e o erro que não revela quem tem conta.</span>
+      </a>
+      <a class="index-card" href="explorer.html">
+        <strong>Explorer</strong>
+        <span class="sub">Busca, período, gráfico por nível, tabela e o painel lateral de detalhe.</span>
+      </a>
+      <a class="index-card" href="issues.html">
+        <strong>Issues</strong>
+        <span class="sub">Erros agrupados por fingerprint e o detalhe com stack trace resolvido.</span>
+      </a>
+      <a class="index-card" href="keys.html">
+        <strong>Keys</strong>
+        <span class="sub">Keys por ambiente, criação mostrada uma vez só, rotação e revogação.</span>
+      </a>
+      <a class="index-card" href="first-log.html">
+        <strong>Primeiro log</strong>
+        <span class="sub">O passo a passo de …/setup, esperando o log chegar em tempo real.</span>
+      </a>
+      <a class="index-card" href="estados.html">
+        <strong>Estados de tela</strong>
+        <span class="sub">Carregando, vazio, erro, sem permissão e cota estourada.</span>
+      </a>
+    </div>
+
+    <section class="card">
+      <div class="card-head"><h2>O que estas páginas são</h2></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <p style="margin:0">HTML e CSS puros, sem build e sem rede. As cores vêm de <span class="mono">tokens.css</span>, que é cópia literal dos blocos <span class="mono">:root</span> e <span class="mono">.dark</span> do tema Grafite — um teste falha se as duas se separarem.</p>
+        <p style="margin:0">Nenhum botão funciona, nenhum campo envia. O que está aqui para ser aprovado é o <strong>desenho</strong>: o que cada tela mostra, onde, e com que palavra.</p>
+        <p class="mock-note" style="margin:0">O tema claro e o escuro alternam no botão ◐, e a escolha fica salva no navegador.</p>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

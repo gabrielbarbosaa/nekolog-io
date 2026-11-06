@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login e código — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="centered">
+  <div class="stack">
+    <div class="page-head">
+      <div class="row">
+        <span class="brand-mark">N</span>
+        <div>
+          <h1>Acesso</h1>
+          <div class="sub">Duas telas, dois passos: senha e depois o código de 6 caracteres.</div>
+        </div>
+      </div>
+      <div class="row">
+        <a class="btn" href="index.html">Todos os mockups</a>
+        <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      </div>
+    </div>
+
+    <div class="auth-grid">
+      <section class="card auth-card">
+        <div class="card-head">
+          <h2>Entrar</h2>
+          <span class="route">/login</span>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input class="input input-lg" id="email" type="email" value="gabriel@acme.test" readonly>
+          </div>
+          <div class="field">
+            <label for="senha">Senha</label>
+            <input class="input input-lg" id="senha" type="password" value="................" readonly>
+          </div>
+          <button class="btn btn-primary btn-block" type="button">Continuar</button>
+          <div class="row" style="justify-content:space-between;margin-top:14px">
+            <span class="hint link">Esqueci minha senha</span>
+            <span class="hint link">Entrar na demo</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card auth-card">
+        <div class="card-head">
+          <h2>Código de verificação</h2>
+          <span class="route">/login/code</span>
+        </div>
+        <div class="card-body">
+          <p class="sub" style="margin:0 0 16px">Mandamos um código de 6 caracteres para <strong>gabriel@acme.test</strong>.</p>
+          <div class="code-boxes">
+            <input value="K" readonly aria-label="caractere 1">
+            <input value="7" readonly aria-label="caractere 2">
+            <input value="M" readonly aria-label="caractere 3">
+            <input value="2" readonly aria-label="caractere 4">
+            <input value="" readonly aria-label="caractere 5">
+            <input value="" readonly aria-label="caractere 6">
+          </div>
+          <button class="btn btn-primary btn-block" type="button" style="margin-top:16px">Entrar</button>
+          <div class="row" style="justify-content:space-between;margin-top:14px">
+            <span class="hint">Reenviar em 0:42</span>
+            <span class="hint link">Usar outro e-mail</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="auth-grid">
+      <section class="card auth-card">
+        <div class="card-head">
+          <h2>Erro</h2>
+          <span class="route">estado</span>
+        </div>
+        <div class="card-body">
+          <div class="banner banner-error" style="margin-bottom:14px">
+            <span class="level-error">✕</span>
+            <span>E-mail ou senha inválidos.</span>
+          </div>
+          <p class="mock-note">A mesma frase para e-mail que não existe e para senha errada — é isso que impede descobrir quem tem conta. Rate limit de 5 por conta e 20 por IP a cada 15 min.</p>
+        </div>
+      </section>
+
+      <section class="card auth-card">
+        <div class="card-head">
+          <h2>Demo</h2>
+          <span class="route">/demo</span>
+        </div>
+        <div class="card-body">
+          <p class="sub" style="margin:0 0 14px">Entra numa organização com logs falsos, <strong>somente leitura</strong>, sem senha e sem e-mail.</p>
+          <button class="btn btn-block" type="button">Entrar na demo</button>
+          <p class="mock-note" style="margin:14px 0 0">O papel somente leitura é garantido no servidor, não escondendo botão.</p>
+        </div>
+      </section>
+    </div>
+
+    <p class="mock-note">Mockup da etapa 2.1. Nada aqui envia formulário; os campos estão em <code>readonly</code> de propósito.</p>
+  </div>
+</div>
+</body>
+</html>

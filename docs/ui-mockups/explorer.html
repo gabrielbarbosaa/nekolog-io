@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorer — mockup NekoLog</title>
+<link rel="stylesheet" href="mockup.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">N</span> NekoLog</div>
+
+    <button class="picker" type="button">
+      <span><span class="picker-label">Organização</span><strong>Acme Ltda</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+    <button class="picker" type="button">
+      <span><span class="picker-label">Projeto</span><strong>checkout-api</strong></span>
+      <span class="muted">⌄</span>
+    </button>
+
+    <nav class="nav">
+      <a class="nav-item" href="explorer.html" aria-current="page">Logs</a>
+      <a class="nav-item" href="issues.html">Issues <span class="count">7</span></a>
+      <span class="nav-item">Dashboards</span>
+      <span class="nav-item">Alertas <span class="count">2</span></span>
+      <span class="nav-item">Releases</span>
+      <span class="nav-item">Exportações</span>
+      <a class="nav-item" href="keys.html">Configurações</a>
+    </nav>
+
+    <div class="sidebar-foot">Mockup da etapa 2.1 — nada aqui funciona.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="badge env-pill env-production"><span class="dot"></span> production</span>
+      <div class="search">
+        <span class="muted">⌕</span>
+        <span class="mono"><span class="token-field">level</span><span class="token-op">:</span><span class="token-value">(error OR fatal)</span> <span class="token-field">service</span><span class="token-op">:</span><span class="token-value">checkout-api</span> <span class="token-field">@orderId</span><span class="token-op">:</span><span class="token-value">ord_7f3a91</span></span>
+        <kbd class="muted" style="font-size:11px">⌘K</kbd>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-icon" type="button" data-theme-toggle title="Alternar tema">◐</button>
+      <button class="btn" type="button">GA <span class="muted">⌄</span></button>
+    </header>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h1>Logs</h1>
+          <div class="sub">1.284 eventos · <span class="mono">?env=production</span> na URL, como todo filtro</div>
+        </div>
+        <div class="row">
+          <button class="btn" type="button">Última 1 hora <span class="muted">⌄</span></button>
+          <button class="btn" type="button">Tempo real <span class="muted">· 3s</span></button>
+          <button class="btn" type="button">Salvar view</button>
+          <button class="btn" type="button">Exportar</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Volume por nível</h2>
+          <div class="legend">
+            <span class="level-info"><span class="dot"></span> info</span>
+            <span class="level-warn"><span class="dot"></span> warn</span>
+            <span class="level-error"><span class="dot"></span> error</span>
+            <span class="level-fatal"><span class="dot"></span> fatal</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart">
+            <div class="bar"><span style="height:34px;background:var(--level-info)"></span><span style="height:6px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:41px;background:var(--level-info)"></span><span style="height:4px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:38px;background:var(--level-info)"></span><span style="height:9px;background:var(--level-warn)"></span><span style="height:3px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:45px;background:var(--level-info)"></span><span style="height:5px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:52px;background:var(--level-info)"></span><span style="height:7px;background:var(--level-warn)"></span><span style="height:4px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:48px;background:var(--level-info)"></span><span style="height:3px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:44px;background:var(--level-info)"></span><span style="height:8px;background:var(--level-warn)"></span><span style="height:2px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:57px;background:var(--level-info)"></span><span style="height:6px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:61px;background:var(--level-info)"></span><span style="height:11px;background:var(--level-warn)"></span><span style="height:6px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:55px;background:var(--level-info)"></span><span style="height:9px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:49px;background:var(--level-info)"></span><span style="height:4px;background:var(--level-warn)"></span><span style="height:3px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:58px;background:var(--level-info)"></span><span style="height:7px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:63px;background:var(--level-info)"></span><span style="height:12px;background:var(--level-warn)"></span><span style="height:9px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:54px;background:var(--level-info)"></span><span style="height:8px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:47px;background:var(--level-info)"></span><span style="height:5px;background:var(--level-warn)"></span><span style="height:2px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:51px;background:var(--level-info)"></span><span style="height:6px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:59px;background:var(--level-info)"></span><span style="height:14px;background:var(--level-warn)"></span><span style="height:18px;background:var(--level-error)"></span><span style="height:5px;background:var(--level-fatal)"></span></div>
+            <div class="bar"><span style="height:46px;background:var(--level-info)"></span><span style="height:17px;background:var(--level-warn)"></span><span style="height:24px;background:var(--level-error)"></span><span style="height:7px;background:var(--level-fatal)"></span></div>
+            <div class="bar"><span style="height:43px;background:var(--level-info)"></span><span style="height:10px;background:var(--level-warn)"></span><span style="height:12px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:50px;background:var(--level-info)"></span><span style="height:6px;background:var(--level-warn)"></span><span style="height:4px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:56px;background:var(--level-info)"></span><span style="height:5px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:52px;background:var(--level-info)"></span><span style="height:9px;background:var(--level-warn)"></span><span style="height:3px;background:var(--level-error)"></span></div>
+            <div class="bar"><span style="height:48px;background:var(--level-info)"></span><span style="height:4px;background:var(--level-warn)"></span></div>
+            <div class="bar"><span style="height:39px;background:var(--level-info)"></span><span style="height:7px;background:var(--level-warn)"></span></div>
+          </div>
+          <div class="axis"><span>14:00</span><span>14:15</span><span>14:30</span><span>14:45</span><span>15:00</span></div>
+        </div>
+      </section>
+
+      <div class="split">
+        <section class="card">
+          <table>
+            <thead>
+              <tr>
+                <th class="nowrap" style="width:92px">Hora</th>
+                <th style="width:74px">Nível</th>
+                <th class="nowrap" style="width:150px">Serviço</th>
+                <th>Mensagem</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono nowrap muted">14:52:08,441</td>
+                <td><span class="badge level level-info">info</span></td>
+                <td class="nowrap">checkout-api</td>
+                <td class="truncate">POST /orders 201 em 128 ms</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:09,077</td>
+                <td><span class="badge level level-warn">warn</span></td>
+                <td class="nowrap">payments-gateway</td>
+                <td class="truncate">Tentativa 2 de 3 para autorizar o cartão</td>
+              </tr>
+              <tr aria-selected="true">
+                <td class="mono nowrap muted">14:52:09,612</td>
+                <td><span class="badge level level-error">error</span></td>
+                <td class="nowrap">checkout-api</td>
+                <td class="truncate">TypeError: Cannot read properties of undefined (reading 'id')</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:09,613</td>
+                <td><span class="badge level level-info">info</span></td>
+                <td class="nowrap">checkout-api</td>
+                <td class="truncate">POST /orders 500 em 1.204 ms</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:11,902</td>
+                <td><span class="badge level level-fatal">fatal</span></td>
+                <td class="nowrap">worker-emails</td>
+                <td class="truncate">Fila de e-mails parada: conexão recusada por smtp:587</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:14,330</td>
+                <td><span class="badge level level-debug">debug</span></td>
+                <td class="nowrap">checkout-api</td>
+                <td class="truncate">Cache de frete expirou para a chave cep:01310-100</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:16,718</td>
+                <td><span class="badge level level-info">info</span></td>
+                <td class="nowrap">web-app</td>
+                <td class="truncate">Navegação para /checkout/confirmacao</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:19,205</td>
+                <td><span class="badge level level-error">error</span></td>
+                <td class="nowrap">payments-gateway</td>
+                <td class="truncate">FetchError: request to https://api.pagamento.test/v1/charges failed, reason: ETIMEDOUT</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:22,884</td>
+                <td><span class="badge level level-info">info</span></td>
+                <td class="nowrap">checkout-api</td>
+                <td class="truncate">POST /orders 201 em 143 ms</td>
+              </tr>
+              <tr>
+                <td class="mono nowrap muted">14:52:25,019</td>
+                <td><span class="badge level level-warn">warn</span></td>
+                <td class="nowrap">web-app</td>
+                <td class="truncate">Relógio do cliente 7 min à frente do servidor</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="card-head" style="border-top:1px solid var(--border);border-bottom:0">
+            <span class="sub">Rolagem infinita, virtualizada — 1.284 linhas carregadas aos poucos</span>
+            <span class="skeleton" style="width:120px"></span>
+          </div>
+        </section>
+
+        <aside class="card">
+          <div class="card-head">
+            <div>
+              <h2>Detalhe do log</h2>
+              <div class="sub mono">?log=2026-11-06T14:52:09.612Z</div>
+            </div>
+            <button class="btn btn-ghost btn-icon" type="button">✕</button>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+            <div class="row">
+              <span class="badge level level-error">error</span>
+              <span class="badge env-pill env-production"><span class="dot"></span> production</span>
+              <button class="btn" type="button">Ver contexto</button>
+              <button class="btn" type="button">Abrir trace</button>
+            </div>
+
+            <div class="banner">
+              <span class="level-warn">⚠</span>
+              <span>O relógio deste cliente está <strong>7 min adiantado</strong>. O horário enviado foi 14:59:09,612.</span>
+            </div>
+
+            <dl class="kv">
+              <dt>timestamp</dt><dd class="mono">2026-11-06 14:52:09,612 (UTC−03)</dd>
+              <dt>received_at</dt><dd class="mono">2026-11-06 14:52:09,744</dd>
+              <dt>clock_skew_ms</dt><dd class="mono">420000</dd>
+              <dt>service</dt><dd class="mono">checkout-api</dd>
+              <dt>release</dt><dd class="mono">2026.11.6-1</dd>
+              <dt>trace_id</dt><dd class="mono">4bf92f3577b34da6a3ce929d0e0e4736</dd>
+              <dt>user_id</dt><dd class="mono">usr_8213</dd>
+              <dt>country</dt><dd class="mono">BR</dd>
+            </dl>
+
+            <div>
+              <h3 style="margin-bottom:8px">attributes</h3>
+              <div class="snippet" style="display:block">
+<pre class="mono"><span class="json-op">{</span>
+  <span class="json-key">"orderId"</span>: <span class="json-string">"ord_7f3a91"</span>,
+  <span class="json-key">"route"</span>: <span class="json-string">"POST /orders"</span>,
+  <span class="json-key">"status"</span>: <span class="json-number">500</span>,
+  <span class="json-key">"durationMs"</span>: <span class="json-number">1204</span>,
+  <span class="json-key">"customerEmail"</span>: <span class="json-string">"[redacted]"</span>,
+  <span class="json-key">"cardNumber"</span>: <span class="json-string">"[redacted]"</span>
+<span class="json-op">}</span></pre>
+              </div>
+              <p class="hint" style="margin:8px 0 0">Renderizado como texto, nunca como HTML: log é entrada não confiável.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
