@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  codeEmail,
   describeCountry,
   describeDevice,
   EMAIL_LOCALES,
   type EmailLocale,
   localeFor,
-  loginCodeEmail,
-} from './login-code.ts'
+} from './code-email.ts'
 
 const NOTICE = {
+  purpose: 'login' as const,
   code: 'K7QM2P',
   locale: 'en',
   device: 'Firefox on Linux',
@@ -18,14 +19,14 @@ const NOTICE = {
 
 describe('the code e-mail', () => {
   it('shows the code grouped, the way the screen asks for it', () => {
-    const mail = loginCodeEmail(NOTICE)
+    const mail = codeEmail(NOTICE)
 
     expect(mail.html).toContain('K7Q-M2P')
     expect(mail.text).toContain('K7Q-M2P')
   })
 
   it('carries no link at all, because a link that signs you in is the attack', () => {
-    const mail = loginCodeEmail(NOTICE)
+    const mail = codeEmail(NOTICE)
 
     expect(mail.html).not.toContain('<a ')
     expect(mail.html).not.toContain('http')
@@ -33,11 +34,11 @@ describe('the code e-mail', () => {
   })
 
   it('says what to do if it was not you', () => {
-    expect(loginCodeEmail(NOTICE).text).toContain('change your password')
+    expect(codeEmail(NOTICE).text).toContain('change your password')
   })
 
   it('names the browser, the country and the time, as section 11.6 asks', () => {
-    const mail = loginCodeEmail(NOTICE)
+    const mail = codeEmail(NOTICE)
 
     expect(mail.text).toContain('Firefox on Linux')
     expect(mail.text).toContain('BR')
@@ -45,11 +46,11 @@ describe('the code e-mail', () => {
   })
 
   it('exists in all three languages, each one different', () => {
-    const subjects = EMAIL_LOCALES.map((locale) => loginCodeEmail({ ...NOTICE, locale }).subject)
+    const subjects = EMAIL_LOCALES.map((locale) => codeEmail({ ...NOTICE, locale }).subject)
 
     expect(new Set(subjects).size).toBe(EMAIL_LOCALES.length)
     for (const locale of EMAIL_LOCALES) {
-      const mail = loginCodeEmail({ ...NOTICE, locale })
+      const mail = codeEmail({ ...NOTICE, locale })
       expect(mail.html, locale).toContain('K7Q-M2P')
       expect(mail.subject.trim(), locale).not.toBe('')
     }
@@ -58,8 +59,8 @@ describe('the code e-mail', () => {
   it('falls back to English for a language it does not have', () => {
     expect(localeFor('fr')).toBe('en')
     expect(localeFor(undefined)).toBe('en')
-    expect(loginCodeEmail({ ...NOTICE, locale: 'fr' }).subject).toBe(
-      loginCodeEmail({ ...NOTICE, locale: 'en' }).subject,
+    expect(codeEmail({ ...NOTICE, locale: 'fr' }).subject).toBe(
+      codeEmail({ ...NOTICE, locale: 'en' }).subject,
     )
   })
 })
@@ -88,14 +89,14 @@ describe('what the e-mail refuses to repeat', () => {
   })
 
   it('escapes anyway, so the refusal is not the only thing standing there', () => {
-    const mail = loginCodeEmail({ ...NOTICE, device: 'Firefox (Linux)', country: 'ZZ' })
+    const mail = codeEmail({ ...NOTICE, device: 'Firefox (Linux)', country: 'ZZ' })
 
     expect(mail.html).toContain('Firefox (Linux)')
     expect(mail.html).not.toContain('<script')
   })
 
   it('never repeats the e-mail address or a name back', () => {
-    const mail = loginCodeEmail(NOTICE)
+    const mail = codeEmail(NOTICE)
 
     expect(mail.html).not.toContain('@')
     expect(mail.text).not.toContain('@')

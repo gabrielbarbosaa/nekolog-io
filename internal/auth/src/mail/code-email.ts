@@ -5,9 +5,11 @@ export type EmailLocale = (typeof EMAIL_LOCALES)[number]
 
 export const DEFAULT_EMAIL_LOCALE: EmailLocale = 'en'
 
+export type CodeFor = 'login' | 'verify-email'
+
 type Copy = {
-  subject: string
-  heading: string
+  subject: Readonly<Record<CodeFor, string>>
+  heading: Readonly<Record<CodeFor, string>>
   lead: string
   validity: string
   device: string
@@ -19,8 +21,8 @@ type Copy = {
 
 const COPY: Readonly<Record<EmailLocale, Copy>> = {
   en: {
-    subject: 'Your sign-in code',
-    heading: 'Your sign-in code',
+    subject: { login: 'Your sign-in code', 'verify-email': 'Confirm your e-mail' },
+    heading: { login: 'Your sign-in code', 'verify-email': 'Confirm your e-mail' },
     lead: 'Type this code in the tab you started from. It only works there.',
     validity: 'It stops working in 10 minutes.',
     device: 'Browser',
@@ -30,8 +32,8 @@ const COPY: Readonly<Record<EmailLocale, Copy>> = {
     noLink: 'This message has no link that signs you in. We will never send one.',
   },
   'pt-BR': {
-    subject: 'Seu código de entrada',
-    heading: 'Seu código de entrada',
+    subject: { login: 'Seu código de entrada', 'verify-email': 'Confirme seu e-mail' },
+    heading: { login: 'Seu código de entrada', 'verify-email': 'Confirme seu e-mail' },
     lead: 'Digite este código na aba onde você começou. Ele só funciona lá.',
     validity: 'Ele para de valer em 10 minutos.',
     device: 'Navegador',
@@ -41,8 +43,8 @@ const COPY: Readonly<Record<EmailLocale, Copy>> = {
     noLink: 'Esta mensagem não tem link que faz login. Nunca vamos mandar um.',
   },
   es: {
-    subject: 'Tu código de acceso',
-    heading: 'Tu código de acceso',
+    subject: { login: 'Tu código de acceso', 'verify-email': 'Confirma tu correo' },
+    heading: { login: 'Tu código de acceso', 'verify-email': 'Confirma tu correo' },
     lead: 'Escribe este código en la pestaña donde empezaste. Solo funciona ahí.',
     validity: 'Deja de valer en 10 minutos.',
     device: 'Navegador',
@@ -85,6 +87,7 @@ export function describeCountry(value: string): string {
 }
 
 export type CodeNotice = {
+  purpose: CodeFor
   code: string
   locale: string | undefined
   device: string
@@ -94,8 +97,10 @@ export type CodeNotice = {
 
 export type CodeEmail = { subject: string; html: string; text: string }
 
-export function loginCodeEmail(notice: CodeNotice): CodeEmail {
+export function codeEmail(notice: CodeNotice): CodeEmail {
   const copy = COPY[localeFor(notice.locale)]
+  const subject = copy.subject[notice.purpose]
+  const heading = copy.heading[notice.purpose]
   const shown = formatCode(notice.code)
   const facts: Array<[string, string]> = [
     [copy.device, describeDevice(notice.device)],
@@ -108,7 +113,7 @@ export function loginCodeEmail(notice: CodeNotice): CodeEmail {
     .join('')
 
   const html = [
-    `<h1>${escapeHtml(copy.heading)}</h1>`,
+    `<h1>${escapeHtml(heading)}</h1>`,
     `<p>${escapeHtml(copy.lead)}</p>`,
     `<p style="font-size:28px;letter-spacing:4px"><strong>${escapeHtml(shown)}</strong></p>`,
     `<p>${escapeHtml(copy.validity)}</p>`,
@@ -118,7 +123,7 @@ export function loginCodeEmail(notice: CodeNotice): CodeEmail {
   ].join('')
 
   const text = [
-    copy.heading,
+    heading,
     '',
     copy.lead,
     '',
@@ -132,5 +137,5 @@ export function loginCodeEmail(notice: CodeNotice): CodeEmail {
     copy.noLink,
   ].join('\n')
 
-  return { subject: copy.subject, html, text }
+  return { subject, html, text }
 }

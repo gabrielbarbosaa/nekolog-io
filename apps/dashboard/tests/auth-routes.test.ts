@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const API = fileURLToPath(new URL('../app/api/', import.meta.url))
 
-const TURNSTILE_GUARDS = ['login/start']
+const TURNSTILE_GUARDS = ['login/start', 'signup']
 
 function routesUnder(directory: string): string[] {
   const found: string[] = []
@@ -59,11 +59,14 @@ describe('Turnstile, which is off until a key exists', () => {
     expect(route?.source).toContain("=== 'refused'")
   })
 
-  it('refuses the request when the check refuses, rather than carrying on', () => {
-    const start = POSTS.find((route) => route.name === 'auth/login/start')
+  it.each(TURNSTILE_GUARDS)(
+    '%s refuses when the check refuses, rather than carrying on',
+    (name) => {
+      const route = POSTS.find((candidate) => candidate.name === `auth/${name}`)
 
-    expect(start?.source).toMatch(/human === 'refused'[\s\S]{0,120}status: 403/)
-  })
+      expect(route?.source).toMatch(/human === 'refused'[\s\S]{0,120}status: 403/)
+    },
+  )
 })
 
 describe('what the routes must never write down', () => {
