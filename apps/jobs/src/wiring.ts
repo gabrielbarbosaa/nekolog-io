@@ -18,6 +18,8 @@ import type {
   BackupStarter,
   ClickHouseBackupAlert,
 } from './tasks/clickhouse-backup.ts'
+import type { KeySyncEvent } from './tasks/key-sync.ts'
+import type { KeyUsageReader } from './tasks/key-usage.ts'
 import type { QuotaBlockEvent } from './tasks/quota-block.ts'
 import type { SpoolResendEvent } from './tasks/spool-resend.ts'
 import type { TaskDeps } from './tasks.ts'
@@ -76,6 +78,10 @@ export function writeCapacityAlert(alert: CapacityAlert): void {
   write('warn', '[nekolog/jobs] capacity', JSON.stringify(alert))
 }
 
+export function writeKeySyncEvent(event: KeySyncEvent): void {
+  write(event.kind === 'unreadable' ? 'warn' : 'log', '[nekolog/jobs] keys', JSON.stringify(event))
+}
+
 export function diskReaderFor(
   config: ClickHouseConfig,
 ): (signal: AbortSignal) => Promise<DiskReading[]> {
@@ -95,6 +101,26 @@ export function diskReaderFor(
 
 export function writeBackupAlert(alert: ClickHouseBackupAlert): void {
   write('warn', '[nekolog/jobs] backup', JSON.stringify(alert))
+}
+
+export const KEY_USAGE_QUERY = `
+  select key_id, max(received_at) as at
+  from logs
+  where received_at >= {since:DateTime64(3)} and key_id != ''
+  group by key_id
+`
+
+export function keyUsageReaderFor(config: ClickHouseConfig): KeyUsageReader {
+  return async (since: Date, signal: AbortSignal) => {
+    const rows = await queryRows<{ key_id: string; at: string }>(config, KEY_USAGE_QUERY, {
+      params: { since: since.toISOString().replace('T', ' ').replace('Z', '') },
+      fetch: (input, init) => fetch(input, { ...init, signal }),
+    })
+
+    return rows
+      .map((row) => ({ keyId: row.key_id, at: new Date(`${row.at.replace(' ', 'T')}Z`) }))
+      .filter((stamp) => !Number.isNaN(stamp.at.getTime()))
+  }
 }
 
 function within(signal: AbortSignal): typeof fetch {

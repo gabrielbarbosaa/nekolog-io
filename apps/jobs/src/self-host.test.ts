@@ -106,6 +106,8 @@ describe('what the self-host jobs container actually runs', () => {
       'alert-notify',
       'capacity-watch',
       'issue-rollup',
+      'key-sync',
+      'key-usage',
       'quota-block',
       'spool-resend',
     ])

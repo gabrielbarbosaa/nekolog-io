@@ -35,8 +35,20 @@ const record = await store.get(await hashApiKey(key))
 - `kvKeyStore` — Workers KV, com prefixo `key:` para a KV poder guardar outras
   coisas. Um registro corrompido é tratado como **ausente**, e um escopo
   desconhecido vindo do KV é descartado em vez de confiado.
-- `cachedKeyStore` — 60 s de cache em memória, com teto de entradas e cache
-  também do "não existe". Escrever ou apagar por ele invalida na hora.
+- `cachedKeyStore` — 60 s de cache em memória, com teto de entradas. O "não
+  existe" também é cacheado, mas por **5 s**, não 60: uma key recém-criada
+  chega ao KV no próximo `key-sync`, e um minuto de 401 depois disso tornaria
+  impossível o passo a passo do primeiro log. Cinco segundos ainda derrubam
+  uma enxurrada de hashes chutados. Escrever ou apagar por ele invalida na hora.
+- `firstKeyStore(a, b)` — pergunta na ordem e devolve a primeira resposta;
+  escreve só na primeira. É o que deixa o self-host ler o KV e, só depois, o
+  `.nekolog-seed.json`.
+- `sqlKeyDirectory` / `publishKeys` — o lado que os **jobs** usam: `live()` lê
+  do Postgres toda key não revogada com as configurações do ambiente dela, e
+  `publishKeys` grava no KV só o que mudou, apaga o que sumiu e mantém o
+  documento `keys:index` com um resumo por hash. O índice existe porque um
+  `KvNamespace` não se lista: sem ele não haveria como saber o que apagar.
+  `stampLastUsed` grava o último uso e **nunca anda para trás**.
 - `originAllowed` / `originMatches` — a lista de origens das keys públicas,
   com curinga de subdomínio que confere esquema e sufixo. Os casos que o erro
   clássico deixa passar (`aexample.com` por `*.example.com`) têm teste próprio.

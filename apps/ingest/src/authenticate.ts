@@ -73,6 +73,9 @@ export function createKeyAuthenticator(options: KeyAuthenticatorOptions): Authen
       allowedOrigin: key.kind === 'public' ? origin : null,
     }
 
+    if (record.keyId !== undefined) {
+      principal.keyId = record.keyId
+    }
     if (record.retentionDays !== undefined) {
       principal.retentionDays = record.retentionDays
     }

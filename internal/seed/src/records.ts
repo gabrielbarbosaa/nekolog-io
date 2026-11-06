@@ -13,6 +13,7 @@ export function keyRecordsFor(document: SeedDocument): SeedKeyRecord[] {
       record: {
         projectId: document.project.id,
         environmentId: environment.id,
+        keyId: key.id,
         scopes: [...key.scopes],
         originAllowlist:
           environment.originAllowlist === null ? null : [...environment.originAllowlist],

@@ -6,6 +6,8 @@ import type {
   ExportScheduleStore,
   ExportStore,
   IssueStore,
+  KeyDirectory,
+  KvNamespace,
   LogStore,
   Mailer,
   QuotaStore,
@@ -35,6 +37,8 @@ import { type ExportNotifyEvent, exportNotifyTask } from './tasks/export-notify.
 import { type ExportRunEvent, type ExportWriter, exportRunTask } from './tasks/export-run.ts'
 import { type ExportScheduleEvent, exportScheduleTask } from './tasks/export-schedule.ts'
 import { type IssueSourceLike, issueRollupTask } from './tasks/issue-rollup.ts'
+import { type KeySyncEvent, keySyncTask } from './tasks/key-sync.ts'
+import { type KeyUsageReader, keyUsageTask } from './tasks/key-usage.ts'
 import { type QuotaBlockEvent, quotaBlockTask } from './tasks/quota-block.ts'
 import { type SpoolResendEvent, spoolResendTask } from './tasks/spool-resend.ts'
 
@@ -75,6 +79,10 @@ export type TaskDeps = {
   backupHistory?: BackupHistoryReader
   startBackup?: BackupStarter
   onBackupAlert?: (alert: ClickHouseBackupAlert) => void
+  keyDirectory?: KeyDirectory
+  kv?: KvNamespace
+  onKeySyncEvent?: (event: KeySyncEvent) => void
+  readKeyUsage?: KeyUsageReader
 }
 
 export function buildTasks(deps: TaskDeps): readonly Task[] {
@@ -173,7 +181,25 @@ export function buildTasks(deps: TaskDeps): readonly Task[] {
           }),
         ]
 
+  const publishing =
+    deps.keyDirectory === undefined || deps.kv === undefined
+      ? []
+      : [
+          keySyncTask({
+            directory: deps.keyDirectory,
+            kv: deps.kv,
+            ...(deps.onKeySyncEvent === undefined ? {} : { onEvent: deps.onKeySyncEvent }),
+          }),
+        ]
+
+  const stamping =
+    deps.keyDirectory === undefined || deps.readKeyUsage === undefined
+      ? []
+      : [keyUsageTask({ directory: deps.keyDirectory, read: deps.readKeyUsage })]
+
   return registerTasks([
+    ...publishing,
+    ...stamping,
     ...backing,
     ...alerting,
     ...notifying_alerts,

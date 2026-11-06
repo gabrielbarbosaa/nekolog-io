@@ -158,6 +158,7 @@ describe('rowsFor', () => {
     expect((await rows(batch))[0]).toEqual({
       project_id: 'p_1',
       environment_id: 'e_1',
+      key_id: '',
       timestamp: '2026-10-31 15:30:00.000',
       received_at: '2026-10-31 15:30:45.125',
       clock_skew_ms: 45_125,
@@ -290,6 +291,14 @@ describe('rowsFor', () => {
   it('reads the columns a later migration added, not only the ones the first one created', () => {
     expect(alteredColumns()).toContain('clock_skew_ms')
     expect(createdColumns()).not.toContain('clock_skew_ms')
+  })
+
+  it('names the key that wrote the row, which is what makes a rotation answerable', async () => {
+    const batch = batchOf([{ timestamp: '2026-10-31T15:30:00.000Z', level: 'info', message: 'x' }])
+
+    const built = await rowsFor(batch, { ...PRINCIPAL, keyId: 'key_7F3A' }, CONTEXT)
+
+    expect(built[0]?.key_id).toBe('key_7F3A')
   })
 })
 

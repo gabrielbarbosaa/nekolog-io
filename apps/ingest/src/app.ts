@@ -23,6 +23,7 @@ export type IngestPrincipal = {
   minLevel?: string
   sampleRate?: number
   redaction?: unknown
+  keyId?: string
   keyKind?: 'public' | 'secret'
   keyLocation?: 'header' | 'query'
   allowedOrigin?: string | null

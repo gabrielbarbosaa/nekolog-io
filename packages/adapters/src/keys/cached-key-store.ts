@@ -1,10 +1,12 @@
 ﻿import type { KeyRecord, KeyStore } from '../key-store.ts'
 
 export const DEFAULT_KEY_CACHE_TTL_MS = 60_000
+export const DEFAULT_KEY_MISS_TTL_MS = 5_000
 export const DEFAULT_KEY_CACHE_SIZE = 500
 
 export type CachedKeyStoreOptions = {
   ttlMs?: number
+  missTtlMs?: number
   maxEntries?: number
   now?: () => number
 }
@@ -16,16 +18,18 @@ type Entry = {
 
 export function cachedKeyStore(inner: KeyStore, options: CachedKeyStoreOptions = {}): KeyStore {
   const ttlMs = options.ttlMs ?? DEFAULT_KEY_CACHE_TTL_MS
+  const missTtlMs = options.missTtlMs ?? Math.min(DEFAULT_KEY_MISS_TTL_MS, ttlMs)
   const maxEntries = options.maxEntries ?? DEFAULT_KEY_CACHE_SIZE
   const now = options.now ?? Date.now
   const entries = new Map<string, Entry>()
 
   const remember = (keyHash: string, record: KeyRecord | null): void => {
-    if (ttlMs <= 0) {
+    const lifetime = record === null ? missTtlMs : ttlMs
+    if (lifetime <= 0) {
       return
     }
     entries.delete(keyHash)
-    entries.set(keyHash, { record, expiresAt: now() + ttlMs })
+    entries.set(keyHash, { record, expiresAt: now() + lifetime })
     while (entries.size > maxEntries) {
       const oldest = entries.keys().next()
       if (oldest.done) {
