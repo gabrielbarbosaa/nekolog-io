@@ -67,7 +67,7 @@ describe('what a hung job is allowed to cost', () => {
   const files = readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))
 
   it('found the workflows at all, so this is not passing on an empty list', () => {
-    expect(files.length).toBeGreaterThanOrEqual(10)
+    expect(files.length).toBeGreaterThanOrEqual(8)
   })
 
   it('gives every job a ceiling, because the default is six hours of metered minutes', () => {

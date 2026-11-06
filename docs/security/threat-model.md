@@ -110,7 +110,7 @@ A varredura do ZAP está na seção [Varredura do ZAP](#varredura-do-zap).
 | T1 | SQL injection pela linguagem de busca | 4, 7 | Busca vira AST e depois **SQL sempre parametrizado**. O **nome do atributo também é parâmetro**: `@orderId` vira `attributes[{p1:String}]`, nunca `attributes['orderId']` — interpolar a chave seria o único ponto de injeção da tradução inteira, já que `@a'] OR 1=1 --:x` fecha o colchete. O filtro de projeto e ambiente é injetado pelo servidor a partir da key. `search.fuzz.test.ts` com fast-check, e a varredura ativa do ZAP sobre a API pública não encontrou nada nas quatro regras de SQL injection | **Implementada** (etapa 4.1; API na 5.9) |
 | T2 | Log com sequência ANSI ou caractere de controle quebrando a renderização | 3 | ANSI removido ou renderizado com segurança; escape em toda renderização; nada de `dangerouslySetInnerHTML` | Planejada (M2) |
 | T3 | Injeção de fórmula em exportação CSV (`=`, `+`, `-`, `@`) executando na planilha de quem abre | 4 | O `SELECT` que gera o CSV passa **toda coluna de texto** por um `if(has([...], substring(col, 1, 1)), concat('''', col), col)`, que prefixa a célula com aspa simples. A lista de caracteres é `=`, `+`, `-`, `@`, tabulação e CR. Um teste prende a classificação de **todas** as colunas da tabela em texto ou não-texto, então uma coluna nova não entra sem guarda, e um teste de integração manda `=cmd\|/c calc` para o ClickHouse de verdade e confere que volta com a aspa no CSV e **sem** ela no JSON e no XML, onde prefixar seria corromper o dado | **Implementada** (etapa 4.12) |
-| T4 | Dependência comprometida injetando código no build | 6 | pnpm sem install scripts por padrão (`allowBuilds` explícito); `minimumReleaseAge` de 3 dias; `--frozen-lockfile`; Dependabot, Renovate, `dependency-review`, CodeQL | **Implementada** (0.3, 0.6) |
+| T4 | Dependência comprometida injetando código no build | 6 | pnpm sem install scripts por padrão (`allowBuilds` explícito); `minimumReleaseAge` de 3 dias; `--frozen-lockfile`; Dependabot, Renovate, e o workflow `Supply chain`, que roda `pnpm audit` e a política de licenças sobre a **árvore inteira** a cada PR — o `dependency-review` que estava aqui olhava só o que o PR mudava, e saiu junto com o CodeQL quando o repositório virou privado | **Implementada** (0.3, 0.6; trocada em 06/11/2026) |
 | T5 | Action do GitHub trocada sob uma tag móvel | 6 | Actions fixadas por **SHA**; `permissions` mínimas; harden-runner | **Implementada** (0.5, 0.6) |
 | T6 | Push direto reescrevendo história em branch protegida | 6 | Rulesets sem bypass para ninguém; sem force push; commits assinados em `main` e `qa` | **Implementada** (0.7) |
 | T7 | Cliente foge da cota datando os eventos fora do dia corrente | 1 | O uso é contado pela `usage_per_minute`, agrupada por `received_at` (carimbado pelo servidor), e não pela `logs_per_minute`, agrupada pelo `timestamp` que o cliente escolhe. Teste de integração manda um evento datado de 2020 e confere que ele entra na contagem de hoje | **Implementada** (etapa 1.12) |
@@ -245,30 +245,27 @@ Registrar o que **não** está coberto é tão importante quanto o que está.
   porque um hash ali faria o navegador ignorar o `'unsafe-inline'` e quebrar as
   centenas de atributos em silêncio (etapa 2.12).
 
-### Achados do Scorecard aceitos
+### O CodeQL e o Scorecard saíram
 
-O [OpenSSF Scorecard](../../.github/workflows/scorecard.yml) roda semanalmente e
-publica no Security tab. Estes achados ficam abertos de propósito:
+Em 06/11/2026 o CodeQL, o `dependency-review` e o OpenSSF Scorecard foram
+removidos do repositório. Não foi escolha de postura: repositório privado sem
+GitHub Advanced Security não aceita upload de SARIF (`Resource not accessible by
+integration`) nem roda o `dependency-review` (`Dependency review is not
+supported on this repository`), e o Scorecard pontua projeto aberto. A ADR
+[0017](../adr/0017-licenca-proprietaria-e-repositorio-privado.md) já tinha
+aceitado essa consequência.
 
-| Achado | Por que fica aberto |
-|---|---|
-| `CodeReviewID` — 0 changesets aprovados | Projeto de uma pessoa; o GitHub não deixa aprovar o próprio PR. Mesmo motivo do item acima. |
-| `BranchProtectionID` — `main` não exige aprovadores | Exigir aprovador travaria o único mantenedor. O que **dá** para proteger está protegido: sem deleção, sem force-push, PR e status checks obrigatórios, assinatura exigida, ninguém com bypass. |
-| `MaintainedID` — repositório com menos de 90 dias | Resolve sozinho com o tempo. |
-| `FuzzingID` — sem fuzzing | Planejado: etapa 1.14 inclui fuzzing do validador de payload. |
-| `CIIBestPracticesID` — sem selo OpenSSF | Não perseguido por enquanto. |
-| `TokenPermissionsID` — `release.yml` | **O achado está errado.** Ele diz "topLevel 'contents' permission set to 'write'", mas o topo do arquivo é `contents: read`, tanto na `main` quanto na `dev`. O `write` é **do job**, e o `changesets/action` precisa dele para criar a branch e abrir o PR de versão, junto com `pull-requests: write`. Já é o mínimo: escopo de um job, não do workflow. Conferido em 31/10/2026. |
+O que entrou no lugar está na T4: o workflow `Supply chain`, com `pnpm audit` e
+a política de licenças sobre a árvore inteira em todo PR. **Análise estática do
+código não foi substituída** — ver [README.md](README.md#o-que-saiu-e-o-que-não-foi-substituído).
 
-Desde 30/10/2026 esse SARIF sobe com `category: scorecard`. O efeito só aparece
-depois que a correção chegar na `main` ou o cron semanal rodar, porque o
-`scorecard.yml` dispara em `push` para `main` e no agendamento — até lá os
-alertas antigos continuam na faixa padrão. Sem isso ele caía na
-faixa padrão do code scanning e era reportado pelo check `CodeQL`, que então
-falhava em PRs por motivos que **não são vulnerabilidade no código** — "o projeto
-não tem selo OpenSSF" num PR de SDK. Um CI que fica vermelho por algo que não dá
-para resolver ensina a ignorar CI vermelho, que é o oposto do que se quer. A
-análise de código do CodeQL continua obrigatória para o merge; os achados de
-maturidade do Scorecard, não.
+Os achados de maturidade do Scorecard que esta página registrava como aceitos
+(projeto de uma pessoa, `main` sem aprovadores exigidos, repositório novo, sem
+selo OpenSSF) deixaram de ser medidos. O único que valia a pena guardar é o
+raciocínio, que continua valendo: **exigir aprovador travaria o único
+mantenedor**, e o que dá para proteger está protegido — sem deleção, sem
+force-push, PR e status checks obrigatórios, assinatura exigida na `main` e na
+`qa`, ninguém com bypass.
 
 ## Varredura do ZAP
 

@@ -25,6 +25,7 @@
     "ch:new": "pnpm --filter @nekolog-io/clickhouse ch new",
     "db:generate": "pnpm --filter @nekolog-io/db db:generate",
     "db:migrate": "pnpm --filter @nekolog-io/db db:migrate",
+    "licences:check": "pnpm -r licenses list --json | node internal/release/src/licences-cli.ts",
     "load": "pnpm --filter @internal/load load",
     "release:sbom": "pnpm run sbom:write && pnpm run sbom:check",
     "sbom:write": "pnpm sbom --sbom-format cyclonedx --sbom-spec-version 1.7 --sbom-type library --sbom-supplier NekoLog --prod --lockfile-only --exclude-peers --split --filter \"@nekolog-io/*\" --out sbom/%s.cdx.json",

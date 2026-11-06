@@ -66,7 +66,8 @@ que não está fechada, e está marcada como tal.
 
 | Item | Como está | Onde |
 |---|---|---|
-| Dependência com vulnerabilidade conhecida barra o PR | Sim, `dependency-review` | ameaça T4 |
+| Dependência com vulnerabilidade conhecida barra o PR | Sim, `pnpm audit` no workflow `Supply chain` | ameaça T4 |
+| Licença incompatível com produto proprietário barra o PR | Sim, `pnpm run licences:check` no mesmo workflow | ameaça T4 |
 | Sem script de instalação por padrão | Sim, `allowBuilds` explícito no pnpm | ameaça T4 |
 | Janela mínima antes de aceitar versão nova | Sim, `minimumReleaseAge` de 3 dias | ameaça T4 |
 | Action fixada por SHA | Sim | ameaça T5 |
@@ -102,7 +103,7 @@ que não está fechada, e está marcada como tal.
 | Serviço não expõe porta que não precisa | Sim no compose: só o Caddy publica 80 e 443; o hardening do host é o item B2, ainda por fazer | ameaça E9, lista de aceitas |
 | Credencial de banco com *grant* mínimo, por papel e por ambiente | Sim, com teste que falha se algum alargar | ameaças E10, E11 |
 | Nenhuma rota dispara trabalho agendado | Sim, e um teste falha se alguém adicionar uma | ameaça E12 |
-| Varredura automatizada de vulnerabilidade | Parcial: CodeQL e Scorecard em todo PR; o ZAP é manual até existir `qa` | [zap/README.md](zap/README.md) |
+| Varredura automatizada de vulnerabilidade | Parcial, e menos do que era: `pnpm audit` em todo PR cobre dependência, o ZAP é manual, e **não há mais análise estática do código** desde que o CodeQL saiu | [zap/README.md](zap/README.md) |
 
 ## O que fica em aberto
 
