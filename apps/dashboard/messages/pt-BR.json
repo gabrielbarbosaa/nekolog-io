@@ -16,9 +16,39 @@
     "switchProject": "Trocar de projeto",
     "comingLater": "Ainda não existe"
   },
-  "Toolbar": {
-    "period": "Última hora",
-    "searchHint": "level:error service:api"
+  "Explorer": {
+    "tableLabel": "Linhas de log",
+    "detailLabel": "A linha que você abriu",
+    "environment": "Ambiente",
+    "period": "Período",
+    "search": "Busca",
+    "searchHint": "level:error service:api",
+    "live": "Ao vivo",
+    "loading": "Lendo…",
+    "nothing": "Nada corresponde a essa busca nesse período.",
+    "counted": "{count, plural, =0 {nenhuma linha} one {# linha} other {# linhas}}",
+    "close": "Fechar",
+    "seeContext": "Ver as linhas em volta",
+    "hideContext": "Voltar à busca",
+    "contextShown": "Mostrando as linhas em volta da que você abriu.",
+    "attributes": "Atributos",
+    "stacktrace": "Pilha de chamadas",
+    "raw": "O registro inteiro",
+    "service": "Serviço",
+    "release": "Versão",
+    "source": "Origem",
+    "error_type": "Tipo do erro",
+    "trace_id": "Trace",
+    "span_id": "Span",
+    "session_id": "Sessão",
+    "user_id": "Usuário",
+    "country": "País",
+    "period_15m": "Últimos 15 minutos",
+    "period_1h": "Última hora",
+    "period_6h": "Últimas 6 horas",
+    "period_24h": "Últimas 24 horas",
+    "period_7d": "Últimos 7 dias",
+    "period_30d": "Últimos 30 dias"
   },
   "ThemeToggle": {
     "label": "Tema",
@@ -222,7 +252,12 @@
     "bad_address": "Isso não parece um endereço de e-mail.",
     "already_a_member": "Essa pessoa já está nesta organização.",
     "wait": "Tentativas demais. Espere um pouco e comece de novo.",
-    "challenge_failed": "Não conseguimos diferenciar você de um robô."
+    "challenge_failed": "Não conseguimos diferenciar você de um robô.",
+    "unknown_parameter": "Esta versão não conhece um dos filtros desse endereço.",
+    "bad_period": "Esse período não faz sentido. Escolha outro.",
+    "bad_limit": "São mais linhas do que cabe em uma página.",
+    "bad_search": "Essa busca não foi entendida.",
+    "logs_unavailable": "O banco de logs não respondeu. Tente de novo em instantes."
   },
   "Common": {
     "cancel": "Cancelar",

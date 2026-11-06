@@ -1,4 +1,6 @@
-export type Answer<T> = { ok: true; body: T } | { ok: false; error: string; status: number }
+export type Answer<T> =
+  | { ok: true; body: T }
+  | { ok: false; error: string; status: number; detail?: string }
 
 export async function call<T>(path: string, body?: Record<string, unknown>): Promise<Answer<T>> {
   let response: Response
@@ -23,10 +25,14 @@ export async function call<T>(path: string, body?: Record<string, unknown>): Pro
     return { ok: true, body: (parsed ?? {}) as T }
   }
 
-  const named = (parsed as { error?: unknown } | null)?.error
+  const answered = parsed as { error?: unknown; detail?: unknown } | null
+  const named = answered?.error
+  const detail = answered?.detail
+
   return {
     ok: false,
     status: response.status,
     error: typeof named === 'string' && named !== '' ? named : 'unknown',
+    ...(typeof detail === 'string' && detail !== '' ? { detail } : {}),
   }
 }

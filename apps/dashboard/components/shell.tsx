@@ -13,15 +13,17 @@ export type Place = {
   project?: Project | undefined
 }
 
-const PROJECT_SCREENS = ['logs', 'issues', 'dashboards', 'alerts', 'releases', 'exports'] as const
+const PROJECT_SCREENS = ['issues', 'dashboards', 'alerts', 'releases', 'exports'] as const
 
 export async function Shell({
   place,
   current,
+  bare,
   children,
 }: {
   place: Place
   current: string
+  bare?: boolean
   children: ReactNode
 }) {
   const t = await getTranslations('Sidebar')
@@ -29,7 +31,7 @@ export async function Shell({
   const project = place.project === undefined ? undefined : `${org}/${place.project.id}`
 
   return (
-    <div className="flex min-h-dvh">
+    <div className={cn('flex', bare ? 'h-dvh overflow-hidden' : 'min-h-dvh')}>
       <nav
         aria-label={t('label')}
         className="hidden w-56 shrink-0 flex-col border-border border-r bg-sidebar p-2 md:flex"
@@ -49,6 +51,12 @@ export async function Shell({
         </Link>
 
         <ul className="flex flex-col gap-px">
+          {project === undefined ? null : (
+            <Item href={`${project}/logs`} current={current} name="logs">
+              {t('logs')}
+            </Item>
+          )}
+
           {project === undefined
             ? null
             : PROJECT_SCREENS.map((screen) => (
@@ -92,7 +100,7 @@ export async function Shell({
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 px-5 py-7 md:px-7">{children}</main>
+        <main className={cn(bare ? 'min-h-0 flex-1' : 'flex-1 px-5 py-7 md:px-7')}>{children}</main>
       </div>
     </div>
   )

@@ -16,9 +16,39 @@
     "switchProject": "Cambiar de proyecto",
     "comingLater": "Todavía no existe"
   },
-  "Toolbar": {
-    "period": "Última hora",
-    "searchHint": "level:error service:api"
+  "Explorer": {
+    "tableLabel": "Líneas de log",
+    "detailLabel": "La línea que abriste",
+    "environment": "Entorno",
+    "period": "Periodo",
+    "search": "Búsqueda",
+    "searchHint": "level:error service:api",
+    "live": "En vivo",
+    "loading": "Leyendo…",
+    "nothing": "Nada coincide con esa búsqueda en ese periodo.",
+    "counted": "{count, plural, =0 {ninguna línea} one {# línea} other {# líneas}}",
+    "close": "Cerrar",
+    "seeContext": "Ver las líneas alrededor",
+    "hideContext": "Volver a la búsqueda",
+    "contextShown": "Mostrando las líneas alrededor de la que abriste.",
+    "attributes": "Atributos",
+    "stacktrace": "Pila de llamadas",
+    "raw": "El registro entero",
+    "service": "Servicio",
+    "release": "Versión",
+    "source": "Origen",
+    "error_type": "Tipo de error",
+    "trace_id": "Trace",
+    "span_id": "Span",
+    "session_id": "Sesión",
+    "user_id": "Usuario",
+    "country": "País",
+    "period_15m": "Últimos 15 minutos",
+    "period_1h": "Última hora",
+    "period_6h": "Últimas 6 horas",
+    "period_24h": "Últimas 24 horas",
+    "period_7d": "Últimos 7 días",
+    "period_30d": "Últimos 30 días"
   },
   "ThemeToggle": {
     "label": "Tema",
@@ -222,7 +252,12 @@
     "bad_address": "Eso no parece una dirección de correo.",
     "already_a_member": "Esa persona ya está en esta organización.",
     "wait": "Demasiados intentos. Espera un poco y empieza otra vez.",
-    "challenge_failed": "No pudimos distinguirte de un robot."
+    "challenge_failed": "No pudimos distinguirte de un robot.",
+    "unknown_parameter": "Esta versión no conoce uno de los filtros de esa dirección.",
+    "bad_period": "Ese periodo no tiene sentido. Elige otro.",
+    "bad_limit": "Son más líneas de las que cabe en una página.",
+    "bad_search": "Esa búsqueda no se pudo entender.",
+    "logs_unavailable": "El almacén de logs no respondió. Inténtalo de nuevo en un momento."
   },
   "Common": {
     "cancel": "Cancelar",
