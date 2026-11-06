@@ -16,6 +16,7 @@ jobs:
   bundle:
     name: Build the smoke bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -53,6 +54,7 @@ jobs:
     name: Node ${{ matrix.node }}
     needs: bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -80,6 +82,7 @@ jobs:
     name: Bun
     needs: bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -103,6 +106,7 @@ jobs:
     name: Deno
     needs: bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -125,6 +129,7 @@ jobs:
   browsers:
     name: ${{ matrix.browser }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -156,6 +161,7 @@ jobs:
         run: pnpm --filter @nekolog-io/browser... run build
 
       - name: Install the browser
+        timeout-minutes: 8
         run: pnpm --filter @nekolog-io/browser exec playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run the browser tests

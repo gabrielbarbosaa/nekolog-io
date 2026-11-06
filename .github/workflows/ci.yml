@@ -16,6 +16,7 @@ jobs:
   ci:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:26.8-alpine
