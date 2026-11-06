@@ -8,6 +8,7 @@ import {
 } from '@internal/auth'
 import { after, NextResponse } from 'next/server'
 import { authSettings, loginDeps, mail } from '@/lib/auth'
+import { cookieFrom } from '@/lib/cookies'
 import { countryOf, deviceOf } from '@/lib/request'
 
 export const runtime = 'nodejs'
@@ -27,14 +28,10 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'bad_origin' }, { status: 403 })
   }
 
-  const cookie = request.headers
-    .get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${CHALLENGE_COOKIE}=`))
-    ?.slice(CHALLENGE_COOKIE.length + 1)
-
-  const attempt = openChallenge(settings.otpSecret, cookie)
+  const attempt = openChallenge(
+    settings.otpSecret,
+    cookieFrom(request.headers.get('cookie'), CHALLENGE_COOKIE),
+  )
   if (attempt === undefined) {
     return NextResponse.json({ error: 'start_again' }, { status: 401 })
   }

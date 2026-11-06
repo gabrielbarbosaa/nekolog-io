@@ -63,29 +63,57 @@ describe('the order the steps have to run in', () => {
   })
 })
 
-describe('what the browser job is allowed to download', () => {
-  const COMPAT = readFileSync(join(WORKFLOWS, 'compat.yml'), 'utf8')
+describe('what a job driving a browser is allowed to download', () => {
+  const IMAGE = /image: mcr\.microsoft\.com\/playwright:v([\d.]+)-\w+/g
 
-  it('runs in the image that already carries the browsers and their libraries', () => {
-    expect(COMPAT).toMatch(/image: mcr\.microsoft\.com\/playwright:v[\d.]+-\w+/)
+  function imagesInWorkflows(): Array<{ file: string; version: string }> {
+    return readdirSync(WORKFLOWS)
+      .filter((name) => name.endsWith('.yml'))
+      .flatMap((name) =>
+        [...readFileSync(join(WORKFLOWS, name), 'utf8').matchAll(IMAGE)].map((match) => ({
+          file: name,
+          version: match[1] as string,
+        })),
+      )
+  }
+
+  function playwrightIn(directory: string): string {
+    const manifest = JSON.parse(
+      readFileSync(join(ROOT, ...directory.split('/'), 'package.json'), 'utf8'),
+    ) as { devDependencies?: Record<string, string> }
+    const pinned =
+      manifest.devDependencies?.playwright ?? manifest.devDependencies?.['@playwright/test']
+
+    expect(pinned, `${directory} depends on no Playwright`).toBeDefined()
+    return pinned as string
+  }
+
+  it('was found in every workflow that needs one, so this is not an empty list', () => {
+    const files = new Set(imagesInWorkflows().map((found) => found.file))
+
+    expect([...files].sort()).toEqual(['ci.yml', 'compat.yml'])
   })
 
   it('installs no browser and asks apt for nothing, because there is nothing to install', () => {
-    expect(COMPAT).not.toContain('playwright install')
-    expect(COMPAT).not.toContain('--with-deps')
+    for (const name of readdirSync(WORKFLOWS).filter((file) => file.endsWith('.yml'))) {
+      const workflow = readFileSync(join(WORKFLOWS, name), 'utf8')
+
+      expect(workflow, name).not.toContain('playwright install')
+      expect(workflow, name).not.toContain('--with-deps')
+    }
   })
 
-  it('pins the image to the Playwright the browser package depends on', () => {
-    const pinned = /image: mcr\.microsoft\.com\/playwright:v([\d.]+)-/.exec(COMPAT)?.[1]
-    const manifest = JSON.parse(
-      readFileSync(join(ROOT, 'packages', 'browser', 'package.json'), 'utf8'),
-    ) as { devDependencies: Record<string, string> }
+  it('pins every image to the Playwright the packages depend on', () => {
+    const wanted = new Set(
+      ['packages/browser', 'apps/dashboard'].map((directory) => playwrightIn(directory)),
+    )
 
-    expect(pinned, 'the workflow pins no Playwright version').toBeDefined()
-    expect(
-      manifest.devDependencies.playwright,
-      'the image and the dependency must be the same Playwright',
-    ).toBe(`^${pinned}`)
+    expect(wanted.size, 'two packages drive a browser on different Playwright versions').toBe(1)
+    for (const { file, version } of imagesInWorkflows()) {
+      expect([...wanted][0], `${file} runs a different Playwright than the code it tests`).toBe(
+        `^${version}`,
+      )
+    }
   })
 })
 
