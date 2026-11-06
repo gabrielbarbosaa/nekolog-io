@@ -1,6 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { RedisClient } from '@nekolog-io/adapters'
-import { CREATE_SESSION, REVOKE_EVERY_SESSION, REVOKE_SESSION, ROTATE_REFRESH } from './scripts.ts'
+import {
+  CREATE_SESSION,
+  LIST_SESSIONS,
+  REVOKE_EVERY_SESSION,
+  REVOKE_OWN_SESSION,
+  REVOKE_SESSION,
+  ROTATE_REFRESH,
+} from './scripts.ts'
 
 export const REFRESH_IDLE_SECONDS = 7 * 24 * 60 * 60
 export const REFRESH_ABSOLUTE_SECONDS = 30 * 24 * 60 * 60
@@ -140,6 +147,45 @@ export async function sessionLives(store: SessionStore, sid: string): Promise<bo
 
 export async function revokeSession(store: SessionStore, sid: string): Promise<void> {
   await store.redis.eval(REVOKE_SESSION, [sessionKey(sid)], [sid])
+}
+
+export type SessionSummary = {
+  sid: string
+  device: string
+  country: string
+  createdAt: number
+  lastUsed: number
+}
+
+export async function listSessions(store: SessionStore, userId: string): Promise<SessionSummary[]> {
+  const answer = await store.redis.eval(LIST_SESSIONS, [userSessionsKey(userId)], [])
+  if (!Array.isArray(answer)) {
+    return []
+  }
+
+  return (answer as unknown[])
+    .filter((row): row is unknown[] => Array.isArray(row))
+    .map((row) => ({
+      sid: String(row[0]),
+      device: String(row[1] ?? ''),
+      country: String(row[2] ?? ''),
+      createdAt: Number(row[3] ?? 0),
+      lastUsed: Number(row[4] ?? 0),
+    }))
+    .sort((one, other) => other.lastUsed - one.lastUsed)
+}
+
+export async function revokeOwnSession(
+  store: SessionStore,
+  userId: string,
+  sid: string,
+): Promise<boolean> {
+  const answer = await store.redis.eval(
+    REVOKE_OWN_SESSION,
+    [sessionKey(sid), userSessionsKey(userId)],
+    [userId, sid],
+  )
+  return Number(answer) === 1
 }
 
 export async function revokeEverySession(store: SessionStore, userId: string): Promise<number> {

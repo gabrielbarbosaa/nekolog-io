@@ -42,6 +42,22 @@ tratam `http://localhost` como contexto seguro, então o login funciona em
 `:3001` sem certificado. Em qualquer outro host sem HTTPS, não funciona — e isso
 é o prefixo fazendo o trabalho dele.
 
+## As rotas da conta
+
+`password/{forgot,reset,change}`, `email/{change,confirm}`, `sessions` (listar e
+encerrar uma) e `logout-all`. As cinco que só valem para quem está dentro
+chamam o `liveSession(request)`, que confere o JWT **e** pergunta ao Redis se a
+sessão ainda existe — é a "ação sensível" da §11.5, e é o que faz uma sessão
+revogada ser barrada na hora em vez de nos próximos dez minutos.
+
+`tests/auth-routes.test.ts` falha se uma delas parar de chamá-lo, mas esse teste
+lê o fonte: ele **não** viu a sabotagem que deixou o `liveSession` devolver a
+sessão sem perguntar ao Redis, porque a chamada continuava lá. Quem viu foi o
+teste ponta a ponta.
+
+Nenhuma delas lê o id da conta do corpo da requisição — só do token verificado —
+e há teste disso também.
+
 ### Conferido ponta a ponta
 
 Em 06/11/2026, contra o stack de dev (Postgres, Valkey e Mailpit de verdade):
@@ -54,6 +70,21 @@ Foi assim que apareceu um defeito que nenhum teste unitário pegou: o
 user-agent real `(X11; Linux x86_64)` vira `Firefox on Linux x86_64`, e o
 allowlist do campo "navegador" do e-mail não aceitava `_` — o e-mail dizia
 `unknown` para um navegador perfeitamente normal.
+
+Em 06/11/2026, de novo, agora com as rotas da conta: **38 de 38**, com Postgres,
+Valkey e Mailpit de verdade. Cobre cadastro, confirmação, entrada, lista de
+sessões, troca de senha (com o aviso por e-mail e todas as sessões caindo),
+troca de endereço com os dois códigos, recuperação de senha, sair de todos os
+dispositivos, origem estranha recusada, encerrar a sessão de outra pessoa
+recusada, e a sessão revogada barrada na hora com o access token ainda válido.
+
+Dois defeitos saíram daí. Um é do produto: trocar a senha encerra todas as
+sessões e manda entrar de novo **dentro** da espera de 60 s entre códigos, e o
+login respondia "e-mail ou senha inválidos" a quem tinha acabado de digitar a
+senha certa; agora responde 429 com `Retry-After`. O outro é do arnês: o
+`DELETE /api/v1/message/{id}` do Mailpit não apaga nada (o certo é
+`DELETE /api/v1/messages` com os ids no corpo), então o script lia um código
+velho e culpava o servidor.
 
 ## O `proxy.ts`
 

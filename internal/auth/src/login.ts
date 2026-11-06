@@ -1,6 +1,12 @@
 import type { RedisClient } from '@nekolog-io/adapters'
 import { type CodePurpose, newChallenge } from './codes.ts'
-import { issueCode, type OtpStore, verifyCode } from './otp.ts'
+import {
+  issueCode,
+  type OtpStore,
+  RESEND_COOLDOWN_SECONDS,
+  SENDS_WINDOW_SECONDS,
+  verifyCode,
+} from './otp.ts'
 import { spendTheSameTime, verifyPassword } from './password.ts'
 import type { PwnedOptions } from './pwned.ts'
 import { forgetFailures, mayAttempt, recordFailure } from './rate-limit.ts'
@@ -67,7 +73,12 @@ export async function startLogin(deps: LoginDeps, input: StartInput): Promise<St
   const issued = await issueCode(stores(deps).otp, LOGIN_PURPOSE, account.id, challenge)
 
   if (issued.outcome !== 'issued') {
-    return { outcome: 'refused' }
+    await forgetFailures(deps.redis, 'login', input.email.toLowerCase())
+    return {
+      outcome: 'slow-down',
+      retryAfterSeconds:
+        issued.outcome === 'cooling-down' ? RESEND_COOLDOWN_SECONDS : SENDS_WINDOW_SECONDS,
+    }
   }
 
   await forgetFailures(deps.redis, 'login', input.email.toLowerCase())

@@ -5,7 +5,17 @@ import { describe, expect, it } from 'vitest'
 
 const API = fileURLToPath(new URL('../app/api/', import.meta.url))
 
-const TURNSTILE_GUARDS = ['login/start', 'signup']
+const TURNSTILE_GUARDS = ['login/start', 'signup', 'password/forgot']
+
+const NEEDS_A_LIVE_SESSION = [
+  'auth/password/change',
+  'auth/email/change',
+  'auth/email/confirm',
+  'auth/sessions',
+  'auth/logout-all',
+]
+
+const ENDS_EVERY_SESSION = ['auth/password/change', 'auth/password/reset', 'auth/logout-all']
 
 function routesUnder(directory: string): string[] {
   const found: string[] = []
@@ -67,6 +77,35 @@ describe('Turnstile, which is off until a key exists', () => {
       expect(route?.source).toMatch(/human === 'refused'[\s\S]{0,120}status: 403/)
     },
   )
+})
+
+describe('an action that is only for the person who is signed in', () => {
+  it.each(NEEDS_A_LIVE_SESSION)(
+    '%s asks Redis whether the session still exists, rather than trusting the token',
+    (name) => {
+      const route = ROUTES.find((candidate) => candidate.name === name)
+
+      expect(route, `${name} is not a route`).toBeDefined()
+      expect(route?.source).toContain('liveSession(request)')
+      expect(route?.source).toContain('status: 401')
+    },
+  )
+
+  it.each(ENDS_EVERY_SESSION)('%s clears the cookies it just made worthless', (name) => {
+    const route = ROUTES.find((candidate) => candidate.name === name)
+
+    expect(route?.source).toContain('clearCookie(response, ACCESS_COOKIE)')
+    expect(route?.source).toContain('clearCookie(response, REFRESH_COOKIE)')
+  })
+
+  it('never reads the account id out of the body, only out of the verified token', () => {
+    for (const route of ROUTES.filter((candidate) =>
+      NEEDS_A_LIVE_SESSION.includes(candidate.name),
+    )) {
+      expect(route.source, route.name).not.toMatch(/stringField\(body, '(userId|sub|email_of)'\)/)
+      expect(route.source, route.name).toContain('claims.sub')
+    }
+  })
 })
 
 describe('what the routes must never write down', () => {

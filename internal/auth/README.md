@@ -180,6 +180,42 @@ Uma coisa que o próprio esquema ensinou: a *check constraint*
 o teste precisa criá-lo com `created_at` no passado. O banco recusando o dado
 impossível é o banco funcionando.
 
+## A conta depois que ela existe
+
+`src/account.ts` tem as quatro operações da §11.1 e da §11.5, todas sem HTTP.
+
+**Recuperar a senha.** `startRecovery` responde **a mesma coisa** para um
+endereço que ninguém tem, para uma conta que nunca confirmou e para uma conta
+suspensa; a rota ainda grava um cookie de desafio nos três casos, senão a
+*ausência* do cookie já diria que a conta não existe. Só um endereço que não
+pode entrar conta como tentativa no rate limit — para um que pode, quem segura é
+a espera de 60 s entre envios, que não dá para usar para trancar a conta de
+outra pessoa.
+
+**A política da senha roda antes de o código ser gasto.** Se a ordem fosse a
+outra, uma senha recusada por ser curta queimaria o código e a pessoa teria de
+começar de novo por um erro que o servidor já sabia. Há teste de que o código
+ainda vale depois de uma senha recusada — ele pegou a ordem invertida numa
+sabotagem.
+
+**Trocar a senha de dentro da conta** pede a senha atual e **encerra todas as
+sessões**, inclusive a de quem está trocando. É o que a §11.5 escreve. O efeito
+colateral apareceu no teste ponta a ponta e está contado abaixo.
+
+**Trocar o endereço** pede a senha de novo e manda **dois códigos**: um para o
+endereço atual e um para o novo, com ids diferentes (`{userId}` e
+`{userId}:new`), então um não responde pelo outro — há teste de que trocar os
+dois é recusado. O endereço pretendido fica no Redis com a mesma validade do
+código, junto do desafio. Essa comparação do desafio é **a segunda fechadura da
+mesma porta**: o `verifyCode` já recusa um desafio de outra aba, então o único
+teste que a enxerga escreve a chave pendente à mão.
+
+**Sessões ativas.** `listSessions` roda um Lua que lê o conjunto do usuário e,
+para cada sid morto (expirado pela TTL ou apagado numa rotação), tira o membro
+da lista em vez de mostrá-lo. `revokeOwnSession` **confere o dono dentro do
+script** — sem isso, conhecer um `sid` bastaria para desconectar outra pessoa, e
+a sabotagem que tirou a comparação foi pega na hora.
+
 ## Login
 
 `startLogin` e `finishLogin` são o fluxo da §11.1, sem HTTP: quem chama entrega
@@ -207,6 +243,18 @@ Redis de verdade.
 
 Um login que dá certo esquece as falhas **da conta** e não as do endereço — quem
 está varrendo endereços não ganha fôlego acertando uma senha.
+
+### Senha certa dentro da espera de 60 s não é "senha inválida"
+
+Era, até a 2.11. O `startLogin` devolvia `refused` quando o `issueCode` estava
+em espera, e a rota traduzia isso para `invalid_credentials` — a pessoa digitava
+a senha certa e lia que estava errada. A 2.11 tornou isso frequente, porque
+trocar a senha encerra todas as sessões e manda a pessoa entrar de novo **dentro
+daquela mesma janela de 60 s**.
+
+Agora é `slow-down` com `Retry-After`, e não conta como falha. Não há vazamento:
+só se chega ali **depois** de a senha ter conferido, então dizer "espere" não
+conta nada que quem perguntou já não soubesse.
 
 ### Cookies
 

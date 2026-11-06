@@ -5,7 +5,12 @@ export type EmailLocale = (typeof EMAIL_LOCALES)[number]
 
 export const DEFAULT_EMAIL_LOCALE: EmailLocale = 'en'
 
-export type CodeFor = 'login' | 'verify-email'
+export type CodeFor =
+  | 'login'
+  | 'verify-email'
+  | 'reset-password'
+  | 'change-email'
+  | 'change-email-current'
 
 type Copy = {
   subject: Readonly<Record<CodeFor, string>>
@@ -21,8 +26,20 @@ type Copy = {
 
 const COPY: Readonly<Record<EmailLocale, Copy>> = {
   en: {
-    subject: { login: 'Your sign-in code', 'verify-email': 'Confirm your e-mail' },
-    heading: { login: 'Your sign-in code', 'verify-email': 'Confirm your e-mail' },
+    subject: {
+      login: 'Your sign-in code',
+      'verify-email': 'Confirm your e-mail',
+      'reset-password': 'Your code to set a new password',
+      'change-email': 'Confirm this new address',
+      'change-email-current': 'Someone is changing your e-mail address',
+    },
+    heading: {
+      login: 'Your sign-in code',
+      'verify-email': 'Confirm your e-mail',
+      'reset-password': 'Set a new password',
+      'change-email': 'Confirm this new address',
+      'change-email-current': 'Confirm the change of address',
+    },
     lead: 'Type this code in the tab you started from. It only works there.',
     validity: 'It stops working in 10 minutes.',
     device: 'Browser',
@@ -32,8 +49,20 @@ const COPY: Readonly<Record<EmailLocale, Copy>> = {
     noLink: 'This message has no link that signs you in. We will never send one.',
   },
   'pt-BR': {
-    subject: { login: 'Seu código de entrada', 'verify-email': 'Confirme seu e-mail' },
-    heading: { login: 'Seu código de entrada', 'verify-email': 'Confirme seu e-mail' },
+    subject: {
+      login: 'Seu código de entrada',
+      'verify-email': 'Confirme seu e-mail',
+      'reset-password': 'Seu código para definir uma senha nova',
+      'change-email': 'Confirme este endereço novo',
+      'change-email-current': 'Alguém está trocando seu endereço de e-mail',
+    },
+    heading: {
+      login: 'Seu código de entrada',
+      'verify-email': 'Confirme seu e-mail',
+      'reset-password': 'Defina uma senha nova',
+      'change-email': 'Confirme este endereço novo',
+      'change-email-current': 'Confirme a troca de endereço',
+    },
     lead: 'Digite este código na aba onde você começou. Ele só funciona lá.',
     validity: 'Ele para de valer em 10 minutos.',
     device: 'Navegador',
@@ -43,8 +72,20 @@ const COPY: Readonly<Record<EmailLocale, Copy>> = {
     noLink: 'Esta mensagem não tem link que faz login. Nunca vamos mandar um.',
   },
   es: {
-    subject: { login: 'Tu código de acceso', 'verify-email': 'Confirma tu correo' },
-    heading: { login: 'Tu código de acceso', 'verify-email': 'Confirma tu correo' },
+    subject: {
+      login: 'Tu código de acceso',
+      'verify-email': 'Confirma tu correo',
+      'reset-password': 'Tu código para poner una contraseña nueva',
+      'change-email': 'Confirma esta dirección nueva',
+      'change-email-current': 'Alguien está cambiando tu dirección de correo',
+    },
+    heading: {
+      login: 'Tu código de acceso',
+      'verify-email': 'Confirma tu correo',
+      'reset-password': 'Pon una contraseña nueva',
+      'change-email': 'Confirma esta dirección nueva',
+      'change-email-current': 'Confirma el cambio de dirección',
+    },
     lead: 'Escribe este código en la pestaña donde empezaste. Solo funciona ahí.',
     validity: 'Deja de valer en 10 minutos.',
     device: 'Navegador',

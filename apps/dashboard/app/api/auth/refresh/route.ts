@@ -10,6 +10,7 @@ import {
 import { NextResponse } from 'next/server'
 import { authSettings } from '@/lib/auth'
 import { clearCookie, cookieFrom } from '@/lib/cookies'
+import { warnAboutReuse } from '@/lib/notices'
 import { renewDeps } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -41,6 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     console.warn(
       `a refresh token came back after the grace window; ended the session of ${renewal.userId}`,
     )
+    warnAboutReuse(renewal.userId, request.headers)
     return signedOut('session_ended')
   }
 

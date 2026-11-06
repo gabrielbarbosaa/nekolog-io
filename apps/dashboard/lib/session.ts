@@ -4,6 +4,7 @@ import {
   type AccessClaims,
   type RenewDeps,
   revokeSession,
+  type SessionStore,
   sessionLives,
   verifyAccessToken,
 } from '@internal/auth'
@@ -12,7 +13,9 @@ import { cookieFrom } from './cookies'
 import { signingKey, verifyingKeys } from './keys'
 import { redisClient } from './redis'
 
-export const SIGN_IN_PATH = '/sign-in'
+export function sessionStore(): SessionStore {
+  return { redis: redisClient() }
+}
 
 export async function renewDeps(): Promise<RenewDeps> {
   return {
@@ -34,10 +37,14 @@ export async function currentSession(): Promise<AccessClaims | undefined> {
     : verifyAccessToken(await verifyingKeys(), token)
 }
 
-export async function liveSession(claims: AccessClaims | undefined): Promise<boolean> {
-  return claims !== undefined && (await sessionLives({ redis: redisClient() }, claims.sid))
+export async function liveSession(request: Request): Promise<AccessClaims | undefined> {
+  const claims = await sessionFrom(request)
+  if (claims === undefined) {
+    return undefined
+  }
+  return (await sessionLives(sessionStore(), claims.sid)) ? claims : undefined
 }
 
 export async function endSession(claims: AccessClaims): Promise<void> {
-  await revokeSession({ redis: redisClient() }, claims.sid)
+  await revokeSession(sessionStore(), claims.sid)
 }
