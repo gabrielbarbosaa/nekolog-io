@@ -12,6 +12,16 @@ export {
   normalizeCode,
 } from './codes.ts'
 export {
+  ACCESS_COOKIE,
+  CHALLENGE_COOKIE,
+  type CookieAttributes,
+  cookieAttributes,
+  openChallenge,
+  originAllowed,
+  REFRESH_COOKIE,
+  sealChallenge,
+} from './cookies.ts'
+export {
   ACCESS_TTL_SECONDS,
   type AccessClaims,
   JWT_ALGORITHM,
@@ -25,6 +35,26 @@ export {
   type VerifyingKey,
   verifyAccessToken,
 } from './jwt.ts'
+export {
+  type Finished,
+  finishLogin,
+  LOGIN_PURPOSE,
+  type LoginDeps,
+  resendCode,
+  type Started,
+  type StartInput,
+  startLogin,
+  type VerifyInput,
+} from './login.ts'
+export {
+  type CodeEmail,
+  type CodeNotice,
+  DEFAULT_EMAIL_LOCALE,
+  EMAIL_LOCALES,
+  type EmailLocale,
+  localeFor,
+  loginCodeEmail,
+} from './mail/login-code.ts'
 export {
   CODE_TTL_SECONDS,
   codeKey,
@@ -69,6 +99,20 @@ export {
   suffixAppears,
 } from './pwned.ts'
 export {
+  ACCOUNT_ATTEMPTS,
+  ATTEMPT_WINDOW_SECONDS,
+  type Attempt,
+  BACKOFF_MINUTES,
+  forgetFailures,
+  IP_ATTEMPTS,
+  limitKey,
+  mayAttempt,
+  type RateScope,
+  recordFailure,
+  waitAfter,
+} from './rate-limit.ts'
+export {
+  COUNT_ATTEMPT,
   CREATE_SESSION,
   ISSUE_OTP,
   REVOKE_EVERY_SESSION,
@@ -99,3 +143,19 @@ export {
   UNREMEMBERED_SECONDS,
   userSessionsKey,
 } from './sessions.ts'
+export {
+  checkTurnstile,
+  TURNSTILE_TIMEOUT_MS,
+  TURNSTILE_VERIFY_URL,
+  type TurnstileOptions,
+  type TurnstileVerdict,
+  turnstileIsOn,
+} from './turnstile.ts'
+export {
+  type Account,
+  findAccountByEmail,
+  mayHoldASession,
+  normalizeEmail,
+  type SqlRunner,
+  setPasswordHash,
+} from './users.ts'

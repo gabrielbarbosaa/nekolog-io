@@ -9,6 +9,12 @@ redis.call('EXPIRE', KEYS[1], ARGV[3])
 return 1
 `.trim()
 
+export const COUNT_ATTEMPT = `
+local failures = redis.call('INCR', KEYS[1])
+if failures == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return failures
+`.trim()
+
 export const CREATE_SESSION = `
 redis.call('HSET', KEYS[1], 'cur', ARGV[1], 'prev', '', 'prevUntil', '0',
   'absExp', ARGV[2], 'lastUsed', ARGV[3], 'userId', ARGV[4],

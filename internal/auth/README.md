@@ -128,6 +128,55 @@ reuso encerrando a sessão, **dez requisições paralelas** com o mesmo token (t
 tocar na sessão de outra pessoa, e revogação visível na hora — que é o que uma
 ação sensível confere.
 
+## Login
+
+`startLogin` e `finishLogin` são o fluxo da §11.1, sem HTTP: quem chama entrega
+um `SqlRunner`, um `RedisClient` e o segredo dos códigos.
+
+**Senha errada e endereço que não existe devolvem a mesma coisa**, e demoram o
+mesmo: quando não há conta, `spendTheSameTime` gasta uma verificação argon2 de
+verdade. E-mail não confirmado e conta suspensa também caem no mesmo `refused` —
+dizer qual dos três foi entregaria o estado da conta.
+
+O endereço é sempre normalizado para minúsculas antes da consulta, e há teste de
+que o SQL recebe o endereço em minúsculas mesmo quando a pessoa digitou com
+maiúscula e espaço em volta.
+
+### Limite de tentativas
+
+Cinco por conta, vinte por endereço, em 15 minutos, com espera crescente de
+1 → 2 → 4 → 8 → 15 minutos. A quinta falha **já** bloqueia: é o que a §11.6
+quer dizer com "5 senhas erradas ativam uma espera".
+
+Eu errei isso por um na primeira versão, e o teste unitário não pegou porque eu
+o escrevi contra o meu código em vez de contra o plano. Quem pegou foi o teste
+de integração. A sequência `[0,0,0,0,60,120,240,480,900]` está presa contra
+Redis de verdade.
+
+Um login que dá certo esquece as falhas **da conta** e não as do endereço — quem
+está varrendo endereços não ganha fôlego acertando uma senha.
+
+### Cookies
+
+`__Host-at`, `__Host-rt` e `__Host-lc`, todos `HttpOnly`, `Secure`,
+`SameSite=Lax`, `Path=/` e sem `Domain` — que é o que o prefixo `__Host-` exige.
+O cookie do desafio carrega `{userId}.{challenge}` assinado com HMAC e comparado
+em tempo constante; trocar o usuário ou o desafio invalida a assinatura.
+
+Marcar "lembrar este dispositivo" é o que decide se os cookies têm `Max-Age`:
+sem ele, somem ao fechar o navegador e a sessão dura no máximo 12 h.
+
+### Turnstile fica atrás da variável
+
+`checkTurnstile` devolve `off` sem tocar a rede quando não há
+`TURNSTILE_SECRET_KEY`, e passa a valer assim que a chave existir — sem mudar
+código. É o mesmo padrão de `INFRA_ENABLED` e `BACKUPS_ENABLED`.
+
+Quando está ligado ele **falha fechado**: erro de rede, status ruim, resposta
+sem `success: true` exato ou requisição sem token são todos `refused`. Essa é a
+diferença para o Pwned Passwords, e é deliberada — ali quem paga é quem cria
+conta num dia ruim; aqui quem paga é o bot.
+
 ## O que foi conferido contra a API de verdade
 
 Em 06/11/2026, pelo módulo, sem mock: `password123456` e `qwertyuiop1234`

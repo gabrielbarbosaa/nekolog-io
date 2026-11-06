@@ -1,0 +1,96 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+const API = fileURLToPath(new URL('../app/api/', import.meta.url))
+
+const TURNSTILE_GUARDS = ['login/start']
+
+function routesUnder(directory: string): string[] {
+  const found: string[] = []
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry)
+    if (statSync(path).isDirectory()) {
+      found.push(...routesUnder(path))
+    } else if (entry === 'route.ts') {
+      found.push(path)
+    }
+  }
+  return found
+}
+
+const ROUTES = routesUnder(API).map((path) => ({
+  name: path.slice(API.length).replace(/\\/g, '/').replace('/route.ts', ''),
+  source: readFileSync(path, 'utf8'),
+}))
+
+const POSTS = ROUTES.filter((route) => route.source.includes('export async function POST'))
+
+describe('the auth routes that accept a POST', () => {
+  it('were found, so none of this is passing on an empty list', () => {
+    expect(POSTS.length).toBeGreaterThanOrEqual(3)
+    expect(POSTS.map((route) => route.name).sort()).toContain('auth/login/start')
+  })
+
+  it.each(POSTS)('$name refuses a request from another origin', ({ source }) => {
+    expect(source).toContain("originAllowed(request.headers.get('origin')")
+    expect(source).toContain('status: 403')
+  })
+
+  it.each(POSTS)('$name runs on Node, where the crypto and the driver live', ({ source }) => {
+    expect(source).toContain("export const runtime = 'nodejs'")
+  })
+
+  it.each(POSTS)(
+    '$name is never cached, because it reads cookies and writes them',
+    ({ source }) => {
+      expect(source).toContain("export const dynamic = 'force-dynamic'")
+    },
+  )
+})
+
+describe('Turnstile, which is off until a key exists', () => {
+  it.each(TURNSTILE_GUARDS)('%s checks it, so setting the key is all it takes', (name) => {
+    const route = POSTS.find((candidate) => candidate.name === `auth/${name}`)
+
+    expect(route, `auth/${name} is not a POST route`).toBeDefined()
+    expect(route?.source).toContain('checkTurnstile(')
+    expect(route?.source).toContain("=== 'refused'")
+  })
+
+  it('refuses the request when the check refuses, rather than carrying on', () => {
+    const start = POSTS.find((route) => route.name === 'auth/login/start')
+
+    expect(start?.source).toMatch(/human === 'refused'[\s\S]{0,120}status: 403/)
+  })
+})
+
+describe('what the routes must never write down', () => {
+  function logsIn(source: string): string[] {
+    return [...source.matchAll(/console\.(?:log|error|warn)\(([^\n]*)/g)]
+      .map((match) => match[1] as string)
+      .map((line) => line.replace(/'[^']*'|"[^"]*"|`[^`]*`/g, "''"))
+  }
+
+  it('found some logging across the routes, so this is not vacuous', () => {
+    expect(POSTS.flatMap((route) => logsIn(route.source)).length).toBeGreaterThan(0)
+  })
+
+  it.each(POSTS)('$name logs no identifier that holds a secret', ({ source }) => {
+    for (const line of logsIn(source)) {
+      for (const secret of ['password', 'code', 'token', 'refreshToken', 'challenge', 'notice']) {
+        expect(line, `${line} carries ${secret}`).not.toMatch(new RegExp(`\\b${secret}\\b`, 'i'))
+      }
+    }
+  })
+
+  it.each(POSTS)('$name answers the same way for an unknown account', ({ name, source }) => {
+    if (name !== 'auth/login/start') {
+      return
+    }
+    expect(source).toContain("error: 'invalid_credentials'")
+    expect(source).not.toContain('no such user')
+    expect(source).not.toContain('unknown_email')
+  })
+})

@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_STANDALONE === '1' ? { output: 'standalone' as const } : {}),
-  transpilePackages: ['@internal/security-headers'],
+  transpilePackages: ['@internal/auth', '@internal/security-headers'],
 }
 
 export default withNextIntl(nextConfig)
