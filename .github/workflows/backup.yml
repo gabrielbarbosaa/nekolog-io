@@ -15,6 +15,7 @@ jobs:
     name: Restore the newest backup and check it
     if: vars.BACKUPS_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: prod
     services:
       postgres:

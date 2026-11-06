@@ -1,10 +1,13 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
-const WORKFLOW = readFileSync(join(ROOT, '.github', 'workflows', 'release.yml'), 'utf8')
+const WORKFLOWS = join(ROOT, '.github', 'workflows')
+const WORKFLOW = readFileSync(join(WORKFLOWS, 'release.yml'), 'utf8')
+
+const MOST_MINUTES_ANY_JOB_MAY_TAKE = 30
 
 function at(needle: string): number {
   const index = WORKFLOW.indexOf(needle)
@@ -57,5 +60,32 @@ describe('the order the steps have to run in', () => {
   it('finds each document by what it says it describes, not by guessing a file name', () => {
     expect(WORKFLOW).toContain('cli.ts --json')
     expect(WORKFLOW).toContain('select(.name == $name)')
+  })
+})
+
+describe('what a hung job is allowed to cost', () => {
+  const files = readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))
+
+  it('found the workflows at all, so this is not passing on an empty list', () => {
+    expect(files.length).toBeGreaterThanOrEqual(10)
+  })
+
+  it('gives every job a ceiling, because the default is six hours of metered minutes', () => {
+    for (const file of files) {
+      const text = readFileSync(join(WORKFLOWS, file), 'utf8')
+      const jobs = [
+        ...text.matchAll(/\n {2}([a-z][a-z0-9_-]*):\n((?: {4}\S[^\n]*\n|\n)*)/g),
+      ].filter(([, , body]) => (body as string).includes('runs-on:'))
+
+      expect(jobs.length, `${file} declares no job this test can see`).toBeGreaterThan(0)
+      for (const [, name, body] of jobs) {
+        const ceiling = /\n {4}timeout-minutes: (\d+)\n/.exec(body as string)
+
+        expect(ceiling, `${file}: the job "${name}" has no timeout-minutes`).not.toBeNull()
+        expect(Number(ceiling?.[1]), `${file}: ${name}`).toBeLessThanOrEqual(
+          MOST_MINUTES_ANY_JOB_MAY_TAKE,
+        )
+      }
+    }
   })
 })
