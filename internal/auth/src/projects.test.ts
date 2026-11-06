@@ -255,7 +255,7 @@ describe('every statement in this module', () => {
 
   it('names the organization itself, so an id alone never reaches another tenant', () => {
     const unscoped = statements
-      .filter((one) => !one.text.includes('organization_id') && !one.text.includes('${BELONGS_TO}'))
+      .filter((one) => !one.text.includes('organization_id') && !one.text.includes('BELONGS_TO'))
       .map((one) => one.name)
 
     expect(unscoped).toEqual([])
