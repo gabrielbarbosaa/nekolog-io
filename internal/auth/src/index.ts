@@ -12,6 +12,20 @@ export {
   normalizeCode,
 } from './codes.ts'
 export {
+  ACCESS_TTL_SECONDS,
+  type AccessClaims,
+  JWT_ALGORITHM,
+  JWT_AUDIENCE,
+  JWT_ISSUER,
+  kidOf,
+  loadSigningKey,
+  loadVerifyingKey,
+  type SigningKey,
+  signAccessToken,
+  type VerifyingKey,
+  verifyAccessToken,
+} from './jwt.ts'
+export {
   CODE_TTL_SECONDS,
   codeKey,
   cooldownKey,
@@ -54,4 +68,34 @@ export {
   type PwnedOptions,
   suffixAppears,
 } from './pwned.ts'
-export { ISSUE_OTP, VERIFY_OTP } from './scripts.ts'
+export {
+  CREATE_SESSION,
+  ISSUE_OTP,
+  REVOKE_EVERY_SESSION,
+  REVOKE_SESSION,
+  ROTATE_REFRESH,
+  VERIFY_OTP,
+} from './scripts.ts'
+export {
+  createSession,
+  type Device,
+  GRACE_MS,
+  hashToken,
+  livesFor,
+  type NewSession,
+  newRefreshToken,
+  newSessionId,
+  REFRESH_ABSOLUTE_SECONDS,
+  REFRESH_IDLE_SECONDS,
+  type Rotation,
+  revokeEverySession,
+  revokeSession,
+  rotateRefresh,
+  type Session,
+  type SessionStore,
+  sessionIdOf,
+  sessionKey,
+  sessionLives,
+  UNREMEMBERED_SECONDS,
+  userSessionsKey,
+} from './sessions.ts'
