@@ -30,6 +30,7 @@
     "sbom:write": "pnpm sbom --sbom-format cyclonedx --sbom-spec-version 1.7 --sbom-type library --sbom-supplier NekoLog --prod --lockfile-only --exclude-peers --split --filter \"@nekolog-io/*\" --out sbom/%s.cdx.json",
     "sbom:check": "pnpm --filter @internal/release sbom:check",
     "seed": "pnpm --filter @internal/seed seed",
+    "self-host:up": "pnpm --filter @internal/self-host up",
     "tracking": "pnpm --filter @internal/tracking tracking",
     "changeset": "changeset",
     "changeset:status": "changeset status --since=origin/dev",
