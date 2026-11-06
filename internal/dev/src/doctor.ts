@@ -18,16 +18,19 @@ function say(line = ''): void {
   process.stdout.write(`${line}\n`)
 }
 
-async function reaches(url: string): Promise<{ up: boolean; version: string }> {
+async function reaches(url: string): Promise<{ up: boolean; version: string; detail: string }> {
   try {
     const answer = await fetch(url, { signal: AbortSignal.timeout(2000) })
-    if (!answer.ok) {
-      return { up: false, version: '' }
+    const body = (await answer.json().catch(() => ({}))) as {
+      version?: unknown
+      detail?: unknown
     }
-    const body = (await answer.json()) as { version?: unknown }
-    return { up: true, version: typeof body.version === 'string' ? body.version : '' }
+    const version = typeof body.version === 'string' ? body.version : ''
+    const detail = typeof body.detail === 'string' ? body.detail : ''
+
+    return { up: answer.ok, version, detail }
   } catch {
-    return { up: false, version: '' }
+    return { up: false, version: '', detail: '' }
   }
 }
 
@@ -47,10 +50,14 @@ async function appVerdicts(): Promise<Verdict[]> {
   const reached = await Promise.all(APPS.map((app) => reaches(app.url)))
 
   return APPS.map((app, index) => {
-    const found = reached[index] ?? { up: false, version: '' }
+    const found = reached[index] ?? { up: false, version: '', detail: '' }
 
     if (!found.up) {
-      return { name: `the ${app.name} answers`, ok: false, detail: `${app.url} is quiet` }
+      return {
+        name: `the ${app.name} answers`,
+        ok: false,
+        detail: found.detail === '' ? `${app.url} is quiet` : `${app.url} — ${found.detail}`,
+      }
     }
     if (app.dev && found.version !== 'dev') {
       return {

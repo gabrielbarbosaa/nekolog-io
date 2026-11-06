@@ -1,4 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { HSTS, PERMISSIONS_POLICY, REFERRER_POLICY } from '@internal/security-headers'
 import { inlineAssets, scriptTags } from '@internal/security-headers/inline'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -103,5 +105,12 @@ describe.skipIf(!isBuilt)('the headers a real response carries', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({ status: 'ok', app: 'nekolog/dashboard' })
     expect(response.headers.get('cache-control')).toBe('no-store')
+  })
+
+  it('is given a signing key, because without one this answers 503 and not 200', () => {
+    const server = readFileSync(fileURLToPath(new URL('./server.ts', import.meta.url)), 'utf8')
+
+    expect(server).toContain("generateKeyPairSync('ed25519')")
+    expect(server).toContain('AUTH_JWT_PRIVATE_KEY')
   })
 })
