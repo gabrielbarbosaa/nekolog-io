@@ -52,6 +52,22 @@ function testFilesIn(directory: string): string[] {
   return found
 }
 
+function typescriptIn(directory: string): string[] {
+  const found: string[] = []
+  for (const entry of readdirSync(directory)) {
+    if (SKIP.has(entry)) {
+      continue
+    }
+    const path = join(directory, entry)
+    if (statSync(path).isDirectory()) {
+      found.push(...typescriptIn(path))
+    } else if (entry.endsWith('.ts') || entry.endsWith('.tsx')) {
+      found.push(path)
+    }
+  }
+  return found
+}
+
 function stepsUp(text: string): number {
   let furthest = 0
   for (const match of text.matchAll(JOINED)) {
@@ -157,7 +173,7 @@ function declaredEnv(): string[] {
 function variablesTestsRead(): Map<string, string> {
   const found = new Map<string, string>()
   for (const pkg of PACKAGES) {
-    for (const file of testFilesIn(pkg.directory)) {
+    for (const file of typescriptIn(pkg.directory)) {
       for (const match of readFileSync(file, 'utf8').matchAll(TEST_VARIABLE)) {
         found.set(match[1] as string, relative(ROOT, file))
       }
@@ -171,6 +187,10 @@ describe('an environment variable that decides whether an integration test runs'
 
   it('was found in enough places for this check to mean anything', () => {
     expect(read.size).toBeGreaterThan(8)
+  })
+
+  it('is found in a helper beside the tests too, which is where one of them hid', () => {
+    expect(read.get('DASHBOARD_HEADERS_TEST_REQUIRED')).toContain('server.ts')
   })
 
   it('is declared in the root turbo.json, or Turbo strips it and the test skips in silence', () => {

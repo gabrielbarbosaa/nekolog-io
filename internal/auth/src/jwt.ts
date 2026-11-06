@@ -33,6 +33,22 @@ export async function loadVerifyingKey(spki: string): Promise<VerifyingKey> {
   return { kid: await thumbprintOf(key), key }
 }
 
+export function publicKeyBlocks(bundle: string): string[] {
+  return [
+    ...bundle
+      .replace(/\\n/g, '\n')
+      .matchAll(/-----BEGIN PUBLIC KEY-----[^-]*-----END PUBLIC KEY-----/g),
+  ].map((match) => match[0])
+}
+
+export async function loadVerifyingKeys(bundle: string): Promise<VerifyingKey[]> {
+  const blocks = publicKeyBlocks(bundle)
+  if (blocks.length === 0) {
+    throw new Error('AUTH_JWT_PUBLIC_KEY holds no PEM public key block.')
+  }
+  return Promise.all(blocks.map(loadVerifyingKey))
+}
+
 export async function signAccessToken(
   signing: SigningKey,
   claims: AccessClaims,

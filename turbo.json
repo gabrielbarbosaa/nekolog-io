@@ -40,6 +40,7 @@
         "EXPORT_S3_TEST_SECRET",
         "WEB_HEADERS_TEST_REQUIRED",
         "DOCS_HEADERS_TEST_REQUIRED",
+        "DASHBOARD_HEADERS_TEST_REQUIRED",
         "FUZZ_RUNS"
       ]
     }

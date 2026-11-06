@@ -55,6 +55,51 @@ user-agent real `(X11; Linux x86_64)` vira `Firefox on Linux x86_64`, e o
 allowlist do campo "navegador" do e-mail não aceitava `_` — o e-mail dizia
 `unknown` para um navegador perfeitamente normal.
 
+## O `proxy.ts`
+
+Ele faz três coisas, nesta ordem: monta o nonce e os cabeçalhos, recusa um
+método que escreve vindo de outra origem, e renova a sessão.
+
+**A renovação não custa nada quando não precisa acontecer.** Com um access token
+válido, a verificação é da assinatura e mais nada — o Redis não é consultado. Só
+quando o token venceu (ou sumiu) e sobrou o `__Host-rt` é que o `renewSession`
+roda a rotação. Sem `__Host-rt` o Redis nem é aberto: o `lib/redis.ts` usa
+`lazyConnect`, então uma visita anônima não abre socket nenhum.
+
+Ao renovar, os cookies novos vão na resposta **e** o cabeçalho `cookie` da
+request que segue adiante é reescrito, senão os Server Components daquela mesma
+request ainda leriam o token velho. Há teste disso nos dois sentidos.
+
+**Nenhum header que o proxy repassa é confiável.** Ele não escreve `x-user-id`
+nem nada parecido; quem precisa da sessão chama o `lib/session.ts`, que verifica
+o JWT de novo.
+
+**Se o Redis cair, a renovação lança** em vez de tratar a pessoa como
+desconectada. É a mesma regra do resto do repositório: "não consegui medir" não é
+"não existe". A tela de entrar não é afetada, porque quem não tem cookie nenhum
+nunca chega a consultar o Redis.
+
+A checagem de `Origin` vale para `POST`, `PUT`, `PATCH` e `DELETE`, compara com
+a `APP_URL` (e, sem ela, com a origem da própria request — nunca libera por
+falta de configuração) e deixa `/health` de fora, que é por onde o container é
+vigiado.
+
+### Limpar um cookie `__Host-` não é `cookies.delete`
+
+O `delete` do Next escreve o cookie vencido **sem** `Secure` e sem `Path=/`, e o
+navegador recusa isso num nome com prefixo `__Host-` — o cookie continua lá.
+`lib/cookies.ts` tem o `clearCookie`, que escreve `Max-Age=0` com os atributos
+que o prefixo exige, e `tests/cookies.test.ts` falha se eles sumirem. As rotas
+de confirmação já faziam o `delete`; foram corrigidas junto.
+
+### Rotação da chave do JWT
+
+`verifyingKeys()` lê a `AUTH_JWT_PUBLIC_KEY` e a `AUTH_JWT_PREVIOUS_PUBLIC_KEY`,
+nesta ordem, e aceita token das duas enquanto a troca estiver em curso — o `kid`
+é o thumbprint da própria chave, então não há nada a configurar. Cada variável
+pode trazer mais de um bloco PEM, e `\n` escapado vira quebra de linha, que é
+como um `.env` carrega uma chave.
+
 ## Cinco regras de desenho
 
 Não são preferências: cada uma corrige algo que os mockups da 2.1 erraram, e a

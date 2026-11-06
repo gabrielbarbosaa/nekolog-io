@@ -42,6 +42,11 @@
       "name": "Saúde",
       "state": "/health responde, então dá para vigiar o container."
     },
+    "session": {
+      "name": "Sessão",
+      "in": "Conectado. O access token se renova sozinho, de dez em dez minutos.",
+      "out": "Desconectado. Ainda não existe tela para entrar."
+    },
     "next": "A seguir vem entrar na conta, e depois o explorador de logs."
   }
 }

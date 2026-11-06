@@ -22,9 +22,9 @@ export type NewSession = {
 export type Session = { sid: string; refreshToken: string; absoluteExpiry: number }
 
 export type Rotation =
-  | { outcome: 'rotated'; refreshToken: string }
-  | { outcome: 'within-grace' }
-  | { outcome: 'reused' }
+  | { outcome: 'rotated'; refreshToken: string; userId: string; remember: boolean }
+  | { outcome: 'within-grace'; userId: string; remember: boolean }
+  | { outcome: 'reused'; userId: string }
   | { outcome: 'unknown' }
 
 export function sessionKey(sid: string): string {
@@ -78,16 +78,26 @@ export async function createSession(store: SessionStore, session: NewSession): P
       String(idle),
       sid,
       String(absolute),
+      session.remember ? '1' : '0',
     ],
   )
 
   return { sid, refreshToken, absoluteExpiry }
 }
 
+function readRotation(answer: unknown): { code: number; userId: string; remember: boolean } {
+  const parts = Array.isArray(answer) ? (answer as unknown[]) : [answer]
+  return {
+    code: Number(parts[0] ?? 0),
+    userId: typeof parts[1] === 'string' ? parts[1] : '',
+    remember: parts[2] === '1',
+  }
+}
+
 export async function rotateRefresh(
   store: SessionStore,
   refreshToken: string,
-  options: { now?: number; remember?: boolean } = {},
+  options: { now?: number } = {},
 ): Promise<Rotation> {
   const sid = sessionIdOf(refreshToken)
   if (!sid) {
@@ -96,21 +106,28 @@ export async function rotateRefresh(
 
   const now = options.now ?? Date.now()
   const next = newRefreshToken(sid)
-  const { idle } = livesFor(options.remember ?? true)
 
   const answer = await store.redis.eval(
     ROTATE_REFRESH,
     [sessionKey(sid)],
-    [hashToken(refreshToken), hashToken(next), String(now), String(now + GRACE_MS), String(idle)],
+    [
+      hashToken(refreshToken),
+      hashToken(next),
+      String(now),
+      String(now + GRACE_MS),
+      String(REFRESH_IDLE_SECONDS),
+    ],
   )
 
-  switch (Number(answer)) {
+  const { code, userId, remember } = readRotation(answer)
+
+  switch (code) {
     case 1:
-      return { outcome: 'rotated', refreshToken: next }
+      return { outcome: 'rotated', refreshToken: next, userId, remember }
     case 2:
-      return { outcome: 'within-grace' }
+      return { outcome: 'within-grace', userId, remember }
     case -1:
-      return { outcome: 'reused' }
+      return { outcome: 'reused', userId }
     default:
       return { outcome: 'unknown' }
   }

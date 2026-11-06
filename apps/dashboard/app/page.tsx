@@ -1,11 +1,13 @@
-import { useTranslations } from 'next-intl'
+import { getTranslations } from 'next-intl/server'
 import { Sidebar } from '@/components/sidebar'
 import { Toolbar } from '@/components/toolbar'
+import { currentSession } from '@/lib/session'
 
 const WIRED = ['theme', 'locale', 'headers', 'health'] as const
 
-export default function Page() {
-  const t = useTranslations('Foundation')
+export default async function Page() {
+  const t = await getTranslations('Foundation')
+  const claims = await currentSession()
 
   return (
     <div className="flex min-h-dvh">
@@ -26,6 +28,11 @@ export default function Page() {
                   <dd>{t(`${item}.state`)}</dd>
                 </div>
               ))}
+
+              <div className="flex gap-3">
+                <dt className="w-24 shrink-0 text-muted-foreground">{t('session.name')}</dt>
+                <dd>{claims === undefined ? t('session.out') : t('session.in')}</dd>
+              </div>
             </dl>
 
             <p className="mt-8 text-aside text-muted-foreground">{t('next')}</p>

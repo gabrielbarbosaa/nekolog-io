@@ -1,16 +1,9 @@
 import 'server-only'
 import type { LoginDeps, SqlRunner } from '@internal/auth'
-import {
-  allowlistedMailer,
-  type Mailer,
-  nodeRedis,
-  type RedisClient,
-  resendMailer,
-  smtpMailer,
-} from '@nekolog-io/adapters'
-import Redis from 'ioredis'
+import { allowlistedMailer, type Mailer, resendMailer, smtpMailer } from '@nekolog-io/adapters'
 import nodemailer from 'nodemailer'
 import postgres from 'postgres'
+import { redisClient } from './redis'
 
 export type AuthSettings = {
   appUrl: string
@@ -27,7 +20,6 @@ function required(name: string): string {
 }
 
 let sql: ReturnType<typeof postgres> | undefined
-let redis: Redis | undefined
 let mailer: Mailer | undefined
 
 function sqlRunner(): SqlRunner {
@@ -37,11 +29,6 @@ function sqlRunner(): SqlRunner {
     (await open.unsafe(text, params as never[])) as unknown as ReadonlyArray<
       Record<string, unknown>
     >
-}
-
-function redisClient(): RedisClient {
-  redis ??= new Redis(required('REDIS_URL'))
-  return nodeRedis(redis) as RedisClient
 }
 
 function builtMailer(): Mailer {

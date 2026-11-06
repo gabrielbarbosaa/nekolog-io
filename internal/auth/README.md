@@ -128,6 +128,27 @@ reuso encerrando a sessão, **dez requisições paralelas** com o mesmo token (t
 tocar na sessão de outra pessoa, e revogação visível na hora — que é o que uma
 ação sensível confere.
 
+## Renovar sem a pessoa perceber
+
+`renewSession` é a §11.4 sem HTTP: recebe os dois cookies e devolve um de quatro
+resultados — `carry-on` (o access token ainda vale, e **o Redis não foi
+consultado**), `renewed` (access token novo, e um refresh novo quando houve
+rotação de verdade), `reused` e `anonymous`.
+
+**O dono do token novo vem da sessão, nunca do token vencido.** O
+`rotate-refresh` devolve `{código, userId, remember}` numa tabela Lua, e é esse
+`userId` que vira o `sub`. Ler o `sub` do token que acabou de ser recusado
+parece inofensivo — a assinatura dele continua válida, afinal — mas seria
+confiar num dado que o servidor já tinha decidido não aceitar. Há teste com um
+token vencido que diz ser de outra pessoa.
+
+O `remember` passou a ser gravado na sessão porque a renovação precisa saber se
+os cookies levam `Max-Age` ou somem ao fechar o navegador. **A TTL da sessão
+não precisou dele**: o teto absoluto de uma sessão não lembrada já é 12 h, então
+`min(7 dias, absExp - agora)` nunca passa disso. Eu tinha escrito um `if` no Lua
+para escolher a inatividade; a sabotagem mostrou que nenhum teste mudava de
+resultado com ele removido, porque ele era código morto. Saiu.
+
 ## Cadastro
 
 Só por convite. O link traz um token de 32 bytes; o banco guarda o **SHA-256**
