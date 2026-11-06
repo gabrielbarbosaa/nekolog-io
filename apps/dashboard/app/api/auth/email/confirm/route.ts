@@ -2,9 +2,9 @@ import { CHALLENGE_COOKIE, finishEmailChange, openChallenge, originAllowed } fro
 import { NextResponse } from 'next/server'
 import { authSettings, loginDeps } from '@/lib/auth'
 import { clearCookie, cookieFrom } from '@/lib/cookies'
+import { notTheDemo } from '@/lib/demo'
 import { noticeLater } from '@/lib/notices'
 import { jsonBody, stringField } from '@/lib/request'
-import { liveSession } from '@/lib/session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,10 +16,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'bad_origin' }, { status: 403 })
   }
 
-  const claims = await liveSession(request)
-  if (claims === undefined) {
-    return NextResponse.json({ error: 'signed_out' }, { status: 401 })
+  const gate = await notTheDemo(request)
+  if ('refused' in gate) {
+    return gate.refused
   }
+  const { claims } = gate
 
   const attempt = openChallenge(
     settings.otpSecret,

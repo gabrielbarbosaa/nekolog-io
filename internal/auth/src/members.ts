@@ -45,7 +45,11 @@ const MEMBERSHIPS_OF = `
 `
 
 const ROLE_IN = `
-  select role from memberships where user_id = $1 and organization_id = $2 limit 1
+  select memberships.role, users.is_demo
+  from memberships
+  join users on users.id = memberships.user_id
+  where memberships.user_id = $1 and memberships.organization_id = $2
+  limit 1
 `
 
 const LIST_MEMBERS = `
@@ -236,14 +240,26 @@ export async function organizationsOf(run: SqlRunner, userId: string): Promise<O
   }))
 }
 
+export type Actor = { role: Role; justLooking: boolean }
+
+export async function actorIn(
+  run: SqlRunner,
+  userId: string,
+  organizationId: string,
+): Promise<Actor | undefined> {
+  const rows = await run(ROLE_IN, [userId, organizationId])
+  const row = rows[0]
+  return row === undefined
+    ? undefined
+    : { role: roleOf(row.role), justLooking: row.is_demo === true }
+}
+
 export async function roleIn(
   run: SqlRunner,
   userId: string,
   organizationId: string,
 ): Promise<Role | undefined> {
-  const rows = await run(ROLE_IN, [userId, organizationId])
-  const row = rows[0]
-  return row === undefined ? undefined : roleOf(row.role)
+  return (await actorIn(run, userId, organizationId))?.role
 }
 
 export async function listMembers(run: SqlRunner, organizationId: string): Promise<Member[]> {

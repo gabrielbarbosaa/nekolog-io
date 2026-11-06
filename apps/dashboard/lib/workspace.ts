@@ -1,6 +1,7 @@
 import 'server-only'
 import {
   type Environment,
+  justLooking,
   listEnvironments,
   listProjects,
   type Organization,
@@ -14,6 +15,7 @@ import { currentSession } from './session'
 export type Signed = {
   userId: string
   organizations: Organization[]
+  justLooking: boolean
 }
 
 export async function signedIn(): Promise<Signed> {
@@ -22,9 +24,12 @@ export async function signedIn(): Promise<Signed> {
     redirect('/login')
   }
 
+  const run = loginDeps().run
+
   return {
     userId: claims.sub,
-    organizations: await organizationsOf(loginDeps().run, claims.sub),
+    organizations: await organizationsOf(run, claims.sub),
+    justLooking: await justLooking(run, claims.sub),
   }
 }
 

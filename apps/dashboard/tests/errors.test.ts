@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SETTINGS_REFUSALS } from '@internal/auth'
+import { DEMO_IS_READ_ONLY, SETTINGS_REFUSALS } from '@internal/auth'
 import { describe, expect, it } from 'vitest'
 import { locales } from '../i18n/locales'
 
@@ -38,7 +38,11 @@ const FROM_AN_OUTCOME: Record<string, string> = {
 }
 
 function codesAnswered(): string[] {
-  const found = new Set<string>([...SETTINGS_REFUSALS, ...Object.keys(FROM_AN_OUTCOME)])
+  const found = new Set<string>([
+    ...SETTINGS_REFUSALS,
+    ...Object.keys(FROM_AN_OUTCOME),
+    DEMO_IS_READ_ONLY,
+  ])
   for (const source of [...sources(API), ...GATES]) {
     for (const match of source.matchAll(ANSWERED)) {
       found.add((match[1] ?? match[2]) as string)

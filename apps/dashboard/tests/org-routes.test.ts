@@ -70,8 +70,13 @@ describe('the gate every organization route goes through', () => {
 
 describe('what the guard itself has to do', () => {
   it('reads the role from the database for this person, not from the token', () => {
-    expect(GUARD).toContain('roleIn(loginDeps().run, claims.sub, organizationId)')
+    expect(GUARD).toContain('actorIn(loginDeps().run, claims.sub, organizationId)')
     expect(GUARD).not.toMatch(/claims\.(role|org)/)
+  })
+
+  it('refuses a write from the demo even where the role would have allowed one', () => {
+    expect(GUARD).toMatch(/actor\.justLooking && options\.writes !== false/)
+    expect(GUARD).toContain('refusal(DEMO_IS_READ_ONLY, 403)')
   })
 
   it('asks Redis whether the session is still alive before anything else', () => {
@@ -79,7 +84,7 @@ describe('what the guard itself has to do', () => {
   })
 
   it('answers 404 for somebody who is not a member, so no organization is ever confirmed', () => {
-    expect(GUARD).toMatch(/role === undefined[\s\S]{0,120}no_such_organization', 404/)
+    expect(GUARD).toMatch(/actor === undefined[\s\S]{0,120}no_such_organization', 404/)
   })
 
   it('answers 403 only once membership is established', () => {

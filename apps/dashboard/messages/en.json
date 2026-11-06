@@ -16,6 +16,15 @@
     "switchProject": "Change project",
     "comingLater": "Not built yet"
   },
+  "Demo": {
+    "title": "Look around first",
+    "body": "A read-only tour of a workspace with logs already in it.",
+    "enter": "Enter the demo",
+    "entering": "Opening…",
+    "readOnly": "You arrive in {organization} as a viewer. Nothing you do there changes anything.",
+    "noAccountNeeded": "— no account, no e-mail.",
+    "unavailable": "The demo is not set up on this instance."
+  },
   "Operator": {
     "title": "Instance",
     "lockedTitle": "Type your password again",
@@ -313,7 +322,9 @@
     "not_yourself": "You cannot suspend your own account.",
     "over_the_retention_cap": "That is more days than this organisation is allowed to keep.",
     "locked": "This area closed itself. Type your password again.",
-    "not_found": "This is not here."
+    "not_found": "This is not here.",
+    "demo_is_read_only": "The demo only ever looks. Nothing here can be changed.",
+    "demo_unavailable": "The demo is not set up on this instance."
   },
   "Common": {
     "cancel": "Cancel",

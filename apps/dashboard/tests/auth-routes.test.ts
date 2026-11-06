@@ -63,7 +63,7 @@ describe('the auth routes that accept a POST', () => {
   it.each(POSTS)('$name refuses a request from another origin', ({ source }) => {
     const inline =
       source.includes("originAllowed(request.headers.get('origin')") &&
-      source.includes('status: 403')
+      (source.includes('status: 403') || source.includes("refusal('bad_origin', 403)"))
 
     expect(
       inline ||
@@ -111,10 +111,25 @@ describe('an action that is only for the person who is signed in', () => {
       const route = ROUTES.find((candidate) => candidate.name === name)
 
       expect(route, `${name} is not a route`).toBeDefined()
-      expect(route?.source).toContain('liveSession(request)')
-      expect(route?.source).toContain('status: 401')
+      expect(
+        route?.source.includes('liveSession(request)') ||
+          route?.source.includes('await notTheDemo(request)'),
+        'it asks Redis itself, or goes through the gate that does',
+      ).toBe(true)
+      expect(
+        route?.source.includes('status: 401') || route?.source.includes('return gate.refused'),
+      ).toBe(true)
     },
   )
+
+  it('and that gate does ask Redis, and refuses the demo before anything else', () => {
+    const demo = readFileSync(fileURLToPath(new URL('../lib/demo.ts', import.meta.url)), 'utf8')
+
+    expect(demo).toContain('liveSession(request)')
+    expect(demo).toContain("refusal('signed_out', 401)")
+    expect(demo).toContain('justLooking(loginDeps().run, claims.sub)')
+    expect(demo).toContain('refusal(DEMO_IS_READ_ONLY, 403)')
+  })
 
   it.each(ENDS_EVERY_SESSION)('%s clears the cookies it just made worthless', (name) => {
     const route = ROUTES.find((candidate) => candidate.name === name)

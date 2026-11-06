@@ -36,6 +36,7 @@ export default async function Page({
     <Shell
       place={{ organization, project: { ...found, environments: environments.length } }}
       current="project-settings"
+      justLooking={signed.justLooking}
     >
       <div className="max-w-3xl">
         <h1 className="font-semibold text-screen tracking-tight">{found.name}</h1>

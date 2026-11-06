@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 import { BASE_URL } from '../playwright.config'
 import { clearMail, codeFromMail } from './support/mail'
 import {
@@ -12,6 +12,10 @@ import {
 test.afterAll(async () => {
   await closeWorld()
 })
+
+function said(page: Page, role: 'alert' | 'status') {
+  return page.locator(`[role="${role}"]:not(#__next-route-announcer__)`)
+}
 
 test('somebody invited can sign up, confirm and sign in, all on the screen', async ({ page }) => {
   const { email, token } = await anInvitedAddress()
@@ -58,14 +62,14 @@ test('a wrong password says so and does not move on', async ({ page }) => {
   await page.getByLabel(/^password$|^senha$|^contraseña$/i).fill('not the password')
   await page.getByRole('button', { name: /continue|continuar|seguir/i }).click()
 
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(said(page, 'alert')).toBeVisible()
   await expect(page.getByLabel(/^password$|^senha$|^contraseña$/i)).toBeVisible()
 })
 
 test('signing up needs an invitation, and the page says so', async ({ page }) => {
   await page.goto(`${BASE_URL}/signup`)
 
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(said(page, 'alert')).toBeVisible()
   await expect(page.getByLabel(/your name|seu nome|tu nombre/i)).toHaveCount(0)
 })
 
@@ -84,7 +88,7 @@ test('recovering a password walks from one screen to the next', async ({ page })
   await page.getByLabel(/e-mail/i).fill(anAddress())
   await page.getByRole('button', { name: /continue|continuar|seguir/i }).click()
 
-  await expect(page.getByRole('status')).toBeVisible()
+  await expect(said(page, 'status')).toBeVisible()
   await page.getByRole('link', { name: /continue|continuar|seguir/i }).click()
   await expect(page).toHaveURL(/reset-password$/)
 })

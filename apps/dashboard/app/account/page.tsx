@@ -1,4 +1,5 @@
 import { findAccountById, MIN_PASSWORD_LENGTH } from '@internal/auth'
+import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Shell } from '@/components/shell'
 import { loginDeps } from '@/lib/auth'
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function Page() {
   const signed = await signedIn()
+  if (signed.justLooking) {
+    notFound()
+  }
+
   const account = await findAccountById(loginDeps().run, signed.userId)
   const organization = signed.organizations[0]
   const t = await getTranslations('Account')

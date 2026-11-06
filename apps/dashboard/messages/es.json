@@ -16,6 +16,15 @@
     "switchProject": "Cambiar de proyecto",
     "comingLater": "Todavía no existe"
   },
+  "Demo": {
+    "title": "Mira antes de entrar",
+    "body": "Un paseo de solo lectura por un espacio que ya tiene logs dentro.",
+    "enter": "Entrar en la demo",
+    "entering": "Abriendo…",
+    "readOnly": "Llegas a {organization} como viewer. Nada de lo que hagas ahí cambia nada.",
+    "noAccountNeeded": "— sin cuenta, sin correo.",
+    "unavailable": "La demo no está configurada en esta instancia."
+  },
   "Operator": {
     "title": "Instancia",
     "lockedTitle": "Escribe tu contraseña otra vez",
@@ -313,7 +322,9 @@
     "not_yourself": "No puedes suspender tu propia cuenta.",
     "over_the_retention_cap": "Son más días de los que esta organización puede guardar.",
     "locked": "Esta área se cerró sola. Escribe tu contraseña otra vez.",
-    "not_found": "Esto no está aquí."
+    "not_found": "Esto no está aquí.",
+    "demo_is_read_only": "La demo solo mira. Nada aquí se puede cambiar.",
+    "demo_unavailable": "La demo no está configurada en esta instancia."
   },
   "Common": {
     "cancel": "Cancelar",
