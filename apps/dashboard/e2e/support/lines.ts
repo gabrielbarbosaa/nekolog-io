@@ -1,3 +1,4 @@
+import { expect } from '@playwright/test'
 import {
   CLICKHOUSE_DB,
   CLICKHOUSE_INSERT_PASSWORD,
@@ -6,6 +7,7 @@ import {
   CLICKHOUSE_READ_USER,
   CLICKHOUSE_URL,
 } from '../../playwright.config'
+import { anAccount, api, openBrowser, signIn } from './world'
 
 export type Line = {
   timestamp: string
@@ -84,6 +86,36 @@ export async function writeLines(
         'and the insert still answers 200.',
     )
   }
+}
+
+export const LINES_START_AGO_MS = 30 * 60 * 1000
+
+export async function aProjectWithLines(context: Parameters<typeof openBrowser>[0], howMany = 120) {
+  const page = await openBrowser(context)
+  const email = await anAccount(page)
+  expect((await signIn(page, email)).status).toBe(200)
+
+  const org = String(
+    (await api(page, '/api/orgs', { name: `Acme ${Date.now()}` })).body?.organization,
+  )
+  const project = String(
+    (await api(page, `/api/orgs/${org}/projects`, { name: 'The Shop' })).body?.project,
+  )
+  const read = await api(page, `/api/orgs/${org}/projects/${project}`)
+  const environments = (read.body?.environments ?? []) as Array<{ id: string; name: string }>
+
+  const production = environments.find((one) => one.name === 'production') ?? environments[0]
+  if (production === undefined) {
+    throw new Error('the project was born with no environment')
+  }
+
+  await writeLines(
+    project,
+    production.id,
+    aMinuteOfLines(new Date(Date.now() - LINES_START_AGO_MS), howMany),
+  )
+
+  return { page, org, project, environment: production.id, environments }
 }
 
 export function aMinuteOfLines(start: Date, count: number): Line[] {

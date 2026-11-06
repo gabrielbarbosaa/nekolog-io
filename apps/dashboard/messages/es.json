@@ -16,6 +16,23 @@
     "switchProject": "Cambiar de proyecto",
     "comingLater": "Todavía no existe"
   },
+  "Levels": {
+    "trace": "trace",
+    "debug": "debug",
+    "info": "info",
+    "warn": "warn",
+    "error": "error",
+    "fatal": "fatal"
+  },
+  "Volume": {
+    "label": "Volumen en el periodo",
+    "describe": "Cuántas líneas llegaron en cada porción del periodo, apiladas por nivel.",
+    "counted": "{count, plural, =0 {ninguna línea en este periodo} one {# línea en este periodo} other {# líneas en este periodo}}",
+    "loading": "Contando…",
+    "asTable": "Leer como tabla",
+    "asChart": "Volver al gráfico",
+    "when": "Cuándo"
+  },
   "Explorer": {
     "tableLabel": "Líneas de log",
     "detailLabel": "La línea que abriste",

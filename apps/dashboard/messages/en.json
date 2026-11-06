@@ -16,6 +16,23 @@
     "switchProject": "Change project",
     "comingLater": "Not built yet"
   },
+  "Levels": {
+    "trace": "trace",
+    "debug": "debug",
+    "info": "info",
+    "warn": "warn",
+    "error": "error",
+    "fatal": "fatal"
+  },
+  "Volume": {
+    "label": "Volume over the period",
+    "describe": "How many lines arrived in each slice of the period, stacked by level.",
+    "counted": "{count, plural, =0 {no lines in this period} one {# line in this period} other {# lines in this period}}",
+    "loading": "Counting…",
+    "asTable": "Read as a table",
+    "asChart": "Back to the chart",
+    "when": "When"
+  },
   "Explorer": {
     "tableLabel": "Log lines",
     "detailLabel": "The line you opened",
