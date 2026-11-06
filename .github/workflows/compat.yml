@@ -133,7 +133,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        include:
+          - browser: chromium
+            deps: ""
+          - browser: firefox
+            deps: ""
+          - browser: webkit
+            deps: "--with-deps"
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -162,7 +168,7 @@ jobs:
 
       - name: Install the browser
         timeout-minutes: 8
-        run: pnpm --filter @nekolog-io/browser exec playwright install --with-deps ${{ matrix.browser }}
+        run: pnpm --filter @nekolog-io/browser exec playwright install ${{ matrix.deps }} ${{ matrix.browser }}
 
       - name: Run the browser tests
         run: pnpm --filter @nekolog-io/browser run test:browser

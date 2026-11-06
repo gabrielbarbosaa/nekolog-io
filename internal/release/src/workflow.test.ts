@@ -63,6 +63,29 @@ describe('the order the steps have to run in', () => {
   })
 })
 
+describe('what the browser job is allowed to download', () => {
+  const COMPAT = readFileSync(join(WORKFLOWS, 'compat.yml'), 'utf8')
+
+  function depsFor(browser: string): string | undefined {
+    return new RegExp(`- browser: ${browser}\\n\\s+deps: "([^"]*)"`).exec(COMPAT)?.[1]
+  }
+
+  it('decides the apt step per browser, not once for all three', () => {
+    expect(COMPAT).toMatch(
+      /playwright install \$\{\{ matrix\.deps \}\} \$\{\{ matrix\.browser \}\}/,
+    )
+  })
+
+  it('asks apt for nothing for chromium, whose only missing packages are fonts', () => {
+    expect(depsFor('chromium')).toBe('')
+    expect(depsFor('firefox')).toBe('')
+  })
+
+  it('still installs webkit libraries, which the image really does not carry', () => {
+    expect(depsFor('webkit')).toBe('--with-deps')
+  })
+})
+
 describe('what a hung job is allowed to cost', () => {
   const files = readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))
 
