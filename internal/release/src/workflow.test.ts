@@ -66,23 +66,26 @@ describe('the order the steps have to run in', () => {
 describe('what the browser job is allowed to download', () => {
   const COMPAT = readFileSync(join(WORKFLOWS, 'compat.yml'), 'utf8')
 
-  function depsFor(browser: string): string | undefined {
-    return new RegExp(`- browser: ${browser}\\n\\s+deps: "([^"]*)"`).exec(COMPAT)?.[1]
-  }
-
-  it('decides the apt step per browser, not once for all three', () => {
-    expect(COMPAT).toMatch(
-      /playwright install \$\{\{ matrix\.deps \}\} \$\{\{ matrix\.browser \}\}/,
-    )
+  it('runs in the image that already carries the browsers and their libraries', () => {
+    expect(COMPAT).toMatch(/image: mcr\.microsoft\.com\/playwright:v[\d.]+-\w+/)
   })
 
-  it('asks apt for nothing for chromium, whose only missing packages are fonts', () => {
-    expect(depsFor('chromium')).toBe('')
-    expect(depsFor('firefox')).toBe('')
+  it('installs no browser and asks apt for nothing, because there is nothing to install', () => {
+    expect(COMPAT).not.toContain('playwright install')
+    expect(COMPAT).not.toContain('--with-deps')
   })
 
-  it('still installs webkit libraries, which the image really does not carry', () => {
-    expect(depsFor('webkit')).toBe('--with-deps')
+  it('pins the image to the Playwright the browser package depends on', () => {
+    const pinned = /image: mcr\.microsoft\.com\/playwright:v([\d.]+)-/.exec(COMPAT)?.[1]
+    const manifest = JSON.parse(
+      readFileSync(join(ROOT, 'packages', 'browser', 'package.json'), 'utf8'),
+    ) as { devDependencies: Record<string, string> }
+
+    expect(pinned, 'the workflow pins no Playwright version').toBeDefined()
+    expect(
+      manifest.devDependencies.playwright,
+      'the image and the dependency must be the same Playwright',
+    ).toBe(`^${pinned}`)
   })
 })
 
