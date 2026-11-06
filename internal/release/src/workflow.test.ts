@@ -66,12 +66,23 @@ describe('the order the steps have to run in', () => {
 describe('what the browser job is allowed to download', () => {
   const COMPAT = readFileSync(join(WORKFLOWS, 'compat.yml'), 'utf8')
 
-  it('installs the browser itself, from the CDN that serves it quickly', () => {
-    expect(COMPAT).toMatch(/playwright install \$\{\{ matrix\.browser \}\}/)
+  function depsFor(browser: string): string | undefined {
+    return new RegExp(`- browser: ${browser}\\n\\s+deps: "([^"]*)"`).exec(COMPAT)?.[1]
+  }
+
+  it('decides the apt step per browser, not once for all three', () => {
+    expect(COMPAT).toMatch(
+      /playwright install \$\{\{ matrix\.deps \}\} \$\{\{ matrix\.browser \}\}/,
+    )
   })
 
-  it('asks apt for nothing, because the runner image already carries the libraries', () => {
-    expect(COMPAT).not.toContain('--with-deps')
+  it('asks apt for nothing for chromium, whose only missing packages are fonts', () => {
+    expect(depsFor('chromium')).toBe('')
+    expect(depsFor('firefox')).toBe('')
+  })
+
+  it('still installs webkit libraries, which the image really does not carry', () => {
+    expect(depsFor('webkit')).toBe('--with-deps')
   })
 })
 
