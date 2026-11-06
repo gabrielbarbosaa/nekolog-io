@@ -34,9 +34,8 @@ O que já roda em todo PR:
 
 | Verificação | O que pega |
 |---|---|
-| CodeQL | Padrões de vulnerabilidade em JS/TS |
-| `dependency-review` | Dependência com vulnerabilidade conhecida ou licença incompatível |
-| OpenSSF Scorecard | Postura de segurança do repositório |
+| `Supply chain` → `pnpm audit` | Dependência com vulnerabilidade conhecida, em qualquer nível da árvore |
+| `Supply chain` → `licences:check` | Dependência sob GPL ou AGPL, que não pode entrar num produto proprietário |
 | Dependabot + Renovate | Atualização de dependência e de action |
 | Secret scanning + push protection | Segredo commitado |
 | Branch rulesets | Push direto, force push, commit não assinado em `main`/`qa` |
@@ -47,10 +46,43 @@ orçamento de CPU da ingestão medido em teste. A varredura do ZAP é **manual**
 ver [zap/](zap/README.md) — porque a automática a cada promoção depende de `qa`
 existir. Teste de IDOR entre organizações é do dashboard.
 
+### O que saiu, e o que não foi substituído
+
+Em 06/11/2026 o CodeQL, o `dependency-review` e o OpenSSF Scorecard foram
+removidos. Os dois primeiros exigem GitHub Advanced Security em repositório
+privado — falhavam com `Resource not accessible by integration` e
+`Dependency review is not supported on this repository` em todo PR — e o
+Scorecard mede repositório público. A ADR
+[0017](../adr/0017-licenca-proprietaria-e-repositorio-privado.md) já previa isso
+e dizia que substituí-los era etapa própria; esta é a etapa.
+
+O `dependency-review` foi substituído com vantagem: ele olhava **só as
+dependências que o PR mudava**, e `pnpm audit` mais `licences:check` olham a
+árvore inteira a cada PR. A política de licenças ficou mais larga de propósito —
+recusa a família GPL e AGPL em qualquer grafia, e não só as seis identificações
+SPDX que a lista antiga nomeava, porque um manifesto pode escrever `GPL-3.0` ou
+o nome por extenso. Expressão com escolha (`MIT OR GPL-3.0`) passa, porque a
+escolha é nossa; conjunção (`MIT AND GPL-3.0`) não passa. LGPL não é recusada.
+
+**O CodeQL não tem substituto.** Análise de taint em JS/TS não existe de graça
+em repositório privado, e nenhuma regra de lint faz o que ele fazia. É a única
+perda real desta troca, e está registrada aqui para não ser esquecida: ou se
+paga o GitHub Advanced Security, ou a análise estática do código continua sendo
+revisão humana.
+
+O Scorecard não será substituído: ele pontua postura de projeto aberto, que este
+repositório deixou de ser.
+
 ## Pendências conhecidas
 
 - **Nenhum runbook foi exercitado**, porque a infraestrutura ainda não existe.
   Um procedimento nunca testado falha exatamente quando é necessário.
+- **Não há análise estática de segurança do código.** Ver a seção acima.
+- **O check `Dependencies` ainda não é obrigatório para o merge.** O
+  `infra/repo/main.tf` já o declara e `internal/infra/src/repo.test.ts` garante
+  que todo check exigido é reportado por algum job, mas os rulesets vivos no
+  GitHub exigem só `Lint, typecheck, test, build` e `Validate PR source branch`,
+  e ninguém aplicou o `infra/repo`.
 - **Padrões próprios de secret scanning** para `nekolog_sk_` e `nekolog_pk_`
   ainda não foram configurados no GitHub (ameaça I9).
 - **O *trusted publisher* de cada pacote no npmjs.com** ainda não existe, por

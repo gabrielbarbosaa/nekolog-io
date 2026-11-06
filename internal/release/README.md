@@ -57,6 +57,42 @@ only in prose and in the fact that nobody had broken it. The lockfile answers
 it now, and a transitive dependency arriving through a package they already use
 fails the check.
 
+## The licence a dependency brings with it
+
+```bash
+pnpm run licences:check
+```
+
+pipes `pnpm -r licenses list --json` into `src/licences-cli.ts`, which refuses
+the GPL and AGPL families anywhere in the tree. It replaces the `deny-licenses`
+half of the `dependency-review` workflow, which a private repository cannot run
+without GitHub Advanced Security, and it reaches further: that action compared
+only the dependencies a pull request changed.
+
+Four decisions are worth knowing before changing it.
+
+**The policy is a family, not a list of identifiers.** The action named six
+exact SPDX ids; a manifest may say `GPL-3.0`, `GPL-2.0+` or the name written
+out in words, and none of those three was on the list. `isDenied` matches
+`^a?gpl` and, for free text, `GENERAL PUBLIC LICENSE` without `LESSER` —
+so LGPL, which is not refused, is not caught by either rule.
+
+**An expression is read the way SPDX means it.** `AND` binds tighter than `OR`.
+A choice passes when one alternative is ours to take (`MIT OR GPL-3.0`), and a
+conjunction fails when either half is refused (`MIT AND GPL-3.0`), because both
+apply at once.
+
+**The listing is piped in, never spawned.** `pnpm` on Windows is a `.cmd` shim
+Node cannot `spawn` without a shell — the same constraint the SBOM command has.
+Reading stdin sidesteps it, and `parseListing` strips a leading byte order mark,
+which is what a PowerShell pipe can put in front of the JSON.
+
+**A listing smaller than `MINIMUM_PACKAGES` is an error, not a pass.** Without
+`-r`, `pnpm licenses list` answers for the root project alone — 116 packages
+against 698 — and every one of them is permissively licensed, so the check would
+pass while reading almost nothing. The count is also what catches a command that
+failed before the pipe.
+
 ## The version an SDK reports
 
 Eight packages carry `export const SDK_VERSION`, because every batch names the

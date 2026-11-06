@@ -17,8 +17,7 @@ provider "github" {
 locals {
   required_checks = [
     "Lint, typecheck, test, build",
-    "Analyze (javascript-typescript)",
-    "dependency-review",
+    "Dependencies",
     "Validate PR source branch",
   ]
 
