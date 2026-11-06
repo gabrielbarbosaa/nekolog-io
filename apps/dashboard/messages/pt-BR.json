@@ -1,0 +1,47 @@
+{
+  "Sidebar": {
+    "label": "Telas",
+    "noProject": "Nenhum projeto ainda",
+    "logs": "Logs",
+    "issues": "Issues",
+    "dashboards": "Dashboards",
+    "alerts": "Alertas",
+    "releases": "Releases",
+    "exports": "Exportações",
+    "settings": "Configurações"
+  },
+  "Toolbar": {
+    "period": "Última hora",
+    "searchHint": "level:error service:api"
+  },
+  "ThemeToggle": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Escuro",
+    "system": "Seguir o sistema"
+  },
+  "LocaleSwitcher": {
+    "label": "Idioma"
+  },
+  "Foundation": {
+    "title": "Ainda não há telas",
+    "body": "Esta é a moldura em que o dashboard é construído. As telas de logs, issues e alertas chegam uma etapa por vez. O que já funciona está abaixo.",
+    "theme": {
+      "name": "Tema",
+      "state": "Claro, escuro e do sistema, lembrado por navegador."
+    },
+    "locale": {
+      "name": "Idioma",
+      "state": "Inglês, português e espanhol, escolhidos por cookie."
+    },
+    "headers": {
+      "name": "Cabeçalhos",
+      "state": "Uma política de segurança de conteúdo com nonce a cada resposta."
+    },
+    "health": {
+      "name": "Saúde",
+      "state": "/health responde, então dá para vigiar o container."
+    },
+    "next": "A seguir vem entrar na conta, e depois o explorador de logs."
+  }
+}

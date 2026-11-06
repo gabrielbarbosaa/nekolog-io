@@ -89,6 +89,39 @@ function runsUncached(pkg: Package): boolean {
 const PACKAGES = packagesWithTests()
 const CROSSING = PACKAGES.filter((pkg) => readsOutside(pkg).length > 0)
 
+describe('a test that holds a port while another package runs', () => {
+  const PORT = /^const PORT = (\d+)$/gm
+
+  function portsClaimed(): Array<{ file: string; port: number }> {
+    return PACKAGES.flatMap((pkg) =>
+      testFilesIn(pkg.directory).flatMap((file) =>
+        [...readFileSync(file, 'utf8').matchAll(PORT)].map((match) => ({
+          file: relative(ROOT, file),
+          port: Number(match[1]),
+        })),
+      ),
+    )
+  }
+
+  it('found enough of them for this check to mean anything', () => {
+    expect(portsClaimed().length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('claims a port no other test claims, because Turbo runs them at once', () => {
+    const byPort = new Map<number, string[]>()
+
+    for (const { file, port } of portsClaimed()) {
+      byPort.set(port, [...(byPort.get(port) ?? []), file])
+    }
+
+    const shared = [...byPort.entries()]
+      .filter(([, files]) => files.length > 1)
+      .map(([port, files]) => `${port}: ${files.join(' and ')}`)
+
+    expect(shared, 'two tests binding one port do not fail, they answer for each other').toEqual([])
+  })
+})
+
 describe('a test that reads outside its own package', () => {
   it('was found in enough packages for this check to mean anything', () => {
     expect(PACKAGES.length).toBeGreaterThan(20)

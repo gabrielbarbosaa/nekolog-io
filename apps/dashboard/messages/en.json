@@ -1,0 +1,47 @@
+{
+  "Sidebar": {
+    "label": "Screens",
+    "noProject": "No project yet",
+    "logs": "Logs",
+    "issues": "Issues",
+    "dashboards": "Dashboards",
+    "alerts": "Alerts",
+    "releases": "Releases",
+    "exports": "Exports",
+    "settings": "Settings"
+  },
+  "Toolbar": {
+    "period": "Last hour",
+    "searchHint": "level:error service:api"
+  },
+  "ThemeToggle": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Match the system"
+  },
+  "LocaleSwitcher": {
+    "label": "Language"
+  },
+  "Foundation": {
+    "title": "No screens yet",
+    "body": "This is the frame the dashboard is built in. The logs, issues and alerts screens arrive one step at a time. What already works is below.",
+    "theme": {
+      "name": "Theme",
+      "state": "Light, dark and system, remembered per browser."
+    },
+    "locale": {
+      "name": "Language",
+      "state": "English, Portuguese and Spanish, chosen by cookie."
+    },
+    "headers": {
+      "name": "Headers",
+      "state": "A content security policy with a nonce for every response."
+    },
+    "health": {
+      "name": "Health",
+      "state": "/health answers, so the container can be watched."
+    },
+    "next": "Next comes signing in, and then the log explorer."
+  }
+}

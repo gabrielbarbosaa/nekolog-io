@@ -8,6 +8,7 @@ const CANONICAL = join(ROOT, 'docs', 'tema', 'globals.css')
 
 const COPIES = [
   join(ROOT, 'apps', 'web', 'app', 'globals.css'),
+  join(ROOT, 'apps', 'dashboard', 'app', 'globals.css'),
   join(ROOT, 'docs', 'ui-mockups', 'tokens.css'),
 ]
 

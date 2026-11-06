@@ -131,6 +131,7 @@ jobs:
         run: pnpm run test
         env:
           WEB_HEADERS_TEST_REQUIRED: "1"
+          DASHBOARD_HEADERS_TEST_REQUIRED: "1"
           DOCS_HEADERS_TEST_REQUIRED: "1"
           CLICKHOUSE_TEST_REQUIRED: "1"
           CLICKHOUSE_TEST_URL: http://localhost:8123
