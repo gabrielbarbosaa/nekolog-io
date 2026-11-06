@@ -1,10 +1,10 @@
-export type { IngestEnv, JobsEnv, MigrationsEnv, WebEnv } from './env.ts'
+export type { DashboardEnv, IngestEnv, JobsEnv, MigrationsEnv } from './env.ts'
 export {
+  dashboardEnvSchema,
   EnvValidationError,
   ingestEnvSchema,
   jobsEnvSchema,
   loadEnv,
   migrationsEnvSchema,
-  webEnvSchema,
   withoutBlanks,
 } from './env.ts'

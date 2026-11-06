@@ -16,7 +16,7 @@ const hasSelfHostMailer = (env: { SMTP_URL?: string }) => env.SMTP_URL !== undef
 
 export type AppEnvironment = 'dev' | 'qa' | 'prod'
 
-export type WebEnv = {
+export type DashboardEnv = {
   APP_ENV: AppEnvironment
   APP_URL: string
   DATABASE_URL: string
@@ -27,18 +27,12 @@ export type WebEnv = {
   CLICKHOUSE_DB: string
   CLICKHOUSE_READ_USER: string
   CLICKHOUSE_READ_PASSWORD: string
-  CF_ACCESS_CLIENT_ID: string
-  CF_ACCESS_CLIENT_SECRET: string
-  CF_ACCOUNT_ID: string
-  CF_KV_NAMESPACE_ID: string
-  CF_KV_API_TOKEN: string
   R2_ENDPOINT: string
   R2_BUCKET: string
   R2_ACCESS_KEY_ID: string
   R2_SECRET_ACCESS_KEY: string
   AUTH_JWT_PRIVATE_KEY: string
   AUTH_JWT_PUBLIC_KEY: string
-  AUTH_JWT_KID: string
   AUTH_JWT_PREVIOUS_PUBLIC_KEY?: string
   AUTH_OTP_SECRET: string
   ENCRYPTION_KEY: string
@@ -46,12 +40,12 @@ export type WebEnv = {
   SMTP_URL?: string
   EMAIL_FROM: string
   EMAIL_ALLOWLIST?: string
-  TURNSTILE_SITE_KEY: string
-  TURNSTILE_SECRET_KEY: string
+  TURNSTILE_SITE_KEY?: string
+  TURNSTILE_SECRET_KEY?: string
   NEKOLOG_SELF_KEY: string
 }
 
-export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
+export const dashboardEnvSchema: v.GenericSchema<unknown, DashboardEnv> = v.pipe(
   v.object({
     APP_ENV: appEnv,
     APP_URL: urlString,
@@ -67,12 +61,6 @@ export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
     CLICKHOUSE_READ_USER: nonEmptyString,
     CLICKHOUSE_READ_PASSWORD: nonEmptyString,
 
-    CF_ACCESS_CLIENT_ID: nonEmptyString,
-    CF_ACCESS_CLIENT_SECRET: nonEmptyString,
-    CF_ACCOUNT_ID: nonEmptyString,
-    CF_KV_NAMESPACE_ID: nonEmptyString,
-    CF_KV_API_TOKEN: nonEmptyString,
-
     R2_ENDPOINT: urlString,
     R2_BUCKET: nonEmptyString,
     R2_ACCESS_KEY_ID: nonEmptyString,
@@ -80,7 +68,6 @@ export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
 
     AUTH_JWT_PRIVATE_KEY: nonEmptyString,
     AUTH_JWT_PUBLIC_KEY: nonEmptyString,
-    AUTH_JWT_KID: nonEmptyString,
     AUTH_JWT_PREVIOUS_PUBLIC_KEY: v.optional(nonEmptyString),
     AUTH_OTP_SECRET: nonEmptyString,
     ENCRYPTION_KEY: nonEmptyString,
@@ -90,8 +77,8 @@ export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
     EMAIL_FROM: nonEmptyString,
     EMAIL_ALLOWLIST: v.optional(nonEmptyString),
 
-    TURNSTILE_SITE_KEY: nonEmptyString,
-    TURNSTILE_SECRET_KEY: nonEmptyString,
+    TURNSTILE_SITE_KEY: v.optional(nonEmptyString),
+    TURNSTILE_SECRET_KEY: v.optional(nonEmptyString),
 
     NEKOLOG_SELF_KEY: nonEmptyString,
   }),
@@ -102,6 +89,10 @@ export const webEnvSchema: v.GenericSchema<unknown, WebEnv> = v.pipe(
   v.check(
     (env) => hasCloudMailer(env) !== hasSelfHostMailer(env),
     'Set either RESEND_API_KEY (cloud) or SMTP_URL (self-host), not both or neither.',
+  ),
+  v.check(
+    (env) => (env.TURNSTILE_SITE_KEY === undefined) === (env.TURNSTILE_SECRET_KEY === undefined),
+    'Set both TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY, or neither.',
   ),
 )
 

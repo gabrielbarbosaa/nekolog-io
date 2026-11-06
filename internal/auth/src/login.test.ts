@@ -145,6 +145,37 @@ describe('starting a login', () => {
     expect(started.outcome).toBe('refused')
   })
 
+  it('still pays for an argon2 verification when there is no account', async () => {
+    const { deps } = await depsWith([])
+
+    const began = performance.now()
+    await startLogin(deps, { email: 'nobody@acme.test', password: PASSWORD, ip: IP })
+    const spent = performance.now() - began
+
+    expect(
+      spent,
+      'an unknown address came back too fast to have verified anything, which is how ' +
+        'someone learns the address is unknown',
+    ).toBeGreaterThan(5)
+  })
+
+  it('takes a comparable time whether the account exists or not', async () => {
+    const known = await depsWith([await anAccount()])
+    const unknown = await depsWith([])
+
+    const time = async (deps: LoginDeps, email: string): Promise<number> => {
+      const began = performance.now()
+      await startLogin(deps, { email, password: 'not the password', ip: IP })
+      return performance.now() - began
+    }
+
+    const withAccount = await time(known.deps, 'someone@acme.test')
+    const without = await time(unknown.deps, 'nobody@acme.test')
+    const ratio = Math.max(withAccount, without) / Math.min(withAccount, without)
+
+    expect(ratio, `${withAccount.toFixed(1)}ms against ${without.toFixed(1)}ms`).toBeLessThan(4)
+  })
+
   it('looks the address up in lowercase, whatever was typed', async () => {
     const { deps, run } = await depsWith([await anAccount()])
     await startLogin(deps, { email: '  SomeOne@Acme.Test ', password: PASSWORD, ip: IP })

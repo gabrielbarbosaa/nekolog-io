@@ -70,6 +70,17 @@ describe('what the e-mail refuses to repeat', () => {
     expect(describeDevice('Firefox on Linux')).toBe('Firefox on Linux')
   })
 
+  it('keeps the shapes a real user agent actually produces', () => {
+    for (const device of [
+      'Firefox on Linux x86_64',
+      'Chrome on Windows NT 10.0',
+      'Safari on Macintosh',
+      'Edg on Windows NT 10.0',
+    ]) {
+      expect(describeDevice(device), device).toBe(device)
+    }
+  })
+
   it('replaces a country that is not two letters', () => {
     expect(describeCountry('Brazil')).toBe('??')
     expect(describeCountry('br')).toBe('??')

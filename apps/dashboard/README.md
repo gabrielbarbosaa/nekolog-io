@@ -21,6 +21,40 @@ resposta, e `/health`. As telas chegam uma etapa por vez, a partir da 2.5.
 A página inicial é a moldura com um texto honesto sobre o que falta. Ela sai na
 2.17, quando o Explorer entra — foi o que o `apps/web` fez até a 6.8.
 
+## As rotas de login
+
+`app/api/auth/login/{start,verify,resend}`. São finas: validam a origem, leem o
+corpo e chamam o [`@internal/auth`](../../internal/auth/README.md).
+
+`tests/auth-routes.test.ts` lê o fonte de toda rota POST sob `app/api/` e falha
+se alguma deixar de checar `Origin`, de rodar em `nodejs`, de ser
+`force-dynamic`, se registrar no log um identificador que carrega senha, código,
+token ou desafio, ou se o `login/start` parar de chamar o `checkTurnstile`. Essa
+última é o que garante que ligar o Turnstile seja só uma variável de ambiente.
+
+O e-mail do código sai **depois da resposta**, pelo `after()` do Next: o tempo da
+resposta não pode dizer se a senha estava certa.
+
+### `__Host-` em desenvolvimento
+
+Os cookies exigem `Secure`, o que normalmente significa HTTPS. Chrome e Firefox
+tratam `http://localhost` como contexto seguro, então o login funciona em
+`:3001` sem certificado. Em qualquer outro host sem HTTPS, não funciona — e isso
+é o prefixo fazendo o trabalho dele.
+
+### Conferido ponta a ponta
+
+Em 06/11/2026, contra o stack de dev (Postgres, Valkey e Mailpit de verdade):
+origem estranha recusada, senha errada e endereço inexistente com a mesma
+resposta, código chegando no Mailpit no idioma da conta, código errado recusado,
+código certo devolvendo `__Host-at` e `__Host-rt`, e o mesmo código recusado na
+segunda vez. **14 de 14.**
+
+Foi assim que apareceu um defeito que nenhum teste unitário pegou: o
+user-agent real `(X11; Linux x86_64)` vira `Firefox on Linux x86_64`, e o
+allowlist do campo "navegador" do e-mail não aceitava `_` — o e-mail dizia
+`unknown` para um navegador perfeitamente normal.
+
 ## Cinco regras de desenho
 
 Não são preferências: cada uma corrige algo que os mockups da 2.1 erraram, e a

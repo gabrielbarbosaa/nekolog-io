@@ -73,7 +73,7 @@ export function escapeHtml(value: string): string {
     .join('&#39;')
 }
 
-const DEVICE = /^[A-Za-z0-9 ().-]{0,60}$/
+const DEVICE = /^[A-Za-z0-9 ()._/-]{0,60}$/
 const COUNTRY = /^[A-Z]{2}$/
 
 export function describeDevice(value: string): string {

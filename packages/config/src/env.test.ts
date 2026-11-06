@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  dashboardEnvSchema,
   EnvValidationError,
   ingestEnvSchema,
   jobsEnvSchema,
   loadEnv,
   migrationsEnvSchema,
-  webEnvSchema,
 } from './env.ts'
 
-const validWebEnv = {
+const validDashboardEnv = {
   APP_ENV: 'dev',
   APP_URL: 'https://dev.nekolog.io',
   DATABASE_URL: 'postgres://user:pass@host/db',
@@ -18,18 +18,12 @@ const validWebEnv = {
   CLICKHOUSE_DB: 'nekolog_dev',
   CLICKHOUSE_READ_USER: 'reader',
   CLICKHOUSE_READ_PASSWORD: 'secret',
-  CF_ACCESS_CLIENT_ID: 'id',
-  CF_ACCESS_CLIENT_SECRET: 'secret',
-  CF_ACCOUNT_ID: 'account',
-  CF_KV_NAMESPACE_ID: 'ns',
-  CF_KV_API_TOKEN: 'token',
   R2_ENDPOINT: 'https://r2.example.com',
   R2_BUCKET: 'bucket',
   R2_ACCESS_KEY_ID: 'key',
   R2_SECRET_ACCESS_KEY: 'secret',
   AUTH_JWT_PRIVATE_KEY: 'key',
   AUTH_JWT_PUBLIC_KEY: 'key',
-  AUTH_JWT_KID: 'kid',
   AUTH_OTP_SECRET: 'secret',
   ENCRYPTION_KEY: 'key',
   RESEND_API_KEY: 'key',
@@ -39,16 +33,16 @@ const validWebEnv = {
   NEKOLOG_SELF_KEY: 'key',
 }
 
-describe('webEnvSchema', () => {
+describe('dashboardEnvSchema', () => {
   it('accepts a fully valid cloud configuration', () => {
-    expect(() => loadEnv('web', webEnvSchema, validWebEnv)).not.toThrow()
+    expect(() => loadEnv('dashboard', dashboardEnvSchema, validDashboardEnv)).not.toThrow()
   })
 
   it('accepts a self-host configuration (REDIS_URL + SMTP_URL)', () => {
     const { UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, RESEND_API_KEY, ...rest } =
-      validWebEnv
+      validDashboardEnv
     expect(() =>
-      loadEnv('web', webEnvSchema, {
+      loadEnv('dashboard', dashboardEnvSchema, {
         ...rest,
         REDIS_URL: 'redis://localhost:6379',
         SMTP_URL: 'smtp://localhost:1025',
@@ -57,25 +51,28 @@ describe('webEnvSchema', () => {
   })
 
   it('rejects a missing required variable', () => {
-    const { DATABASE_URL, ...rest } = validWebEnv
-    expect(() => loadEnv('web', webEnvSchema, rest)).toThrow(EnvValidationError)
+    const { DATABASE_URL, ...rest } = validDashboardEnv
+    expect(() => loadEnv('dashboard', dashboardEnvSchema, rest)).toThrow(EnvValidationError)
   })
 
   it('rejects an invalid URL', () => {
-    expect(() => loadEnv('web', webEnvSchema, { ...validWebEnv, APP_URL: 'not-a-url' })).toThrow(
-      EnvValidationError,
-    )
+    expect(() =>
+      loadEnv('dashboard', dashboardEnvSchema, { ...validDashboardEnv, APP_URL: 'not-a-url' }),
+    ).toThrow(EnvValidationError)
   })
 
   it('rejects setting both cloud and self-host Redis', () => {
     expect(() =>
-      loadEnv('web', webEnvSchema, { ...validWebEnv, REDIS_URL: 'redis://localhost:6379' }),
+      loadEnv('dashboard', dashboardEnvSchema, {
+        ...validDashboardEnv,
+        REDIS_URL: 'redis://localhost:6379',
+      }),
     ).toThrow(EnvValidationError)
   })
 
   it('rejects setting neither cloud nor self-host mailer', () => {
-    const { RESEND_API_KEY, ...rest } = validWebEnv
-    expect(() => loadEnv('web', webEnvSchema, rest)).toThrow(EnvValidationError)
+    const { RESEND_API_KEY, ...rest } = validDashboardEnv
+    expect(() => loadEnv('dashboard', dashboardEnvSchema, rest)).toThrow(EnvValidationError)
   })
 })
 
@@ -142,20 +139,26 @@ describe('migrationsEnvSchema', () => {
 
 describe('loadEnv', () => {
   it('treats a variable set to an empty string as unset', () => {
-    const parsed = loadEnv('web', webEnvSchema, { ...validWebEnv, EMAIL_ALLOWLIST: '' })
+    const parsed = loadEnv('dashboard', dashboardEnvSchema, {
+      ...validDashboardEnv,
+      EMAIL_ALLOWLIST: '',
+    })
 
     expect(parsed.EMAIL_ALLOWLIST).toBeUndefined()
   })
 
   it('treats a variable set to whitespace as unset', () => {
     expect(() =>
-      loadEnv('web', webEnvSchema, { ...validWebEnv, UPSTASH_REDIS_REST_URL: '   ' }),
+      loadEnv('dashboard', dashboardEnvSchema, {
+        ...validDashboardEnv,
+        UPSTASH_REDIS_REST_URL: '   ',
+      }),
     ).toThrow(EnvValidationError)
   })
 
   it('still rejects a required variable left empty', () => {
-    expect(() => loadEnv('web', webEnvSchema, { ...validWebEnv, DATABASE_URL: '' })).toThrow(
-      EnvValidationError,
-    )
+    expect(() =>
+      loadEnv('dashboard', dashboardEnvSchema, { ...validDashboardEnv, DATABASE_URL: '' }),
+    ).toThrow(EnvValidationError)
   })
 })

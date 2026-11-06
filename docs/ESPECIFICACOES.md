@@ -111,13 +111,13 @@ Toda variável existe nos três ambientes (`dev`, `qa`, `prod`), com valores dif
 | `CF_KV_API_TOKEN` | ✓ | token da API do Cloudflare que só escreve nesse namespace |
 | `R2_ENDPOINT`, `R2_BUCKET` | | bucket do ambiente |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | ✓ | só nesse bucket (downloads de exportação e source maps) |
-| `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY`, `AUTH_JWT_KID` | ✓ | assinatura dos access tokens |
+| `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` | ✓ | assinatura dos access tokens. O `kid` **não** é variável: ele é o thumbprint da própria chave (etapa 2.9), então uma rotação não exige configuração nova |
 | `AUTH_JWT_PREVIOUS_PUBLIC_KEY` | | aceita a chave anterior durante uma rotação |
 | `AUTH_OTP_SECRET` | ✓ | HMAC dos códigos |
 | `ENCRYPTION_KEY` | ✓ | AES-256-GCM dos segredos guardados no banco |
 | `RESEND_API_KEY` | ✓ | e-mail; no self-host, `SMTP_URL` |
 | `EMAIL_FROM`, `EMAIL_ALLOWLIST` | | remetente; destinatários permitidos em `dev` e `qa` |
-| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | — / ✓ | proteção contra bots |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | — / — | proteção contra bots. **Opcionais, aos pares**: sem elas o dashboard sobe e a verificação não roda; com elas, roda em toda rota que a declara. É o mesmo padrão de `INFRA_ENABLED` |
 | `NEKOLOG_SELF_KEY` | ✓ | logs do próprio NekoLog (dogfooding) |
 
 ### Ingestão (`apps/ingest`, Worker)
