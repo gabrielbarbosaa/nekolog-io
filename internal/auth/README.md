@@ -84,6 +84,50 @@ novo invalidando o anterior, espera de reenvio e o sexto envio na hora. Pulado
 sem Redis; `REDIS_TEST_REQUIRED=1` transforma o pulo em falha, que é o que o CI
 faz.
 
+## Access token e refresh token
+
+O access token é um JWT Ed25519 de 10 minutos com `sub`, `sid`, `iss`, `aud`,
+`exp` e nada mais. **Papel não vai no token** — é consultado no servidor, para
+mudar na hora. Há teste de que `role`, `roles` e `org` não aparecem.
+
+### O `kid` sai da própria chave
+
+É o *thumbprint* RFC 7638 da chave pública. Isso faz a rotação não precisar de
+configuração nenhuma: basta a chave nova entrar na lista e a antiga continuar
+lá enquanto houver token dela em circulação. `verifyAccessToken` escolhe pelo
+`kid` do cabeçalho; sem chave correspondente, recusa sem nem tentar verificar.
+
+A verificação recusa token de outra chave, assinatura trocada, token vencido,
+`alg: none` e lixo — sem lançar, em todos os casos.
+
+### Refresh: `{sid}.{segredo}`, e o Redis guarda o hash
+
+O Redis nunca vê o token: guarda o SHA-256 dele em `sess:{sid}`. Há teste de que
+nenhum campo do hash contém o token.
+
+A rotação é o `rotate-refresh.lua` do plano, e tem quatro saídas:
+
+| Saída | Quando |
+|---|---|
+| `rotated` | token atual — vira `prev`, nasce um novo |
+| `within-grace` | token anterior, dentro de 30 s — só um access token novo |
+| `reused` | token anterior, depois da janela — **a sessão inteira acaba** |
+| `unknown` | token que ninguém emitiu — recusa e **não derruba a sessão** |
+
+Esse último é deliberado: derrubar a sessão de quem só conhece o `sid` seria um
+jeito de desconectar os outros.
+
+Lembrar o dispositivo dá 7 dias de inatividade e 30 de teto; não lembrar dá 12 h
+para os dois. Passar do teto de 30 dias apaga a sessão na própria rotação.
+
+### Contra Redis de verdade
+
+`src/sessions.integration.test.ts` cobre a lista da §11.11: rotação normal,
+reuso encerrando a sessão, **dez requisições paralelas** com o mesmo token (todas
+`within-grace`, sessão viva), teto de 30 dias, sair de todos os dispositivos sem
+tocar na sessão de outra pessoa, e revogação visível na hora — que é o que uma
+ação sensível confere.
+
 ## O que foi conferido contra a API de verdade
 
 Em 06/11/2026, pelo módulo, sem mock: `password123456` e `qwertyuiop1234`
