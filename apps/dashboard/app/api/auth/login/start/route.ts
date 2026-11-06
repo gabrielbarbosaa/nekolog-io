@@ -1,8 +1,8 @@
 import {
   CHALLENGE_COOKIE,
   checkTurnstile,
+  codeEmail,
   cookieAttributes,
-  loginCodeEmail,
   originAllowed,
   sealChallenge,
   startLogin,
@@ -50,7 +50,8 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
   }
 
-  const notice = loginCodeEmail({
+  const notice = codeEmail({
+    purpose: 'login',
     code: started.code,
     locale: started.account.locale,
     device: deviceOf(request.headers),

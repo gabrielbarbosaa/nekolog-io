@@ -2,6 +2,7 @@ import type { RedisClient } from '@nekolog-io/adapters'
 import { type CodePurpose, newChallenge } from './codes.ts'
 import { issueCode, type OtpStore, verifyCode } from './otp.ts'
 import { spendTheSameTime, verifyPassword } from './password.ts'
+import type { PwnedOptions } from './pwned.ts'
 import { forgetFailures, mayAttempt, recordFailure } from './rate-limit.ts'
 import { createSession, type Device, type Session, type SessionStore } from './sessions.ts'
 import { type Account, findAccountByEmail, mayHoldASession, type SqlRunner } from './users.ts'
@@ -12,6 +13,7 @@ export type LoginDeps = {
   run: SqlRunner
   redis: RedisClient
   otpSecret: string
+  pwned?: PwnedOptions
 }
 
 export type StartInput = {

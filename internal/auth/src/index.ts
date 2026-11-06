@@ -22,6 +22,14 @@ export {
   sealChallenge,
 } from './cookies.ts'
 export {
+  claimInvite,
+  findOpenInvite,
+  hashInviteToken,
+  INVITE_TOKEN_BYTES,
+  newInviteToken,
+  type OpenInvite,
+} from './invites.ts'
+export {
   ACCESS_TTL_SECONDS,
   type AccessClaims,
   JWT_ALGORITHM,
@@ -48,13 +56,14 @@ export {
 } from './login.ts'
 export {
   type CodeEmail,
+  type CodeFor,
   type CodeNotice,
+  codeEmail,
   DEFAULT_EMAIL_LOCALE,
   EMAIL_LOCALES,
   type EmailLocale,
   localeFor,
-  loginCodeEmail,
-} from './mail/login-code.ts'
+} from './mail/code-email.ts'
 export {
   CODE_TTL_SECONDS,
   codeKey,
@@ -143,6 +152,17 @@ export {
   UNREMEMBERED_SECONDS,
   userSessionsKey,
 } from './sessions.ts'
+export {
+  MAX_NAME_LENGTH,
+  MEMBERSHIP_ID_PREFIX,
+  MIN_NAME_LENGTH,
+  newId,
+  readName,
+  type SignedUp,
+  type SignUpInput,
+  signUp,
+  USER_ID_PREFIX,
+} from './signup.ts'
 export {
   checkTurnstile,
   TURNSTILE_TIMEOUT_MS,

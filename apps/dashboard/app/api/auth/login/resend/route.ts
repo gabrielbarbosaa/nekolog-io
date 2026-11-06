@@ -1,6 +1,6 @@
 import {
   CHALLENGE_COOKIE,
-  loginCodeEmail,
+  codeEmail,
   openChallenge,
   originAllowed,
   RESEND_COOLDOWN_SECONDS,
@@ -55,7 +55,8 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'start_again' }, { status: 401 })
   }
 
-  const notice = loginCodeEmail({
+  const notice = codeEmail({
+    purpose: 'login',
     code: issued.code,
     locale: String(account.locale),
     device: deviceOf(request.headers),

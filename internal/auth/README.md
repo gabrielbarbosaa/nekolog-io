@@ -128,6 +128,37 @@ reuso encerrando a sessão, **dez requisições paralelas** com o mesmo token (t
 tocar na sessão de outra pessoa, e revogação visível na hora — que é o que uma
 ação sensível confere.
 
+## Cadastro
+
+Só por convite. O link traz um token de 32 bytes; o banco guarda o **SHA-256**
+dele, então quem lê a tabela não consegue entrar por ninguém.
+
+A ordem importa e tem teste: convite → nome → senha → conta. A política de senha
+roda **antes** de qualquer escrita, e o nome em branco é recusado antes de a
+consulta ao Pwned Passwords sair.
+
+**O convite não é gasto no cadastro.** A conta nasce sem `email_verified_at`, e
+só a confirmação do código marca a conta, gasta o convite e cria a associação —
+tudo num `INSERT ... WITH` só, porque o `SqlRunner` não tem transação e três
+escritas separadas podem parar no meio. Há teste de que o cadastro não toca em
+`email_verified_at` nem em `memberships`.
+
+Fechar a aba no meio não deixa ninguém preso: o cadastro reaproveita uma conta
+que existe mas não foi confirmada e manda outro código. Conta **já confirmada**
+devolve `account-exists` — não é vazamento, porque quem tem o link do convite já
+sabe o endereço.
+
+### As regras do convite vivem em SQL, e agora têm teste
+
+Expirado, revogado, já aceito e endereçado a outra pessoa são todos recusados
+por `where` no banco. Isso não aparecia em teste nenhum até a
+`src/invites.integration.test.ts`, que roda contra o Postgres de verdade.
+
+Uma coisa que o próprio esquema ensinou: a *check constraint*
+`invites_expire_after_they_are_created` impede inserir um convite já vencido, então
+o teste precisa criá-lo com `created_at` no passado. O banco recusando o dado
+impossível é o banco funcionando.
+
 ## Login
 
 `startLogin` e `finishLogin` são o fluxo da §11.1, sem HTTP: quem chama entrega
