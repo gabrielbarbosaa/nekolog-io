@@ -394,7 +394,7 @@ await log.flush() // essencial em serverless
 
 ## 11. Autenticação
 
-Módulo próprio em `internal/auth`, com `@node-rs/argon2`, `jose`, Redis e a API do Pwned Passwords. As rotas em `apps/web/app/api/auth/` são finas e só chamam o módulo.
+Módulo próprio em `internal/auth`, com `@node-rs/argon2`, `jose`, Redis e a API do Pwned Passwords. As rotas em `apps/dashboard/app/api/auth/` são finas e só chamam o módulo. (Diziam `apps/web` enquanto o dashboard era outro repositório; corrigido com a ADR [0019](adr/0019-um-repositorio-so.md).)
 
 ### 11.1 Fluxos
 

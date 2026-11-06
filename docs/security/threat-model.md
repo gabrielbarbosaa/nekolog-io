@@ -202,6 +202,13 @@ Registrar o que **não** está coberto é tão importante quanto o que está.
   (ADR [0008](../adr/0008-jwt-curto-com-refresh-rotativo.md)).
 - **Janela de graça de 30 s no refresh token**: um token roubado ainda funciona
   nesse intervalo. É o preço de não quebrar uso com várias abas.
+- **A checagem do Pwned Passwords falha aberto.** Se a API não responde em 2 s,
+  `lookupBreach` devolve `unknown` e a senha é aceita. É o oposto da regra que
+  vale para cota e capacidade — ali "não consegui medir" é alarme — e a
+  diferença é quem paga o preço: ali é o operador, aqui é alguém criando conta
+  num dia em que um terceiro caiu. O mínimo de 12 caracteres continua valendo, e
+  `checkPassword` devolve `breachCheck: 'unknown'` para quem chama registrar que
+  a checagem não rodou (etapa 2.5).
 - **O `202` da ingestão não garante gravação.** A contingência cobre ClickHouse
   fora do ar, mas um bug no caminho do `waitUntil` perderia dados em silêncio.
   O teste de carga da etapa 6.4 passou a conferir isso de verdade: 1.338 lotes
