@@ -227,7 +227,7 @@ retenção já é coluna. Já existe audit log, matriz de papéis e chave com es
 | D2 | Multi-tenant: criar organização, projeto e ambiente pela interface — hoje o self-host semeia **uma** de cada | repositório fechado | G |
 | D3 | A fiação que falta: nível mínimo, amostragem e redação no servidor não chegam ao `KeyRecord` do self-host | **feito** — documento do seed na versão 2, `seed set`, e a ingestão relendo o arquivo sem reiniciar | M |
 | D4 | Destino de `infra/vercel`, `infra/envs` e `infra/vm` | **feito** — removidas, junto com os Workers que as consumiam; entrou `infra/vps` no lugar | M |
-| D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | aqui | M — **o plano está feito**; os runbooks ficam para junto do B2/B3 |
+| D5 | Reescrever o `docs/PLANO.md` e os `docs/runbooks/` para a arquitetura que existe | **feito** — plano e runbooks reescritos para a máquina; `internal/self-host/src/runbooks.test.ts` falha se um runbook voltar a citar provedor removido, apontar para arquivo que não existe ou inventar variável. Nenhum foi **exercitado**: isso só acontece com a máquina (B2/B3) | M |
 
 O D3 é o achado de hoje, e piora com "privado e pago": um cliente pagante cujo
 log guarda número de cartão em claro, sem jeito de ligar a redação, não é um
