@@ -24,7 +24,7 @@ documentation — is in English, Portuguese and Spanish.
 **The source ships to nobody.** A customer never downloads the platform: they
 install a client library into their own application and read their logs in a
 dashboard that runs on our instance. The dashboard itself lives in a separate
-private repository, [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard).
+repository, in `apps/dashboard`.
 
 What that means for the licence is in [LICENSE](LICENSE): everything is
 reserved, with one narrow grant so a customer may install the SDK and ship it

@@ -84,19 +84,31 @@
 
 > **Nota (03/11/2026):** este marco foi separado entre os dois repositórios, que
 > é o que a nota anterior pedia antes de começar. As etapas **com caixa** abaixo
-> são as que têm branch e PR **aqui**; as de dashboard, autenticação e interface
-> estão em "O que acontece no nekolog-dashboard", no fim do marco. Elas ficam
-> listadas porque o roteiro público mostra o produto inteiro, mas sem caixa, para
-> o `pnpm tracking` não abrir issue delas neste repositório.
+> são as que têm branch e PR; as de dashboard, autenticação e interface estão em
+> "O dashboard", no fim do marco.
 >
 > Os números e os nomes de branch **não foram trocados**. As issues 2.1 a 2.25 já
 > existem aqui, e o `internal/tracking` nunca renomeia nem fecha nada: renumerar
 > abriria um segundo conjunto e deixaria o primeiro órfão.
 >
-> Como os dois repositórios compartilham código está no ADR
-> [0016](adr/0016-pacotes-compartilhados-no-npm.md): `schema`, `adapters`,
-> `clickhouse` e `db` saem de `internal/` e viram pacotes `@nekolog-io/*`
-> publicados no npm. É a etapa 2.0, e ela vem antes de todas.
+> Como os dois repositórios compartilhavam código estava no ADR
+> [0016](adr/0016-pacotes-compartilhados-no-npm.md): `adapters`, `clickhouse`,
+> `config` e `db` saíram de `internal/` e viraram pacotes `@nekolog-io/*` para
+> publicar no npm. É a etapa 2.0 — e a
+> [0019](adr/0019-um-repositorio-so.md) a substituiu: eles voltam a ser privados
+> e nenhum deles vai ao npm.
+
+> **Nota (06/11/2026):** a divisão em dois repositórios acabou — ADR
+> [0019](adr/0019-um-repositorio-so.md). O dashboard vem para cá como
+> `apps/dashboard`, e as **25 etapas** de dashboard do M2 ao M6 ganharam caixa,
+> em todos os marcos. Elas não ficaram sem caixa por serem menos importantes: era
+> para o `pnpm tracking` não abrir issue de trabalho de outro repositório. A 2.1
+> é a única marcada, porque os mockups já foram entregues.
+>
+> **Nenhuma issue nova é aberta por isso.** As 24 que restam já existem aqui
+> desde antes da divisão — o `internal/tracking` nunca fecha nem renomeia nada,
+> então elas ficaram abertas o tempo todo. O `pnpm tracking` confirma: `0 issues`
+> a criar, e sete corpos a atualizar.
 
 **Base compartilhada**
 
@@ -114,44 +126,44 @@
 - [x] **2.24** `feat/monitoring` — `/health` em tudo, monitor externo, heartbeat dos jobs e alertas de disco e de contingência. *(O `apps/web` ganhou `/health`; os outros dois já tinham. O heartbeat avisa a URL quando passou e `…/fail` quando falhou, para o monitor distinguir cron morto de tarefa quebrada, e monitor fora do ar nunca derruba a execução. A tarefa `capacity-watch` vigia o spool e a `system.disks`, e **alerta quando não consegue medir**. O canal do alerta ainda é o log: e-mail e Discord são a 5.2. Não há conta no Better Stack, então o monitor externo em si continua por configurar.)*
 - [x] **2.25** `infra/backups` — `pg_dump` diário criptografado no R2 e primeiro teste de restauração. *(`pg_dump | gzip | age` num cano só, sem arquivo legível no meio, com a assinatura do `age` conferida antes do upload. O `internal/backup` tem a parte que dá para errar em silêncio — nome do objeto, retenção e sequência de comandos — e **recusa apagar a lista inteira**: se tudo parece vencido, o errado é o relógio. O teste de restauração é um `workflow_dispatch` que restaura num Postgres descartável e consulta tabela por tabela. Atrás de `BACKUPS_ENABLED`, que não existe: não há banco no Neon nem bucket no R2.)*
 
-### O que acontece no nekolog-dashboard
+### O dashboard, em `apps/dashboard`
 
 O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 `internal/auth` (senhas, OTP, JWT, sessões) nasce lá e nunca existe aqui.
 
 **Base**
 
-- **2.1** `docs/ui-mockups` — mockups HTML no tema Grafite das telas principais (login e código, Explorer, issues, keys, primeiro log) para aprovação, seguindo o mapa de telas da seção 10.1 do plano.
+- [x] **2.1** `docs/ui-mockups` — mockups HTML no tema Grafite das telas principais (login e código, Explorer, issues, keys, primeiro log) para aprovação, seguindo o mapa de telas da seção 10.1 do plano.
 
 **Autenticação**
 
-- **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords.
-- **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
-- **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
-- **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
-- **2.9** `feat/auth-tokens` — JWT Ed25519 com `kid`, rotação do refresh token e sessões no Redis.
-- **2.10** `feat/auth-proxy` — `proxy.ts` com renovação automática, checagem de `Origin` e helper de sessão.
-- **2.11** `feat/auth-account` — recuperar e trocar senha, trocar e-mail, sessões ativas, sair de todos os dispositivos e re-autenticação.
-- **2.13** `test/auth-e2e` — todos os testes da seção 11.11 do plano, com Playwright e Mailpit.
+- [ ] **2.5** `feat/auth-password` — argon2id, política de senha e Pwned Passwords.
+- [ ] **2.6** `feat/auth-otp` — gerador de códigos e scripts Lua de emissão e verificação.
+- [ ] **2.7** `feat/auth-signup` — cadastro por convite, confirmação de e-mail e Turnstile.
+- [ ] **2.8** `feat/auth-login` — `login/start`, `login/verify` e `login/resend`, com proteção contra enumeração e rate limit (5 por conta e 20 por IP a cada 15 min).
+- [ ] **2.9** `feat/auth-tokens` — JWT Ed25519 com `kid`, rotação do refresh token e sessões no Redis.
+- [ ] **2.10** `feat/auth-proxy` — `proxy.ts` com renovação automática, checagem de `Origin` e helper de sessão.
+- [ ] **2.11** `feat/auth-account` — recuperar e trocar senha, trocar e-mail, sessões ativas, sair de todos os dispositivos e re-autenticação.
+- [ ] **2.13** `test/auth-e2e` — todos os testes da seção 11.11 do plano, com Playwright e Mailpit.
 
 **Produto**
 
-- **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR.
-- **2.15** `feat/projects-envs` — projetos e ambientes, com as configurações de cada um.
-- **2.16** `feat/api-keys-ui` — criar, mostrar uma vez, revogar e rotacionar keys; último uso; sincronização com o KV.
-- **2.17** `feat/explorer` — tabela virtualizada, filtros, período, detalhe em JSON com renderização segura, filtros na URL e fuso do usuário.
-- **2.18** `feat/volume-chart` — ECharts com tema gerado dos tokens do CSS e gráfico de volume por nível, com legenda, texturas e tabela acessíveis.
-- **2.19** `feat/operator-area` — área do operador: convites da instância, uso por org, ajuste de cotas e suspensão.
-- **2.20** `feat/demo` — organização demo, sessão somente leitura e gerador de logs falsos.
+- [ ] **2.14** `feat/orgs-members` — organizações, convites, papéis e a matriz de permissões da seção 10.2 (`internal/auth/permissions.ts`), com um teste por célula e testes de IDOR.
+- [ ] **2.15** `feat/projects-envs` — projetos e ambientes, com as configurações de cada um.
+- [ ] **2.16** `feat/api-keys-ui` — criar, mostrar uma vez, revogar e rotacionar keys; último uso; sincronização com o KV.
+- [ ] **2.17** `feat/explorer` — tabela virtualizada, filtros, período, detalhe em JSON com renderização segura, filtros na URL e fuso do usuário.
+- [ ] **2.18** `feat/volume-chart` — ECharts com tema gerado dos tokens do CSS e gráfico de volume por nível, com legenda, texturas e tabela acessíveis.
+- [ ] **2.19** `feat/operator-area` — área do operador: convites da instância, uso por org, ajuste de cotas e suspensão.
+- [ ] **2.20** `feat/demo` — organização demo, sessão somente leitura e gerador de logs falsos.
 
-**Pronto quando:** alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção. *(É o critério do produto, e ele atravessa os dois repositórios: a key e os logs são daqui, a conta e a tela são de lá.)*
+**Pronto quando:** alguém convidado cria conta, entra com código, gera uma key e vê seus logs em produção. *(É o critério do produto, e ele atravessa servidor e dashboard: a key e os logs são do servidor, a conta e a tela são do dashboard.)*
 
 ## M3 — Front e integrações
 
 > **Nota (03/11/2026):** como o M2, este marco está separado entre os dois
 > repositórios. As etapas **com caixa** são as que têm branch e PR **aqui** —
 > os SDKs, os exemplos, a CLI, a matriz de compatibilidade e os guias. As duas
-> de interface estão em "O que acontece no nekolog-dashboard", no fim do marco.
+> de interface estão em "O dashboard", no fim do marco.
 > Os números e os nomes de branch **não mudaram**, pelo mesmo motivo do M2: as
 > issues 3.1 a 3.15 já existem, e o `internal/tracking` nunca renomeia nada.
 >
@@ -174,17 +186,17 @@ O escopo abaixo continua valendo; só a branch e o PR mudam de endereço. O
 - [x] **3.13** `feat/cli-init` — `npx @nekolog-io/cli init`: detecta o framework, instala o SDK e cria o `.env`.
 - [x] **3.15** `docs/sdk-guides` — guia de cada framework nos três idiomas, incluindo o CORS do `traceparent`.
 
-### O que acontece no nekolog-dashboard
+### O dashboard, em `apps/dashboard`
 
 O escopo continua valendo; só a branch e o PR mudam de endereço. As duas etapas
 abaixo são tela, e dependem do que este marco entrega aqui: sem o `traceparent`
 da 3.4 não há linha do tempo para desenhar, e sem a CLI da 3.13 não há comando
 para o passo a passo mostrar.
 
-- **3.10** `feat/trace-view` — linha do tempo por `trace_id`, com o clique no front e a request no back na mesma tela.
-- **3.14** `feat/onboarding` — passo a passo "envie seu primeiro log" (a rota `…/setup` do mapa de telas da seção 10.1 do plano), esperando o log chegar em tempo real.
+- [ ] **3.10** `feat/trace-view` — linha do tempo por `trace_id`, com o clique no front e a request no back na mesma tela.
+- [ ] **3.14** `feat/onboarding` — passo a passo "envie seu primeiro log" (a rota `…/setup` do mapa de telas da seção 10.1 do plano), esperando o log chegar em tempo real.
 
-**Pronto quando:** um clique no front e a request no back aparecem na mesma linha do tempo. *(Como no M2, o critério atravessa os dois repositórios: a propagação do `traceparent` e os SDKs são daqui, a linha do tempo é de lá.)*
+**Pronto quando:** um clique no front e a request no back aparecem na mesma linha do tempo. *(Como no M2, o critério atravessa servidor e dashboard: a propagação do `traceparent` e os SDKs são do servidor, a linha do tempo é do dashboard.)*
 
 ## M4 — Investigação
 
@@ -193,8 +205,8 @@ para o passo a passo mostrar.
 > quase nunca é por etapa inteira: a busca tem o parser **aqui** e a tela **lá**,
 > a issue é montada pelos jobs daqui e listada lá, a exportação é gerada aqui e
 > baixada lá. Então a maioria das etapas **mantém a caixa**, com a linha dizendo
-> qual metade é daqui; a outra metade está descrita em "O que acontece no
-> nekolog-dashboard", no fim do marco.
+> qual metade é do servidor; a outra metade está descrita em "O dashboard", no
+> fim do marco.
 >
 > O critério é o de sempre (plano, seções 1, 2 e 5): SDK, ingestão, jobs,
 > `packages/*` e API pública são daqui; tela, sessão e permissão são de lá. Três
@@ -229,16 +241,16 @@ para o passo a passo mostrar.
 - [x] **4.13** `feat/export-scheduled` — exportação agendada (diária ou semanal) por projeto e ambiente, executada pelos jobs, com o e-mail de aviso. *(A tela que agenda é de lá; o e-mail leva ao dashboard, não traz anexo.)*
 - [x] **4.15** `feat/db-investigation` — as tabelas de Postgres que este marco pede: views salvas, releases, exportações e dashboards, com as *check constraints* no próprio esquema. *(Etapa nova. Ela vem antes da 4.2, da 4.7, da 4.12 e da 4.14. A tabela `issues` fica com a 4.6, junto do job que a escreve.)*
 
-### O que acontece no nekolog-dashboard
+### O dashboard, em `apps/dashboard`
 
 O escopo continua valendo; só a branch e o PR mudam de endereço.
 
-- **4.2** `feat/saved-views` — views salvas e compartilháveis (tela; a tabela é a 4.15).
-- **4.3** `feat/live-tail` — tempo real por polling a cada 2–3 s, sobre a mesma busca da 4.1.
-- **4.10** `feat/sourcemap-resolve` — stack trace com o código original na tela da issue. É aqui que o source map enviado pela 4.8 é aplicado, na hora de exibir.
-- **4.14** `feat/dashboards` — dashboards customizáveis com widgets (tela; a tabela é a 4.15).
+- [ ] **4.2** `feat/saved-views` — views salvas e compartilháveis (tela; a tabela é a 4.15).
+- [ ] **4.3** `feat/live-tail` — tempo real por polling a cada 2–3 s, sobre a mesma busca da 4.1.
+- [ ] **4.10** `feat/sourcemap-resolve` — stack trace com o código original na tela da issue. É aqui que o source map enviado pela 4.8 é aplicado, na hora de exibir.
+- [ ] **4.14** `feat/dashboards` — dashboards customizáveis com widgets (tela; a tabela é a 4.15).
 
-**Pronto quando:** um erro minificado aparece com arquivo e linha originais. *(Como no M2 e no M3, o critério atravessa os dois repositórios: o upload do source map e o fingerprint são daqui, a resolução na tela é de lá.)*
+**Pronto quando:** um erro minificado aparece com arquivo e linha originais. *(Como no M2 e no M3, o critério atravessa servidor e dashboard: o upload do source map e o fingerprint são do servidor, a resolução na tela é do dashboard.)*
 
 ## M5 — Alertas e governança
 
@@ -286,14 +298,14 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 - [x] **5.9** `feat/public-api` — API de leitura com keys `sk_` e escopos, documentada em OpenAPI. *(Inteira daqui.)*
 - [x] **5.10** `security/key-rotation` — rotação das chaves do JWT e do HMAC sem derrubar sessões, seguindo o runbook. *(Daqui: a rotação do HMAC que assina os webhooks da 5.2. A do JWT e das sessões é de lá.)*
 
-### O que acontece no nekolog-dashboard
+### O dashboard, em `apps/dashboard`
 
 O escopo continua valendo; só a branch e o PR mudam de endereço.
 
-- **5.6** `feat/usage-quotas` — uso e cotas na interface (tela; o cálculo e o bloqueio já existem desde a 1.12).
-- **5.7** `feat/audit-log-ui` — audit log navegável (tela; a tabela `audit_log` existe desde a 2.2).
+- [ ] **5.6** `feat/usage-quotas` — uso e cotas na interface (tela; o cálculo e o bloqueio já existem desde a 1.12).
+- [ ] **5.7** `feat/audit-log-ui` — audit log navegável (tela; a tabela `audit_log` existe desde a 2.2).
 
-**Pronto quando:** um pico de erros em `production` gera alerta no Discord em ~1 min. *(Como no M2, no M3 e no M4, o critério atravessa os dois repositórios: a regra é criada lá e avaliada aqui.)*
+**Pronto quando:** um pico de erros em `production` gera alerta no Discord em ~1 min. *(Como no M2, no M3 e no M4, o critério atravessa servidor e dashboard: a regra é criada na tela e avaliada pelos jobs.)*
 
 ## M6 — 1.0
 
@@ -339,10 +351,10 @@ O escopo continua valendo; só a branch e o PR mudam de endereço.
 - [x] **6.7** `chore/release-1-0` — saída do `0.x`, changelogs, notas da release e SBOM. *(Daqui: os pacotes publicados no npm e o SBOM deste repositório. Os 17 pacotes e os 5 apps foram para a 1.0.0, com changelog por pacote gerado dos 68 changesets acumulados; a publicação passou a ser por trusted publishing, sem token nenhum; cada pacote sai com um SBOM CycloneDX anexado à Release dele, e `core`, `cli` e `adapters` têm a promessa de zero dependências conferida pelo lockfile. `changeset version` nunca tinha rodado neste repositório e falhava no primeiro comando.)*
 - [x] **6.8** `docs/launch` — README final, demo pública e post de lançamento (TabNews, dev.to, Show HN). *(Daqui: o README, o site e o post. A demo pública é de lá, por ser uma sessão no dashboard. O README saiu nos três idiomas, com `CONTRIBUTING` e `CODE_OF_CONDUCT` que faltavam; a landing page deixou de ser prova de fiação e virou página de verdade, com os números presos às constantes que os impõem; o post está em `docs/launch/` em inglês e em português. Sem GIF: ele mostraria o dashboard, que é fechado.)*
 
-### O que acontece no nekolog-dashboard
+### O dashboard, em `apps/dashboard`
 
 O escopo continua valendo; só a branch e o PR mudam de endereço.
 
-- **6.6** `a11y/audit` — auditoria WCAG 2.2 AA e correções (a interface é de lá; o `axe` do site e da documentação já roda aqui desde a 3.12).
+- [ ] **6.6** `a11y/audit` — auditoria WCAG 2.2 AA e correções (a interface é de lá; o `axe` do site e da documentação já roda aqui desde a 3.12).
 
-**Pronto quando:** alguém sobe tudo seguindo só a documentação. *(Como nos marcos anteriores, o critério atravessa os dois repositórios — mas aqui pende para cá: o self-host é só deste repositório.)*
+**Pronto quando:** alguém sobe tudo seguindo só a documentação. *(Como nos marcos anteriores, o critério atravessa servidor e dashboard — mas aqui pende para o servidor: o self-host é todo dele.)*

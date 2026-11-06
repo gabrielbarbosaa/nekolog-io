@@ -2,7 +2,7 @@
 
 - **Data:** 04/11/2026 (etapa 6.5)
 - **Escopo:** só o que está neste repositório. Autenticação, sessão, gestão de
-  usuário e controle de acesso por papel são do `nekolog-dashboard` e **não**
+  usuário e controle de acesso por papel são do `apps/dashboard` e **não**
   são avaliados aqui.
 
 O plano (seção 14) nomeia o ASVS nível 2 como checklist para autenticação,

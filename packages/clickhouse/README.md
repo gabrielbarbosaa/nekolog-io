@@ -162,25 +162,20 @@ descrita na seção 7 do plano. Em dev o `deploy/clickhouse-users.dev.xml` está
 montado em `users.d/` e o ClickHouse recarrega o arquivo sozinho, sem restart;
 em qualquer outro lugar a ordem é responsabilidade de quem faz o deploy.
 
-## Publicado no npm
+## Não vai ao npm
 
-Este pacote é publicado porque o
-[`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard),
-que é um repositório privado, consome o mesmo código — ADR
-[0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md). Ele existe para ser
-compartilhado entre os dois repositórios do NekoLog, não como uma API pública de
-uso geral; o semver vale do mesmo jeito, e mudança incompatível vira major.
+Este pacote é `private: true` e nunca é publicado — ADR
+[0019](../../docs/adr/0019-um-repositorio-so.md). A ADR
+[0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md) o tinha publicado
+porque o dashboard vivia noutro repositório e precisava instalá-lo; o dashboard
+veio para cá, e publicar um pacote de servidor de um produto proprietário
+passou a ser entregar o que o produto é.
 
-**Dentro deste repositório ele resolve pelo fonte**, não pelo `dist/`: o
-`exports` do `package.json` aponta para `./src/`, e o mapeamento para `dist/`
-fica no `publishConfig`, que o `pnpm pack` aplica na hora de publicar. É o que
-deixa os CLIs e os apps carregarem `.ts` direto, sem build. Por isso o script de
-`lint` empacota antes de rodar `publint` e `attw`: é o tarball que precisa ser
-conferido, não o diretório.
+**Ele resolve pelo fonte**: o `exports` do `package.json` aponta para `./src/`,
+que é o que deixa os CLIs e os apps carregarem `.ts` direto, sem build. Não há
+mais `publishConfig`, `files`, `build` nem `lint` — tudo isso existia só para
+empacotar um tarball e conferi-lo com `publint` e `attw`.
 
-O pacote é **ESM apenas**. Os consumidores são Node 24, Workers e Next, todos
-ESM, e o `attw` roda com `--profile esm-only` — o aviso de "require resolveu
-para um arquivo ESM" é o resultado esperado, não uma falha.
 
 ## A linguagem de busca
 

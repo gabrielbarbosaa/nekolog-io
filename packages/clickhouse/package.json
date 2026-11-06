@@ -1,6 +1,7 @@
 {
   "name": "@nekolog-io/clickhouse",
   "version": "1.0.0",
+  "private": true,
   "description": "ClickHouse side of NekoLog: the forward-only migration runner, the HTTP client and the log and usage stores.",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -18,11 +19,6 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "files": [
-    "dist",
-    "migrations",
-    "CHANGELOG.md"
-  ],
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
@@ -34,72 +30,21 @@
     "./backup": "./src/backup.ts",
     "./search": "./src/search/index.ts"
   },
-  "publishConfig": {
-    "bin": {
-      "nekolog-clickhouse": "./dist/cli.mjs"
-    },
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "./client": {
-        "types": "./dist/client.d.mts",
-        "default": "./dist/client.mjs"
-      },
-      "./log-store": {
-        "types": "./dist/log-store.d.mts",
-        "default": "./dist/log-store.mjs"
-      },
-      "./usage-store": {
-        "types": "./dist/usage-store.d.mts",
-        "default": "./dist/usage-store.mjs"
-      },
-      "./issues": {
-        "types": "./dist/issues.d.mts",
-        "default": "./dist/issues.mjs"
-      },
-      "./export": {
-        "types": "./dist/export.d.mts",
-        "default": "./dist/export.mjs"
-      },
-      "./alerts": {
-        "types": "./dist/alerts.d.mts",
-        "default": "./dist/alerts.mjs"
-      },
-      "./backup": {
-        "types": "./dist/backup.d.mts",
-        "default": "./dist/backup.mjs"
-      },
-      "./search": {
-        "types": "./dist/search/index.d.mts",
-        "default": "./dist/search/index.mjs"
-      }
-    },
-    "main": "./dist/index.mjs",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
-  },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsdown",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "ch": "node src/cli.ts",
-    "lint": "pnpm pack --out package.tgz && publint package.tgz --strict && attw package.tgz --profile esm-only"
+    "ch": "node src/cli.ts"
   },
   "dependencies": {
     "@nekolog-io/adapters": "workspace:*",
     "@nekolog-io/config": "workspace:*"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",
-    "publint": "^0.3.25",
-    "tsdown": "^0.23.2",
     "vitest": "^5.0.5"
   }
 }

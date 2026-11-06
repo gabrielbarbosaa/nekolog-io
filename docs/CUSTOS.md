@@ -17,7 +17,7 @@
 | 5 | Jobs | cron de um minuto |
 | 6 | API de leitura | tráfego baixo |
 | 7 | Site e documentação | estáticos na prática |
-| 8 | Dashboard | Next.js; **repositório fechado, 7 telas em aberto** |
+| 8 | Dashboard | Next.js em `apps/dashboard`; **7 telas em aberto** |
 | 9 | Object storage | spool, source maps, exportações e backup |
 | 10 | E-mail | código de login, alerta, exportação pronta |
 | 11 | DNS, TLS, CDN e proteção contra ataque | — |

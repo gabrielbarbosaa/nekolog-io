@@ -21,13 +21,7 @@ const SDKS = [
   '@nekolog-io/winston',
 ]
 
-const SHARED = [
-  '@nekolog-io/adapters',
-  '@nekolog-io/clickhouse',
-  '@nekolog-io/config',
-  '@nekolog-io/core',
-  '@nekolog-io/db',
-]
+const CORE = ['@nekolog-io/core']
 
 const OPEN = /\bMIT\b|open[- ]source|open[- ]core|c[óo]digo aberto|self[- ]host/i
 
@@ -64,13 +58,23 @@ async function publishedPackages(): Promise<string[]> {
   return names.sort()
 }
 
-describe('the two kinds of published package', () => {
+describe('the SDKs and the core they sit on', () => {
   it('together are every package this repository publishes, and nothing else', async () => {
-    expect([...SDKS, ...SHARED].sort()).toEqual(await publishedPackages())
+    expect([...SDKS, ...CORE].sort()).toEqual(await publishedPackages())
   })
 
   it('do not overlap, so a package is one thing or the other', () => {
-    expect(SDKS.filter((name) => SHARED.includes(name))).toEqual([])
+    expect(SDKS.filter((name) => CORE.includes(name))).toEqual([])
+  })
+
+  it('leaves the server libraries out, because they never reach npm', async () => {
+    const published = await publishedPackages()
+
+    for (const name of ['adapters', 'clickhouse', 'config', 'db']) {
+      expect(published, `@nekolog-io/${name} is published again`).not.toContain(
+        `@nekolog-io/${name}`,
+      )
+    }
   })
 })
 

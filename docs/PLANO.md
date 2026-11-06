@@ -6,7 +6,7 @@
 
 Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e no back-end: SDKs em npm, uma API que recebe os logs, armazenamento analítico e um dashboard com filtros, gráficos e projetos, com keys separadas por ambiente.
 
-É um produto **proprietário**, de um autor só, com todos os direitos reservados — ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md). O repositório `nekolog-io` é privado e guarda os SDKs, a ingestão, os jobs, a API pública de leitura, o site e a documentação; o dashboard vive no repositório privado separado [`gabrielbarbosaa/nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard). **Tudo roda numa máquina só**, uma VPS, e a instância é por convite.
+É um produto **proprietário**, de um autor só, com todos os direitos reservados — ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md). Tudo vive num repositório privado só, `nekolog-io`: os SDKs, a ingestão, os jobs, a API pública de leitura, o site, a documentação e o dashboard — ADR [0019](adr/0019-um-repositorio-so.md). **Tudo roda numa máquina só**, uma VPS, e a instância é por convite.
 
 > **Duas revisões recentes, para quem leu este documento antes.** Em 04/11/2026 o
 > produto deixou de ser open-core (tabela A de [COMERCIAL.md](COMERCIAL.md)), e
@@ -30,7 +30,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 |---|---|---|
 | Nome | NekoLog: site `nekolog.io`, escopo `@nekolog-io` no npm, org `nekolog-io` no GitHub | `@nekolog` e `nekolog` já estavam ocupados; o mesmo nome nos três lugares |
 | Modelo | Produto proprietário, de um autor só | Decidido em 04/11/2026: o que dá o produto não é a visibilidade do repositório, é a licença — ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md) |
-| Repositórios | Dois, os dois privados: `nekolog-io` (SDKs, ingestão, jobs, API de leitura, site, docs) e `nekolog-dashboard` (dashboard Next.js) | Separação de produto, não de licença: os dois têm a mesma |
+| Repositórios | Um, privado: `nekolog-io`, com o dashboard dentro, em `apps/dashboard` | A divisão existia porque este era público sob MIT; a [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md) removeu o motivo e a [0019](adr/0019-um-repositorio-so.md) removeu a divisão |
 | Código comum aos dois | `adapters`, `clickhouse`, `config` e `db` ficam em `packages/` como `@nekolog-io/*` | O dashboard escreve no mesmo Postgres; duplicar essa definição é a única divergência que nenhum teste dos dois lados consegue pegar (ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md)) |
 | Escopo | Plano completo até a 1.0, executado em marcos | Evita retrabalho de arquitetura depois do MVP |
 | Hospedagem | Uma VPS, mais o domínio e um bucket de backup | Decidido em 05/11/2026: a camada gratuita da nuvem não sustenta um produto pago, e espalhar por cinco fornecedores custava mais operação do que uma máquina |
@@ -48,7 +48,7 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 | Segurança | Prioridade máxima em todas as camadas (seção 14) | A plataforma recebe dados de terceiros e publica pacotes que rodam em outras aplicações |
 | Versionamento | Tudo versionado: pacotes, apps, API, payload, migrations e docs (seção 16) | Atualizações previsíveis para quem usa e para quem hospeda |
 | Branches | `main` (produção), `qa` (homologação) e `dev` (desenvolvimento), com uma branch por etapa (seção 17) | Histórico organizado e promoção controlada entre ambientes |
-| Licença | Proprietária, todos os direitos reservados, nos dois repositórios, com uma concessão estreita para usar os SDKs dentro da aplicação do cliente | Sem a concessão o produto não é vendável; sem a licença, qualquer um sobe uma cópia e cobra por ela (ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)) |
+| Licença | Proprietária, todos os direitos reservados, com uma concessão estreita para usar os SDKs dentro da aplicação do cliente | Sem a concessão o produto não é vendável; sem a licença, qualquer um sobe uma cópia e cobra por ela (ADR [0017](adr/0017-licenca-proprietaria-e-repositorio-privado.md)) |
 | Infraestrutura | Como código, com OpenTofu, no que é de fornecedor: o repositório, o domínio de e-mail e os nomes da máquina (seção 15.5) | Tudo recriável, versionado e revisado em PR; o que roda dentro da máquina é compose, não OpenTofu |
 | Acompanhamento | Cada etapa é uma issue no GitHub, dentro do milestone do seu marco | Cada PR fecha uma issue; o histórico fica rastreável |
 | Cotas da instância hospedada | 10 mil eventos por dia por organização e retenção de 7 dias, ajustáveis pelo operador; projetos e membros sem limite | Cabe nas cotas gratuitas e pode crescer depois |
@@ -61,12 +61,12 @@ Uma plataforma de logs para aplicações JavaScript/TypeScript, no front-end e n
 
 - **Em aberto de verdade, e com relógio:** comprar a VPS (item B1 de [COMERCIAL.md](COMERCIAL.md)), escolher o modelo de cobrança (tabela C) e decidir se os pacotes compartilhados vão para o npm sob a licença nova ou saem do npm e o dashboard os consome por git.
 - **Logo e ícone:** o autor vai criar e adicionar depois; até lá, o projeto usa o nome em texto.
-- **Mockups das telas:** aprovação antes das telas do dashboard (etapa 2.1, no `nekolog-dashboard`).
+- **Mockups das telas:** aprovação antes das telas do dashboard. A etapa 2.1 está feita, em `docs/ui-mockups/`.
 
 **Decididas em 03/11/2026, antes do M2:**
 
-- **Compartilhamento de código entre os dois repositórios:** os pacotes comuns saem de `internal/`, vão para `packages/` e são publicados no npm como `@nekolog-io/*` — ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md). A etapa 2.0 publicou `adapters`, `clickhouse` e `config`; o `db` nasce assim na 2.2. O ADR lista `schema` no lugar de `config`, e a implementação corrigiu os dois: o `clickhouse` depende do `config` em runtime, e pacote publicado não pode depender de pacote privado; já o `schema` não tem consumidor fora deste repositório e seus schemas Valibot precisam de uma passagem de anotação de tipos que merece etapa própria. O `internal/auth` (senhas, OTP, JWT, sessões) é exclusivo do dashboard e nasce direto no `nekolog-dashboard`, não aqui.
-- **Divisão do M2:** feita no [ETAPAS.md](ETAPAS.md). Ficam neste repositório as etapas 2.0, 2.2, 2.3, 2.4, 2.12 e 2.21 a 2.25; as de dashboard, autenticação e interface acontecem no repositório privado, com o número preservado para as issues já abertas aqui continuarem valendo.
+- **Compartilhamento de código:** deixou de ser um problema. A ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md) tirou `adapters`, `clickhouse`, `config` e `db` de `internal/` e os publicou no npm **porque o dashboard estava noutro repositório**; a [0019](adr/0019-um-repositorio-so.md) o trouxe para cá e os quatro voltaram a ser privados. Ao npm vão treze pacotes: os doze SDKs e o `@nekolog-io/core`. O `internal/auth` (senhas, OTP, JWT, sessões) nasce aqui, junto do resto.
+- **Divisão do M2:** feita no [ETAPAS.md](ETAPAS.md) em 03/11 e desfeita em 06/11. As etapas de dashboard, autenticação e interface voltaram a ter caixa, com o número preservado — as issues delas nunca foram fechadas.
 
 ---
 
@@ -114,7 +114,7 @@ Cloudflare Free ....... DNS, TLS na borda, proteção contra ataque
 - **Uma credencial do ClickHouse por papel:** `reader`, `ingest`, `jobs`, `backup` e `migrator`, cada uma com o *grant* mínimo, conferidas por teste (seção 7).
 - **A máquina não é descartável, e é por isso que existe backup.** Um VPS com disco próprio não se recria sozinho como a VM anterior: o ClickHouse manda `BACKUP DATABASE` para um bucket fora da máquina uma vez por dia, e o Postgres vai pelo mesmo cano, cifrado com `age`.
 - **Endereços:** `nekolog.io` (site e documentação), `ingest.nekolog.io`, `api.nekolog.io` e o do dashboard, quando ele chegar na máquina. Todos são registros A apontando para o mesmo endereço, *proxied* pelo Cloudflare, declarados em `infra/vps`.
-- **Dois repositórios, uma máquina:** `nekolog-io` e o privado `nekolog-dashboard` compartilham o mesmo ClickHouse e o mesmo Postgres.
+- **Um repositório, uma máquina:** os cinco apps e o dashboard compartilham o mesmo ClickHouse e o mesmo Postgres.
 
 ### O que a máquina dá, e o que aperta
 
@@ -135,7 +135,7 @@ Cloudflare Free ....... DNS, TLS na borda, proteção contra ataque
 
 ## 5. Como roda numa máquina só
 
-Tudo o que está no repositório público roda num `docker-compose`: a ingestão, a API pública de leitura, os jobs, o site, a documentação, o ClickHouse, o Postgres e o proxy. **O dashboard não** — ele vive no repositório privado `nekolog-dashboard` e chega na máquina como mais um container, pelo item B7 de [COMERCIAL.md](COMERCIAL.md).
+Tudo roda num `docker-compose`: a ingestão, a API pública de leitura, os jobs, o site, a documentação, o ClickHouse, o Postgres e o proxy. O dashboard entra como mais um container, pelo item B7 de [COMERCIAL.md](COMERCIAL.md).
 
 A troca de cada peça da plataforma anterior pelo que roda aqui:
 
@@ -298,7 +298,7 @@ await log.flush() // essencial em serverless
 
 ## 10. Dashboard
 
-> **Código fechado:** o dashboard vive no repositório privado [`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard), não neste repositório. Esta seção continua sendo a especificação de produto que esse repositório deve seguir — só o código-fonte muda de lugar.
+> **Onde ele mora:** em `apps/dashboard`, neste repositório, desde a ADR [0019](adr/0019-um-repositorio-so.md). Esta seção é a especificação de produto que ele tem de seguir.
 
 **Stack:** Next.js (App Router), Tailwind v4 + shadcn/ui (tema Grafite), `next-themes`, TanStack Query, Table e Virtual, ECharts, `nuqs` (filtros na URL), Drizzle e o módulo `internal/auth`.
 
@@ -790,7 +790,7 @@ A separação que importa não é mais entre ambientes da plataforma, e sim entr
 
 ## 18. Estrutura do repositório
 
-Este é o repositório `nekolog-io`. O dashboard tem o seu, `nekolog-dashboard`, com estrutura equivalente (Next.js, `internal/auth`, `internal/db`). Os dois são privados.
+Um repositório privado só. O dashboard é o `apps/dashboard`, com o `internal/auth` (senhas, OTP, JWT, sessões) ao lado dos outros pacotes internos.
 
 ```
 packages/       # destinados ao npm; a publicação está desligada (tabela A)
@@ -800,16 +800,16 @@ packages/       # destinados ao npm; a publicação está desligada (tabela A)
   clickhouse/   # migrations, query builder, parser da busca
   adapters/     # KeyStore, RateLimiter, BlobStore, Mailer, RedisClient
   config/       # schemas e carga das variáveis de ambiente
-                # Estes quatro existem em packages/ porque o nekolog-dashboard
-                # consome os mesmos: ele escreve no mesmo Postgres e consulta o
-                # mesmo ClickHouse (ADR 0016). Se vão pelo npm ou por git é
-                # decisão em aberto. internal/auth (senhas, OTP, JWT, sessões)
-                # é exclusivo do dashboard e vive só lá, não aqui.
+                # Estes quatro são `private: true` e nunca vão ao npm (ADR
+                # 0019). Estão em packages/ por história, não por regra:
+                # renomeá-los para @internal/* e movê-los para internal/ é
+                # etapa própria, porque são 283 ocorrências em 136 arquivos.
 apps/
   ingest/       # Hono em Node, num container
   api/          # API pública de leitura: busca, histograma, issues
   jobs/         # alertas, issues, uso e cotas
   web/          # site público (landing page), tema, i18n — não é o dashboard
+  dashboard/    # o dashboard: Next.js, internal/auth, as telas do M2 ao M6
   docs/         # Starlight (i18n nativo)
 internal/       # não publicados: só fazem sentido dentro deste repositório
   schema/       # formato do payload (SDK ↔ ingest); publicado quando alguém

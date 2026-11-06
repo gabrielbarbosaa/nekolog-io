@@ -37,18 +37,17 @@ Mexendo num schema, mexa no tipo junto: o compilador confere que o schema
 produz algo atribuível ao tipo, então ele pega o caso perigoso (o tipo promete
 um campo que o schema não valida).
 
-## Publicado no npm
+## Não vai ao npm
 
-Este pacote é publicado como `@nekolog-io/config` porque o
-[`nekolog-dashboard`](https://github.com/gabrielbarbosaa/nekolog-dashboard),
-que é um repositório privado, valida o ambiente dele com o mesmo `webEnvSchema`
-(ADR [0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md)).
+Este pacote é `private: true` e nunca é publicado — ADR
+[0019](../../docs/adr/0019-um-repositorio-so.md). A ADR
+[0016](../../docs/adr/0016-pacotes-compartilhados-no-npm.md) o tinha publicado
+porque o dashboard vivia noutro repositório e precisava instalá-lo; o dashboard
+veio para cá, e publicar um pacote de servidor de um produto proprietário
+passou a ser entregar o que o produto é.
 
-Ele existe para ser compartilhado entre os dois repositórios do NekoLog, não
-como uma API pública de uso geral — mas o semver vale do mesmo jeito, e mudança
-incompatível vira major.
+**Ele resolve pelo fonte**: o `exports` do `package.json` aponta para `./src/`,
+que é o que deixa os CLIs e os apps carregarem `.ts` direto, sem build. Não há
+mais `publishConfig`, `files`, `build` nem `lint` — tudo isso existia só para
+empacotar um tarball e conferi-lo com `publint` e `attw`.
 
-**Dentro deste repositório ele resolve pelo fonte**, não pelo `dist/`: o
-`exports` do `package.json` aponta para `./src/index.ts` e o mapeamento para
-`dist/` fica no `publishConfig`, que o `pnpm pack` aplica na hora de publicar.
-É o que deixa `pnpm ch:migrate` e `pnpm seed` rodarem `.ts` direto, sem build.

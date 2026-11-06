@@ -5,11 +5,14 @@ export const SBOM_EXTENSION = '.cdx.json'
 export const SBOM_DIR = 'sbom'
 export const SBOM_FILTER = '@nekolog-io/*'
 
-export const DEPENDENCY_FREE: readonly string[] = [
+export const SBOM_EXCLUDED: readonly string[] = [
   '@nekolog-io/adapters',
-  '@nekolog-io/cli',
-  '@nekolog-io/core',
+  '@nekolog-io/clickhouse',
+  '@nekolog-io/config',
+  '@nekolog-io/db',
 ]
+
+export const DEPENDENCY_FREE: readonly string[] = ['@nekolog-io/cli', '@nekolog-io/core']
 
 export class SbomRefused extends Error {}
 
@@ -52,6 +55,7 @@ export function sbomArgs(outDir: string = SBOM_DIR): string[] {
     '--split',
     '--filter',
     SBOM_FILTER,
+    ...SBOM_EXCLUDED.flatMap((name) => ['--filter', `!${name}`]),
     '--out',
     `${outDir}/%s${SBOM_EXTENSION}`,
   ]
@@ -59,7 +63,7 @@ export function sbomArgs(outDir: string = SBOM_DIR): string[] {
 
 export function sbomCommand(outDir: string = SBOM_DIR): string {
   return ['pnpm', ...sbomArgs(outDir)]
-    .map((part) => (part.includes('*') ? `"${part}"` : part))
+    .map((part) => (/[*!]/.test(part) ? `"${part}"` : part))
     .join(' ')
 }
 
