@@ -1,0 +1,47 @@
+{
+  "Sidebar": {
+    "label": "Pantallas",
+    "noProject": "Aún sin proyecto",
+    "logs": "Logs",
+    "issues": "Issues",
+    "dashboards": "Dashboards",
+    "alerts": "Alertas",
+    "releases": "Releases",
+    "exports": "Exportaciones",
+    "settings": "Ajustes"
+  },
+  "Toolbar": {
+    "period": "Última hora",
+    "searchHint": "level:error service:api"
+  },
+  "ThemeToggle": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Seguir al sistema"
+  },
+  "LocaleSwitcher": {
+    "label": "Idioma"
+  },
+  "Foundation": {
+    "title": "Todavía no hay pantallas",
+    "body": "Este es el marco en el que se construye el panel. Las pantallas de logs, issues y alertas llegan una etapa a la vez. Lo que ya funciona está abajo.",
+    "theme": {
+      "name": "Tema",
+      "state": "Claro, oscuro y del sistema, recordado por navegador."
+    },
+    "locale": {
+      "name": "Idioma",
+      "state": "Inglés, portugués y español, elegidos por cookie."
+    },
+    "headers": {
+      "name": "Cabeceras",
+      "state": "Una política de seguridad de contenido con nonce en cada respuesta."
+    },
+    "health": {
+      "name": "Salud",
+      "state": "/health responde, así se puede vigilar el contenedor."
+    },
+    "next": "Luego viene entrar a la cuenta, y después el explorador de logs."
+  }
+}

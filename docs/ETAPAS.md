@@ -110,6 +110,12 @@
 > então elas ficaram abertas o tempo todo. O `pnpm tracking` confirma: `0 issues`
 > a criar, e sete corpos a atualizar.
 
+> **Nota (06/11/2026):** antes da 2.5 entrou a fundação do `apps/dashboard` —
+> Next.js, tema Grafite, três idiomas, cabeçalhos com nonce e `/health`. Ela não
+> tem número porque não é uma etapa do plano: é o que a 2.0 foi para os pacotes
+> compartilhados. As regras de desenho que ela fixou estão no
+> `apps/dashboard/README.md`.
+
 **Base compartilhada**
 
 - [x] **2.0** `chore/shared-packages` — mover `internal/adapters`, `internal/clickhouse` e `internal/config` para `packages/`, publicados como `@nekolog-io/*` com tsdown, `isolatedDeclarations`, `publint` e `@arethetypeswrong/cli`. *(Primeira etapa do marco, apesar do número: a 2.2 já nasce neste formato. Os números existentes não podem ser remexidos — ver a nota acima e o ADR [0016](adr/0016-pacotes-compartilhados-no-npm.md). O `config` entrou no lugar do `schema` porque o `clickhouse` depende dele em runtime; o `schema` fica em `internal/` até alguém de fora precisar dele, e publicá-lo exige anotar os schemas Valibot um a um.)*
