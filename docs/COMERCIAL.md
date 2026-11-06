@@ -95,14 +95,14 @@ trabalho real está em A5, A6 e A7.
 | B1 | **Antes de comprar:** confirmar o datacenter de São Paulo no hPanel e se existe prazo menor que 24 meses | latência, e não travar 24 meses no plano que você vai superar | P |
 | B2 | Hardening: SSH só por chave, firewall, atualização automática | a máquina passa a ser sua responsabilidade | P |
 | B3 | Docker e compose na máquina | — | P |
-| B4 | **Proxy reverso com TLS** (Caddy) na frente da ingestão e da API | hoje as duas falam HTTP puro, com a key no header | P |
+| B4 | **Proxy reverso com TLS** (Caddy) na frente da ingestão e da API | **o código está feito** — entrou junto com o B6: o Caddy termina TLS para `ingest.`, `api.` e o domínio, pede certificado ao Let's Encrypt com `ACME_EMAIL` e é o **único** container que publica porta para fora; as aplicações continuam em HTTP puro, mas só na loopback. Falta a máquina | P |
 | B5 | Cloudflare Free na frente: DNS, TLS, proteção contra ataque | de graça, e é o que substitui a borda do Workers | P — **declarado** em `infra/vps`; falta a conta |
 | B6 | Containers para `apps/web` e `apps/docs` no compose | **feito** — Next em standalone (299 MB) e a documentação estática num Caddy próprio (89 MB); o proxy roteia `/docs` direto, sem passar pelo Next | M |
 | B7 | Container do dashboard e como o build dele chega na máquina | repositório fechado | M |
 | B8 | **Backup do ClickHouse** | **feito** — `BACKUP DATABASE` diário para um bucket fora da máquina, com credencial própria; falta **ligar** (um bucket e três variáveis) e pôr regra de ciclo de vida nele | M |
 | B9 | Mover o backup do Postgres do Actions para a máquina | **feito** — container `backup`, `pg_dump \| gzip \| age \| rclone` num cano só; o workflow ficou só com o teste de restauração | P |
 | B10 | Deploy: como o código chega na VPS | **feito** — clone na máquina, `deploy.sh` com `git pull --ff-only` e build local; a imagem caiu de 2,09 GB para 1,05 GB, que é o que torna isso viável num 1 vCPU ([ADR 0018](adr/0018-deploy-por-git-pull-na-maquina.md)) | M |
-| B11 | Limitar a memória do ClickHouse e ligar swap | ver a nota sobre o KVM 1 | P |
+| B11 | Limitar a memória do ClickHouse e ligar swap | **metade feita** — todo serviço tem `mem_limit` no compose, e o teto do próprio ClickHouse em `clickhouse-limits.xml` é deliberadamente menor que o do container, para que uma consulta cara seja recusada em vez de o processo ser morto. **O swap é na máquina** e continua aberto. Ver a nota sobre o KVM 1 | P |
 | B12 | Monitor externo (Better Stack free) no heartbeat dos jobs | o `HEARTBEAT_URL` já existe e não aponta para nada | P |
 
 ### O que o B8 fez, e o que ele deixou para você
