@@ -46,6 +46,44 @@ senhas triviais de circulação.
 O `unknown` não é engolido: `checkPassword` devolve `breachCheck: 'unknown'`
 junto com `accepted: true`, para quem chama registrar que a checagem não rodou.
 
+## Códigos por e-mail
+
+Seis caracteres de um alfabeto de 31, sem `0/O` e `1/I/L` — 887.503.681
+combinações, e há teste de que a conta bate. Mostrados como `K7Q-M2P`; quem
+digita pode usar minúscula, espaço e hífen. Validade de 10 minutos, uso único,
+5 erros encerram, 60 s entre envios, 5 envios por hora.
+
+**O Redis nunca vê o código.** Guarda o HMAC-SHA256 de `challenge:código` com o
+`AUTH_OTP_SECRET`, então o código só vale no navegador que pediu — o
+`challenge` vem de um cookie assinado. O script Lua compara HMACs, então medir
+o tempo da comparação não diz nada.
+
+Um código que não bate e um código de outro navegador devolvem **a mesma
+coisa**. Dizer qual dos dois foi entregaria se existe um código em curso.
+
+### O Lua mora em TypeScript, e não num arquivo `.lua`
+
+O plano chama os scripts de `lua/issue-otp.lua` e `lua/verify-otp.lua`. Aqui
+eles são constantes em `src/scripts.ts`. O motivo é que o dashboard é Next.js:
+ler um arquivo ao lado do módulo em tempo de execução depende de como o bundler
+tratou o caminho, e uma constante não depende de nada. É uma fonte só — não há
+`.lua` para alguém editar achando que é o que roda.
+
+O teste de integração do `packages/adapters` carrega uma **cópia** desses dois
+scripts, de quando a etapa 2.3 precisou de um payload realista para exercitar o
+`eval`. `src/otp.test.ts` compara as duas e falha se divergirem, para ninguém
+editar a cópia achando que é a original. É por isso que este pacote tem
+`turbo.json` com `cache: false`: ele tem um teste que lê fora do próprio
+diretório, que é a única razão aceita por `internal/release/src/turbo.test.ts`.
+
+### Contra Redis de verdade
+
+`src/otp.integration.test.ts` roda os dois scripts no Valkey: uso único, outro
+navegador, o quinto erro encerrando, expiração **pela TTL de verdade**, código
+novo invalidando o anterior, espera de reenvio e o sexto envio na hora. Pulado
+sem Redis; `REDIS_TEST_REQUIRED=1` transforma o pulo em falha, que é o que o CI
+faz.
+
 ## O que foi conferido contra a API de verdade
 
 Em 06/11/2026, pelo módulo, sem mock: `password123456` e `qwertyuiop1234`

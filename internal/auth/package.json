@@ -11,10 +11,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nekolog-io/adapters": "workspace:*",
     "@node-rs/argon2": "^2.2.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "ioredis": "^6.0.0",
     "vitest": "^5.0.5"
   }
 }
