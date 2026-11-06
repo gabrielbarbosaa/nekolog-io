@@ -21,6 +21,20 @@ const FIND_BY_EMAIL = `
   limit 1
 `
 
+const FIND_BY_ID = `
+  select id, email, name, password_hash, email_verified_at, suspended_at, locale, timezone
+  from users
+  where id = $1
+  limit 1
+`
+
+const SET_EMAIL = `
+  update users
+  set email = $2, email_verified_at = now()
+  where id = $1 and not exists (select 1 from users other where other.email = $2 and other.id <> $1)
+  returning email
+`
+
 const SET_PASSWORD = `
   update users
   set password_hash = $2, password_changed_at = now()
@@ -58,6 +72,25 @@ export async function findAccountByEmail(
   const rows = await run(FIND_BY_EMAIL, [normalizeEmail(email)])
   const row = rows[0]
   return row === undefined ? undefined : accountFrom(row)
+}
+
+export async function findAccountById(
+  run: SqlRunner,
+  userId: string,
+): Promise<Account | undefined> {
+  const rows = await run(FIND_BY_ID, [userId])
+  const row = rows[0]
+  return row === undefined ? undefined : accountFrom(row)
+}
+
+export async function setEmail(
+  run: SqlRunner,
+  userId: string,
+  email: string,
+): Promise<string | undefined> {
+  const rows = await run(SET_EMAIL, [userId, normalizeEmail(email)])
+  const row = rows[0]
+  return row === undefined ? undefined : String(row.email)
 }
 
 export async function setPasswordHash(

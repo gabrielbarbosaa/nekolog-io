@@ -56,6 +56,28 @@ if owner then redis.call('SREM', 'sess:user:' .. owner, ARGV[1]) end
 return 1
 `.trim()
 
+export const LIST_SESSIONS = `
+local sids = redis.call('SMEMBERS', KEYS[1])
+local out = {}
+for _, sid in ipairs(sids) do
+  local d = redis.call('HMGET', 'sess:' .. sid, 'device', 'country', 'createdAt', 'lastUsed')
+  if d[1] then
+    out[#out + 1] = {sid, d[1], d[2], d[3], d[4]}
+  else
+    redis.call('SREM', KEYS[1], sid)
+  end
+end
+return out
+`.trim()
+
+export const REVOKE_OWN_SESSION = `
+local owner = redis.call('HGET', KEYS[1], 'userId')
+if not owner or owner ~= ARGV[1] then return 0 end
+redis.call('DEL', KEYS[1])
+redis.call('SREM', KEYS[2], ARGV[2])
+return 1
+`.trim()
+
 export const REVOKE_EVERY_SESSION = `
 local sids = redis.call('SMEMBERS', KEYS[1])
 for _, sid in ipairs(sids) do redis.call('DEL', 'sess:' .. sid) end

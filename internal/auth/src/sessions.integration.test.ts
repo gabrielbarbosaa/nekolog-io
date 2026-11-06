@@ -5,9 +5,11 @@ import {
   createSession,
   GRACE_MS,
   hashToken,
+  listSessions,
   REFRESH_ABSOLUTE_SECONDS,
   REFRESH_IDLE_SECONDS,
   revokeEverySession,
+  revokeOwnSession,
   revokeSession,
   rotateRefresh,
   type SessionStore,
@@ -252,6 +254,42 @@ describe.skipIf(!reachable)('revoking', () => {
     expect(await sessionLives(store, second.sid)).toBe(false)
     expect(await sessionLives(store, untouched.sid)).toBe(true)
     expect(await raw.exists(userSessionsKey(mine))).toBe(0)
+  })
+
+  it('ends one of your own sessions from the list', async () => {
+    const userId = user()
+    const kept = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+    const dropped = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+
+    expect(await revokeOwnSession(store, userId, dropped.sid)).toBe(true)
+    expect(await sessionLives(store, dropped.sid)).toBe(false)
+    expect(await sessionLives(store, kept.sid)).toBe(true)
+    expect(await raw.smembers(userSessionsKey(userId))).toEqual([kept.sid])
+  })
+
+  it('never ends somebody else’s, even knowing the session id', async () => {
+    const mine = user()
+    const theirs = user()
+    const stranger = await createSession(store, { userId: theirs, remember: true, ...SOMEWHERE })
+
+    expect(await revokeOwnSession(store, mine, stranger.sid)).toBe(false)
+    expect(await sessionLives(store, stranger.sid)).toBe(true)
+  })
+
+  it('answers false for a session id that is not there at all', async () => {
+    expect(await revokeOwnSession(store, user(), 'no-such-session')).toBe(false)
+  })
+
+  it('takes a dead member out of the list rather than showing it', async () => {
+    const userId = user()
+    const alive = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+    const expired = await createSession(store, { userId, remember: true, ...SOMEWHERE })
+    await raw.del(sessionKey(expired.sid))
+
+    const listed = await listSessions(store, userId)
+
+    expect(listed.map((row) => row.sid)).toEqual([alive.sid])
+    expect(await raw.smembers(userSessionsKey(userId))).toEqual([alive.sid])
   })
 
   it('is immediately visible, which is what a sensitive action checks', async () => {

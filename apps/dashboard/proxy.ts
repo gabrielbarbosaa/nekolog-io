@@ -11,6 +11,7 @@ import { newNonce, nonceSource, securityHeaders } from '@internal/security-heade
 import { type NextRequest, NextResponse } from 'next/server'
 import { clearCookie, cookieFrom, withCookies } from './lib/cookies'
 import { NONCE_HEADER } from './lib/nonce'
+import { warnAboutReuse } from './lib/notices'
 import { renewDeps } from './lib/session'
 
 const UNSAFE = ['POST', 'PUT', 'PATCH', 'DELETE']
@@ -99,6 +100,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     console.warn(
       `a refresh token came back after the grace window; ended the session of ${renewal.userId}`,
     )
+    warnAboutReuse(renewal.userId, request.headers)
   }
 
   return response

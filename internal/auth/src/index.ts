@@ -1,4 +1,21 @@
 export {
+  CHANGE_EMAIL_PURPOSE,
+  changePassword,
+  EMAIL_SHAPE,
+  type EmailChanged,
+  type EmailChangeStarted,
+  finishEmailChange,
+  finishRecovery,
+  NEW_ADDRESS_SUFFIX,
+  type PasswordChanged,
+  pendingEmailKey,
+  RESET_PURPOSE,
+  type RecoveryFinished,
+  type RecoveryStarted,
+  startEmailChange,
+  startRecovery,
+} from './account.ts'
+export {
   CHALLENGE_BYTES,
   CODE_ALPHABET,
   CODE_GROUP,
@@ -67,6 +84,13 @@ export {
   localeFor,
 } from './mail/code-email.ts'
 export {
+  NOTICES,
+  type NoticeEmail,
+  type NoticeFor,
+  noticeEmail,
+  type SecurityNotice,
+} from './mail/notice-email.ts'
+export {
   CODE_TTL_SECONDS,
   codeKey,
   cooldownKey,
@@ -132,7 +156,9 @@ export {
   COUNT_ATTEMPT,
   CREATE_SESSION,
   ISSUE_OTP,
+  LIST_SESSIONS,
   REVOKE_EVERY_SESSION,
+  REVOKE_OWN_SESSION,
   REVOKE_SESSION,
   ROTATE_REFRESH,
   VERIFY_OTP,
@@ -142,6 +168,7 @@ export {
   type Device,
   GRACE_MS,
   hashToken,
+  listSessions,
   livesFor,
   type NewSession,
   newRefreshToken,
@@ -150,10 +177,12 @@ export {
   REFRESH_IDLE_SECONDS,
   type Rotation,
   revokeEverySession,
+  revokeOwnSession,
   revokeSession,
   rotateRefresh,
   type Session,
   type SessionStore,
+  type SessionSummary,
   sessionIdOf,
   sessionKey,
   sessionLives,
@@ -182,8 +211,10 @@ export {
 export {
   type Account,
   findAccountByEmail,
+  findAccountById,
   mayHoldASession,
   normalizeEmail,
   type SqlRunner,
+  setEmail,
   setPasswordHash,
 } from './users.ts'

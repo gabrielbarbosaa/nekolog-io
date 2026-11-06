@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { finishLogin, type LoginDeps, resendCode, startLogin } from './login.ts'
+import { RESEND_COOLDOWN_SECONDS } from './otp.ts'
 import { hashPassword } from './password.ts'
 import { ACCOUNT_ATTEMPTS } from './rate-limit.ts'
 import { memoryRedis } from './testing/memory-redis.ts'
@@ -140,6 +141,36 @@ describe('starting a login', () => {
       ip: IP,
     })
     expect(held).toEqual({ outcome: 'slow-down', retryAfterSeconds: 60 })
+  })
+
+  it('says wait, not invalid, to a right password inside the resend window', async () => {
+    const { deps } = await depsWith([await anAccount()])
+    expect(
+      (await startLogin(deps, { email: 'someone@acme.test', password: PASSWORD, ip: IP })).outcome,
+    ).toBe('code-sent')
+
+    const again = await startLogin(deps, {
+      email: 'someone@acme.test',
+      password: PASSWORD,
+      ip: IP,
+    })
+
+    expect(
+      again,
+      'the password was already right here, so calling it invalid only misleads the person',
+    ).toEqual({ outcome: 'slow-down', retryAfterSeconds: RESEND_COOLDOWN_SECONDS })
+  })
+
+  it('does not count the wait as a failed attempt', async () => {
+    const { deps } = await depsWith([await anAccount()])
+    await startLogin(deps, { email: 'someone@acme.test', password: PASSWORD, ip: IP })
+
+    for (let attempt = 1; attempt <= ACCOUNT_ATTEMPTS + 1; attempt += 1) {
+      expect(
+        (await startLogin(deps, { email: 'someone@acme.test', password: PASSWORD, ip: IP }))
+          .outcome,
+      ).toBe('slow-down')
+    }
   })
 
   it('forgets the failures once the password is right', async () => {

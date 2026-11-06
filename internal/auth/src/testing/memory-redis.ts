@@ -108,6 +108,36 @@ export function memoryRedis(): RedisClient {
       return [0, '', '']
     }
 
+    if (script.includes("local sids = redis.call('SMEMBERS', KEYS[1])\nlocal out")) {
+      const members = sets.get(keys[0] as string) ?? new Set<string>()
+      const out: unknown[][] = []
+      for (const sid of [...members]) {
+        const stored = hashes.get(`sess:${sid}`)
+        if (stored?.get('device') === undefined) {
+          members.delete(sid)
+          continue
+        }
+        out.push([
+          sid,
+          stored.get('device') ?? '',
+          stored.get('country') ?? '',
+          stored.get('createdAt') ?? '',
+          stored.get('lastUsed') ?? '',
+        ])
+      }
+      return out
+    }
+
+    if (script.includes('if not owner or owner ~= ARGV[1] then return 0 end')) {
+      const stored = hashes.get(keys[0] as string)
+      if (stored?.get('userId') !== args[0]) {
+        return 0
+      }
+      hashes.delete(keys[0] as string)
+      sets.get(keys[1] as string)?.delete(args[1] as string)
+      return 1
+    }
+
     if (script.includes("local owner = redis.call('HGET', KEYS[1], 'userId')")) {
       const owner = hashes.get(keys[0] as string)?.get('userId')
       hashes.delete(keys[0] as string)
