@@ -1,6 +1,7 @@
 import { createOrganization, organizationsOf, originAllowed, recordAudit } from '@internal/auth'
 import { NextResponse } from 'next/server'
 import { authSettings, loginDeps } from '@/lib/auth'
+import { notTheDemo } from '@/lib/demo'
 import { countryOf, jsonBody, stringField } from '@/lib/request'
 import { liveSession } from '@/lib/session'
 
@@ -21,10 +22,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'bad_origin' }, { status: 403 })
   }
 
-  const claims = await liveSession(request)
-  if (claims === undefined) {
-    return NextResponse.json({ error: 'signed_out' }, { status: 401 })
+  const gate = await notTheDemo(request)
+  if ('refused' in gate) {
+    return gate.refused
   }
+  const { claims } = gate
 
   const run = loginDeps().run
   const organizationId = await createOrganization(run, {

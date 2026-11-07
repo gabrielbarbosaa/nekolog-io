@@ -15,7 +15,7 @@ export default async function Page({ params }: { params: Promise<{ org: string }
   const t = await getTranslations('Projects')
 
   return (
-    <Shell place={{ organization }} current="projects">
+    <Shell place={{ organization }} current="projects" justLooking={signed.justLooking}>
       <div className="max-w-3xl">
         <h1 className="font-semibold text-screen tracking-tight">{t('title')}</h1>
         <p className="mt-1.5 text-muted-foreground">{t('body')}</p>

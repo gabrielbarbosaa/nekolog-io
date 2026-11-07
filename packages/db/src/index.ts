@@ -96,6 +96,7 @@ export const users = pgTable(
     locale: text('locale').notNull().default('en'),
     timezone: text('timezone').notNull().default('UTC'),
     isOperator: boolean('is_operator').notNull().default(false),
+    isDemo: boolean('is_demo').notNull().default(false),
     suspendedAt: timestamp('suspended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -105,6 +106,7 @@ export const users = pgTable(
     check('users_email_is_lowercase', sql`email = lower(email)`),
     check('users_email_has_an_at', sql`email like '%@%'`),
     check('users_locale_is_supported', sql`locale in ('en', 'pt-BR', 'es')`),
+    check('users_a_demo_account_is_never_an_operator', sql`not (is_demo and is_operator)`),
   ],
 )
 
@@ -114,6 +116,7 @@ export const organizations = pgTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    isDemo: boolean('is_demo').notNull().default(false),
     dailyEventQuota: integer('daily_event_quota').notNull().default(10_000),
     maxRetentionDays: integer('max_retention_days').notNull().default(7),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

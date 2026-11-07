@@ -19,11 +19,13 @@ export async function Shell({
   place,
   current,
   bare,
+  justLooking,
   children,
 }: {
   place: Place
   current: string
   bare?: boolean
+  justLooking?: boolean
   children: ReactNode
 }) {
   const t = await getTranslations('Sidebar')
@@ -85,9 +87,11 @@ export async function Shell({
           <Item href={`${org}/members`} current={current} name="members">
             {t('members')}
           </Item>
-          <Item href="/account" current={current} name="account">
-            {t('account')}
-          </Item>
+          {justLooking === true ? null : (
+            <Item href="/account" current={current} name="account">
+              {t('account')}
+            </Item>
+          )}
           <li>
             <SignOut />
           </li>

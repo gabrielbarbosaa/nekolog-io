@@ -8,7 +8,8 @@ import {
 import { NextResponse } from 'next/server'
 import { authSettings } from '@/lib/auth'
 import { clearCookie } from '@/lib/cookies'
-import { liveSession, sessionStore } from '@/lib/session'
+import { notTheDemo } from '@/lib/demo'
+import { sessionStore } from '@/lib/session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,10 +19,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'bad_origin' }, { status: 403 })
   }
 
-  const claims = await liveSession(request)
-  if (claims === undefined) {
-    return NextResponse.json({ error: 'signed_out' }, { status: 401 })
+  const gate = await notTheDemo(request)
+  if ('refused' in gate) {
+    return gate.refused
   }
+  const { claims } = gate
 
   const ended = await revokeEverySession(sessionStore(), claims.sub)
 

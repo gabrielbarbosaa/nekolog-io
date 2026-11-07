@@ -457,6 +457,38 @@ describe.skipIf(!reachable)('the e-mail of a user', () => {
       }),
     ).rejects.toThrow(/users_email_key/)
   })
+
+  it('is never both the demo and the operator of the instance', async () => {
+    await expect(
+      inRollback(async (tx) => {
+        await tx`insert into users ${tx({
+          id: id(ID_PREFIXES.user),
+          name: 'Demo',
+          email: 'demo@example.com',
+          password_hash: 'argon2id$x',
+          is_demo: true,
+          is_operator: true,
+        })}`
+      }),
+    ).rejects.toThrow(/users_a_demo_account_is_never_an_operator/)
+  })
+
+  it('may be one or the other, so the rule bites only where it should', async () => {
+    await inRollback(async (tx) => {
+      for (const flags of [
+        { is_demo: true, is_operator: false },
+        { is_demo: false, is_operator: true },
+      ]) {
+        await tx`insert into users ${tx({
+          id: id(ID_PREFIXES.user),
+          name: 'Somebody',
+          email: `${flags.is_demo ? 'demo' : 'operator'}@example.com`,
+          password_hash: 'argon2id$x',
+          ...flags,
+        })}`
+      }
+    })
+  })
 })
 
 describe.skipIf(!reachable)('an environment', () => {

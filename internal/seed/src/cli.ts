@@ -9,6 +9,14 @@ import {
   type RedactionRules,
 } from '@nekolog-io/adapters'
 import {
+  DEMO_EMAIL,
+  DEMO_ORGANIZATION,
+  DEMO_PROJECT,
+  demoLines,
+  FORGET_THE_DEMO,
+  planDemo,
+} from './demo.ts'
+import {
   keyHint,
   parseSeedDocument,
   type SeedDocument,
@@ -54,6 +62,8 @@ pnpm seed sync-db  escreve a organização, o projeto, os ambientes e os hashes
                    das keys no Postgres de DATABASE_URL, sem segredo nenhum
 pnpm seed invite   abre o convite da primeira conta e imprime o link de cadastro;
                    rodado de novo depois do cadastro, torna a pessoa owner
+pnpm seed demo     cria a organização da demo somente leitura e enche o
+                   ClickHouse de logs falsos das últimas 24 horas
 
   --email <endereço>         para o invite
   --role <admin|member|viewer>  para o invite; padrão: admin. Um convite nunca
@@ -74,6 +84,8 @@ pnpm seed invite   abre o convite da primeira conta e imprime o link de cadastro
   --kind <public|secret>     para o add-key; padrão: secret
   --file <caminho>           padrão: ${DEFAULT_SEED_FILE}
   --force                    deixa o init sobrescrever um arquivo que já existe
+  --lines <n>                linhas da demo em production; padrão: 4000
+  --reset                    apaga a demo que existe antes de criar outra
 `.trimStart()
 
 function write(line = ''): void {
@@ -355,6 +367,98 @@ async function syncDb(values: Record<string, string | boolean | undefined>): Pro
   warnAboutRedaction(document)
 }
 
+async function demo(values: Values): Promise<void> {
+  const url = process.env.DATABASE_URL
+  if (url === undefined || url === '') {
+    throw new Error('Preciso de DATABASE_URL para criar a organização da demo.')
+  }
+
+  const clickHouse = process.env.CLICKHOUSE_URL
+  const database = process.env.CLICKHOUSE_DB
+  const user = process.env.CLICKHOUSE_INSERT_USER
+  const password = process.env.CLICKHOUSE_INSERT_PASSWORD
+  if (!clickHouse || !database || !user || !password) {
+    throw new Error(
+      'Preciso de CLICKHOUSE_URL, CLICKHOUSE_DB, CLICKHOUSE_INSERT_USER e ' +
+        'CLICKHOUSE_INSERT_PASSWORD para gravar os logs falsos.',
+    )
+  }
+
+  const perEnvironment = Number(values.lines ?? 4000)
+  if (!Number.isInteger(perEnvironment) || perEnvironment < 1 || perEnvironment > 200_000) {
+    throw new Error('--lines precisa ser um inteiro de 1 a 200000.')
+  }
+
+  const plan = planDemo()
+  const { default: postgres } = await import('postgres')
+  const sql = postgres(url, { max: 1, onnotice: () => {} })
+
+  try {
+    if (values.reset === true) {
+      for (const statement of FORGET_THE_DEMO) {
+        await sql.unsafe(statement.text, statement.params as never[])
+      }
+      write('Apaguei a demo que existia.')
+    }
+
+    for (const statement of plan.statements) {
+      await sql.unsafe(statement.text, statement.params as never[])
+    }
+  } finally {
+    await sql.end({ timeout: 5 })
+  }
+
+  for (const environment of plan.environments) {
+    const lines = demoLines({
+      projectId: plan.projectId,
+      environmentId: environment.id,
+      count: environment.name === 'production' ? perEnvironment : Math.ceil(perEnvironment / 4),
+      overMs: 24 * 60 * 60 * 1000,
+      troubleEvery: environment.name === 'production' ? 11 : 7,
+    })
+
+    const body = `INSERT INTO ${database}.logs FORMAT JSONEachRow\n${lines
+      .map((line) => JSON.stringify(line))
+      .join('\n')}`
+
+    const answer = await fetch(clickHouse, {
+      method: 'POST',
+      headers: { 'X-ClickHouse-User': user, 'X-ClickHouse-Key': password },
+      body,
+    })
+    if (!answer.ok) {
+      throw new Error(
+        `O ClickHouse recusou: ${answer.status} ${(await answer.text()).slice(0, 300)}`,
+      )
+    }
+
+    const counted = await fetch(
+      `${clickHouse}/?query=${encodeURIComponent(
+        `SELECT count() FROM ${database}.logs WHERE project_id = '${plan.projectId}' AND environment_id = '${environment.id}'`,
+      )}`,
+      { headers: { 'X-ClickHouse-User': user, 'X-ClickHouse-Key': password } },
+    )
+    const kept = Number((await counted.text()).trim())
+
+    if (kept < lines.length) {
+      throw new Error(
+        `O ClickHouse aceitou ${lines.length} linhas e guardou ${kept}. A tabela expira por ` +
+          '`timestamp + retention_days`, então uma linha sem retention_days some na própria ' +
+          'inserção e a inserção ainda responde 200.',
+      )
+    }
+
+    write(`${environment.name.padEnd(12)} ${kept} linhas`)
+  }
+
+  write('')
+  write(`organização: ${DEMO_ORGANIZATION}  ${plan.organizationId}`)
+  write(`projeto:     ${DEMO_PROJECT}  ${plan.projectId}`)
+  write(`conta:       ${DEMO_EMAIL} (viewer, nunca entra por senha)`)
+  write('')
+  write('A demo abre em /demo, sem senha nem e-mail.')
+}
+
 async function invite(values: Record<string, string | boolean | undefined>): Promise<void> {
   const url = process.env.DATABASE_URL
   if (url === undefined || url === '') {
@@ -443,6 +547,8 @@ async function main(): Promise<void> {
       role: { type: 'string' },
       file: { type: 'string' },
       force: { type: 'boolean' },
+      lines: { type: 'string' },
+      reset: { type: 'boolean' },
       help: { type: 'boolean' },
     },
   })
@@ -477,6 +583,10 @@ async function main(): Promise<void> {
   }
   if (command === 'invite') {
     await invite(values)
+    return
+  }
+  if (command === 'demo') {
+    await demo(values)
     return
   }
 

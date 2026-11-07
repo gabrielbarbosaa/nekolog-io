@@ -38,6 +38,17 @@ export {
   REFRESH_COOKIE,
   sealChallenge,
 } from './cookies.ts'
+export type { DemoAccount, DemoAttempt } from './demo.ts'
+export {
+  DEMO_EMAIL,
+  DEMO_IS_READ_ONLY,
+  DEMO_SESSIONS_PER_HOUR,
+  DEMO_WINDOW_SECONDS,
+  demoKey,
+  findDemoAccount,
+  justLooking,
+  mayOpenADemo,
+} from './demo.ts'
 export {
   claimInvite,
   findOpenInvite,
@@ -115,10 +126,12 @@ export {
   noticeEmail,
   type SecurityNotice,
 } from './mail/notice-email.ts'
+export type { Actor } from './members.ts'
 export {
   AUDIT_ID_PREFIX,
   AUDIT_PAGE,
   type AuditEntry,
+  actorIn,
   changeRole,
   createOrganization,
   deleteOrganization,

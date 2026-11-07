@@ -37,6 +37,7 @@ export default async function Page({
       place={{ organization, project: { ...found, environments: environments.length } }}
       current="logs"
       bare
+      justLooking={signed.justLooking}
     >
       <Explorer
         org={org}
