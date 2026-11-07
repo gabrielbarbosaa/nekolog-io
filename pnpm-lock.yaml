@@ -281,6 +281,9 @@ importers:
       '@nekolog-io/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
+      '@nekolog-io/clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/clickhouse
       '@radix-ui/react-slot':
         specifier: ^1.1.0
         version: 1.5.0(@types/react@19.3.0)(react@19.3.1)

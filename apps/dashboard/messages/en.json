@@ -16,9 +16,39 @@
     "switchProject": "Change project",
     "comingLater": "Not built yet"
   },
-  "Toolbar": {
-    "period": "Last hour",
-    "searchHint": "level:error service:api"
+  "Explorer": {
+    "tableLabel": "Log lines",
+    "detailLabel": "The line you opened",
+    "environment": "Environment",
+    "period": "Period",
+    "search": "Search",
+    "searchHint": "level:error service:api",
+    "live": "Live",
+    "loading": "Reading…",
+    "nothing": "Nothing matched this search in this period.",
+    "counted": "{count, plural, =0 {no lines} one {# line} other {# lines}}",
+    "close": "Close",
+    "seeContext": "See the lines around it",
+    "hideContext": "Back to the search",
+    "contextShown": "Showing the lines around the one you opened.",
+    "attributes": "Attributes",
+    "stacktrace": "Stack trace",
+    "raw": "The whole record",
+    "service": "Service",
+    "release": "Release",
+    "source": "Source",
+    "error_type": "Error type",
+    "trace_id": "Trace",
+    "span_id": "Span",
+    "session_id": "Session",
+    "user_id": "User",
+    "country": "Country",
+    "period_15m": "Last 15 minutes",
+    "period_1h": "Last hour",
+    "period_6h": "Last 6 hours",
+    "period_24h": "Last 24 hours",
+    "period_7d": "Last 7 days",
+    "period_30d": "Last 30 days"
   },
   "ThemeToggle": {
     "label": "Theme",
@@ -222,7 +252,12 @@
     "bad_address": "That does not look like an e-mail address.",
     "already_a_member": "That person is already in this organisation.",
     "wait": "Too many tries. Wait a moment and start again.",
-    "challenge_failed": "We could not tell you apart from a robot."
+    "challenge_failed": "We could not tell you apart from a robot.",
+    "unknown_parameter": "This build does not know one of the filters in that address.",
+    "bad_period": "That period does not make sense. Pick another one.",
+    "bad_limit": "That is more lines than one page can hold.",
+    "bad_search": "That search does not parse.",
+    "logs_unavailable": "The log store did not answer. Try again in a moment."
   },
   "Common": {
     "cancel": "Cancel",
