@@ -15,6 +15,9 @@ export type Line = {
   message: string
   service: string
   attributes?: Record<string, string>
+  source?: string
+  traceId?: string
+  spanId?: string
 }
 
 function stamp(value: Date): string {
@@ -60,6 +63,9 @@ export async function writeLines(
         level: line.level,
         message: line.message,
         service: line.service,
+        source: line.source ?? 'node',
+        trace_id: line.traceId ?? '',
+        span_id: line.spanId ?? '',
         attributes: line.attributes ?? {},
         retention_days: RETENTION_DAYS,
       }),

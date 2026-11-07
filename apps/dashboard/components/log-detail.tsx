@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/button'
 import { EnvDot } from '@/components/env-dot'
@@ -27,6 +28,7 @@ export function LogDetail({
   onClose,
   onContext,
   context,
+  traceHref,
 }: {
   row: LogRow
   environment: string
@@ -34,6 +36,7 @@ export function LogDetail({
   onClose: () => void
   onContext: () => void
   context: 'idle' | 'loading' | 'open'
+  traceHref?: string | undefined
 }) {
   const t = useTranslations('Explorer')
   const locale = useLocale()
@@ -70,7 +73,12 @@ export function LogDetail({
       <div className="flex flex-col gap-5 px-4 py-4">
         <dl className="grid grid-cols-[10ch_minmax(0,1fr)] gap-x-3 gap-y-1">
           {FIELDS.filter((field) => textOf(row, field) !== '').map((field) => (
-            <Pair key={field} name={t(field)} value={textOf(row, field)} />
+            <Pair
+              key={field}
+              name={t(field)}
+              value={textOf(row, field)}
+              href={field === 'trace_id' ? traceHref : undefined}
+            />
           ))}
         </dl>
 
@@ -113,11 +121,19 @@ function asText(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value)
 }
 
-function Pair({ name, value }: { name: string; value: string }) {
+function Pair({ name, value, href }: { name: string; value: string; href?: string | undefined }) {
   return (
     <>
       <dt className="truncate text-muted-foreground">{name}</dt>
-      <dd className="break-words font-mono">{value}</dd>
+      <dd className="break-words font-mono">
+        {href === undefined ? (
+          value
+        ) : (
+          <Link href={href} className="underline underline-offset-4">
+            {value}
+          </Link>
+        )}
+      </dd>
     </>
   )
 }

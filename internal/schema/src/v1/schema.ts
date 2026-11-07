@@ -71,9 +71,18 @@ export const attributesSchema = v.pipe(
   ),
 )
 
+function hexIdentifier(chars: number) {
+  return v.pipe(
+    v.string(),
+    v.length(chars),
+    v.regex(HEX_PATTERN),
+    v.transform((value: string) => value.toLowerCase()),
+  )
+}
+
 export const traceSchema = v.object({
-  traceId: v.pipe(v.string(), v.length(TRACE_ID_CHARS), v.regex(HEX_PATTERN)),
-  spanId: v.pipe(v.string(), v.length(SPAN_ID_CHARS), v.regex(HEX_PATTERN)),
+  traceId: hexIdentifier(TRACE_ID_CHARS),
+  spanId: hexIdentifier(SPAN_ID_CHARS),
 })
 
 export const sessionSchema = v.object({
