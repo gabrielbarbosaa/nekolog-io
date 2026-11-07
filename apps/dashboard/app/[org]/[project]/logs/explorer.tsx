@@ -19,6 +19,7 @@ import {
   windowOf,
 } from '@/lib/explorer'
 import { gridOf, type HistogramRow, type Volume, volumeFrom } from '@/lib/histogram'
+import { traceHrefOf } from '@/lib/trace'
 
 const PAGE = 200
 const LIVE_EVERY_MS = 3000
@@ -288,6 +289,7 @@ export function Explorer({
               }}
               onContext={() => void showContext()}
               context={context === undefined ? 'idle' : 'open'}
+              traceHref={traceHrefOf(org, project, row)}
             />
           </div>
         )}

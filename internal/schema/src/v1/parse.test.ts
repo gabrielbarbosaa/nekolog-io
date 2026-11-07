@@ -71,6 +71,46 @@ describe('parseBatch, the example from the specification', () => {
   })
 })
 
+describe('parseBatch, the trace identifiers are stored in one spelling', () => {
+  it('lowercases a trace that arrived in capitals', () => {
+    const parsed = expectOk(
+      parseBatch(
+        batch({
+          events: [
+            {
+              ...VALID_EVENT,
+              trace: { traceId: 'A'.repeat(32), spanId: 'BEEF0123456789AB' },
+            },
+          ],
+        }),
+      ),
+    )
+
+    expect(parsed.accepted[0]?.event.trace).toEqual({
+      traceId: 'a'.repeat(32),
+      spanId: 'beef0123456789ab',
+    })
+  })
+
+  it('makes the same trace in two spellings one value', () => {
+    const lower = '4bf92f3577b34da6a3ce929d0e0e4736'
+    const spellings = [lower, lower.toUpperCase(), '4BF92f3577B34da6A3ce929D0e0E4736']
+
+    const seen = spellings.map((traceId) => {
+      const parsed = expectOk(
+        parseBatch(
+          batch({
+            events: [{ ...VALID_EVENT, trace: { traceId, spanId: '00f067aa0ba902b7' } }],
+          }),
+        ),
+      )
+      return parsed.accepted[0]?.event.trace?.traceId
+    })
+
+    expect(new Set(seen)).toEqual(new Set([lower]))
+  })
+})
+
 describe('parseBatch, a bad event does not sink the batch', () => {
   it('keeps the valid events and reports the invalid one by index', () => {
     const result = parseBatch(

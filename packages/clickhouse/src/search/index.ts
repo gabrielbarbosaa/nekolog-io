@@ -47,3 +47,12 @@ export {
 } from './query.ts'
 export type { SearchScope } from './scope.ts'
 export { clickHouseDateTime, SCOPE_PREFIX, searchWhere } from './scope.ts'
+export type { LogTraceOptions, LogTraceTarget } from './trace.ts'
+export {
+  DEFAULT_TRACE_ROWS,
+  logTraceQuery,
+  MAX_TRACE_ROWS,
+  MAX_TRACE_SPAN_MS,
+  TRACE_ID_CHARS,
+  traceIdOf,
+} from './trace.ts'

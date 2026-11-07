@@ -199,7 +199,7 @@ abaixo são tela, e dependem do que este marco entrega aqui: sem o `traceparent`
 da 3.4 não há linha do tempo para desenhar, e sem a CLI da 3.13 não há comando
 para o passo a passo mostrar.
 
-- [ ] **3.10** `feat/trace-view` — linha do tempo por `trace_id`, com o clique no front e a request no back na mesma tela.
+- [x] **3.10** `feat/trace-view` — linha do tempo por `trace_id`, com o clique no front e a request no back na mesma tela.
 - [ ] **3.14** `feat/onboarding` — passo a passo "envie seu primeiro log" (a rota `…/setup` do mapa de telas da seção 10.1 do plano), esperando o log chegar em tempo real.
 
 **Pronto quando:** um clique no front e a request no back aparecem na mesma linha do tempo. *(Como no M2, o critério atravessa servidor e dashboard: a propagação do `traceparent` e os SDKs são do servidor, a linha do tempo é do dashboard.)*

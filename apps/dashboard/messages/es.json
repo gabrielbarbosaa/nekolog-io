@@ -110,6 +110,15 @@
     "period_7d": "Últimos 7 días",
     "period_30d": "Últimos 30 días"
   },
+  "Trace": {
+    "timeline": "La traza, del más antiguo al más reciente",
+    "nothing": "Ningún log lleva esta traza en la hora a su alrededor.",
+    "steps": "{count, plural, =0 {ninguna línea} one {# línea} other {# líneas}}",
+    "services": "{count, plural, =0 {ningún servicio} one {# servicio} other {# servicios}}",
+    "crossed": "Del navegador al servidor",
+    "backToLogs": "Volver al explorador",
+    "unavailable": "No se pudieron leer los logs ahora."
+  },
   "ThemeToggle": {
     "label": "Tema",
     "light": "Claro",

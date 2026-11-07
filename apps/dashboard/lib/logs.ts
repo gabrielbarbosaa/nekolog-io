@@ -6,7 +6,9 @@ import {
   logContextQuery,
   logHistogramQuery,
   logSearchQuery,
+  logTraceQuery,
   MAX_SEARCH_ROWS,
+  MAX_TRACE_ROWS,
   SIDE_COLUMN,
 } from '@nekolog-io/clickhouse/search'
 import type { LogRow } from './explorer'
@@ -82,6 +84,33 @@ export async function countVolume(ask: Volume): Promise<LogRow[]> {
     },
     { database: config.database },
     { bucket: ask.bucket, environments: ask.environments },
+  )
+
+  return queryRows<LogRow>(config, compiled.sql, { params: compiled.params })
+}
+
+export type Trace = {
+  traceId: string
+  projectId: string
+  environmentIds: readonly string[]
+  from: Date
+  to: Date
+}
+
+export const TRACE_ROWS = MAX_TRACE_ROWS
+
+export async function traceOf(ask: Trace): Promise<LogRow[]> {
+  const config = clickHouse()
+  const compiled = logTraceQuery(
+    ask.traceId,
+    {
+      projectId: ask.projectId,
+      environmentIds: ask.environmentIds,
+      from: ask.from,
+      to: ask.to,
+    },
+    { database: config.database },
+    { limit: TRACE_ROWS },
   )
 
   return queryRows<LogRow>(config, compiled.sql, { params: compiled.params })
