@@ -7,7 +7,7 @@ const PAGE_EXTENSIONS = ['.md', '.mdx']
 
 const BYTE_ORDER_MARK = '﻿'
 
-const DOUBLE_ENCODED = /Ã[\u0080-¿]|â€[\u0080-\u009F“”™]|Â[ -¿]/
+const DOUBLE_ENCODED = /Ã[\u0080-\u00bf]|â€[\u0080-\u009f“”™]|Â[\u0080-\u00bf]/
 
 async function listPages(): Promise<string[]> {
   const entries = await readdir(DOCS_DIR, { recursive: true, withFileTypes: true })

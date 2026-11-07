@@ -226,7 +226,9 @@ export {
   readOriginPattern,
   readProjectName,
   renameProject,
+  SETTINGS_REFUSALS,
   type SettingsRead,
+  type SettingsRefusal,
   STARTING_ENVIRONMENTS,
   updateEnvironment,
 } from './projects.ts'

@@ -78,9 +78,21 @@ export type EnvironmentSettings = {
   redactionRules: Record<string, unknown>
 }
 
+export const SETTINGS_REFUSALS = [
+  'unknown_color',
+  'bad_retention',
+  'unknown_level',
+  'bad_sample_rate',
+  'bad_quota',
+  'bad_origins',
+  'too_many_origins',
+  'bad_redaction_rules',
+] as const
+export type SettingsRefusal = (typeof SETTINGS_REFUSALS)[number]
+
 export type SettingsRead =
   | { settings: EnvironmentSettings }
-  | { refused: string; field: string; detail?: string }
+  | { refused: SettingsRefusal; field: string; detail?: string }
 
 function isColor(value: unknown): value is EnvironmentColor {
   return typeof value === 'string' && (ENVIRONMENT_COLORS as readonly string[]).includes(value)

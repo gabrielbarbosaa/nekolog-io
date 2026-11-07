@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process'
+import { generateKeyPairSync } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,9 +26,16 @@ export function requireBuild(): void {
 
 export async function startNext(port: number): Promise<ChildProcess> {
   const bin = join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next')
+  const pair = generateKeyPairSync('ed25519')
+
   const server = spawn(process.execPath, [bin, 'start', '-p', `${port}`], {
     cwd: ROOT,
     stdio: ['ignore', 'ignore', 'pipe'],
+    env: {
+      ...process.env,
+      AUTH_JWT_PRIVATE_KEY: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+      AUTH_JWT_PUBLIC_KEY: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    },
   })
   server.stderr?.on('data', (chunk: Buffer) => process.stderr.write(chunk))
 
