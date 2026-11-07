@@ -11,11 +11,13 @@ function read(path: string): string {
 
 const SEARCH = read('app/api/orgs/[org]/projects/[project]/logs/route.ts')
 const CONTEXT = read('app/api/orgs/[org]/projects/[project]/logs/context/route.ts')
+const VOLUME = read('app/api/orgs/[org]/projects/[project]/logs/histogram/route.ts')
 const LOGS = read('lib/logs.ts')
 
 const ROUTES = [
   { name: 'logs', source: SEARCH },
   { name: 'logs/context', source: CONTEXT },
+  { name: 'logs/histogram', source: VOLUME },
 ]
 
 function filesUnder(directory: string, ending: string): string[] {
@@ -38,12 +40,25 @@ describe('the environments a log query is allowed to touch', () => {
     expect(source).toContain('listEnvironments(loginDeps().run, org, project)')
   })
 
-  it('narrows the server list by the asked id and never queries the id itself', () => {
-    expect(SEARCH).toContain('environments.filter((one) => one.id === wanted)')
-    expect(SEARCH).toContain('environmentIds: scoped.map((one) => one.id)')
-    expect(SEARCH, 'an id straight off the request skips the project scoping').not.toMatch(
-      /environmentIds: \[[^\]]*asked\.get/,
+  it.each([
+    { name: 'logs', source: SEARCH },
+    { name: 'logs/histogram', source: VOLUME },
+  ])(
+    '$name narrows the server list by the asked id, never querying the id itself',
+    ({ source }) => {
+      expect(source).toContain('environments.filter((one) => one.id === wanted)')
+      expect(source).toContain('environmentIds: scoped.map((one) => one.id)')
+      expect(source, 'an id straight off the request skips the project scoping').not.toMatch(
+        /environmentIds: \[[^\]]*asked\.get/,
+      )
+    },
+  )
+
+  it('never lets the browser choose how wide a bucket is', () => {
+    expect(VOLUME, 'a one-second bucket over a month is a denial of service').not.toMatch(
+      /asked\.get\('bucket'\)/,
     )
+    expect(VOLUME).toContain('bucketFor(from.getTime(), to.getTime())')
   })
 
   it('looks the context environment up in that list rather than trusting it', () => {
@@ -84,6 +99,7 @@ describe('a parameter this build does not know', () => {
     for (const [source, name] of [
       [SEARCH, 'LOG_PARAMETERS'],
       [CONTEXT, 'CONTEXT_PARAMETERS'],
+      [VOLUME, 'HISTOGRAM_PARAMETERS'],
     ] as const) {
       const allowed = declared(source, name)
       const used = [...new Set(readBy(source))].sort()
@@ -124,6 +140,7 @@ describe('what reaches ClickHouse', () => {
   it('goes through the query builders, which bind every value', () => {
     expect(LOGS).toContain('logSearchQuery(')
     expect(LOGS).toContain('logContextQuery(')
+    expect(LOGS).toContain('logHistogramQuery(')
     expect(LOGS).toMatch(
       /queryRows<LogRow>\(config, compiled\.sql, \{ params: compiled\.params \}\)/,
     )

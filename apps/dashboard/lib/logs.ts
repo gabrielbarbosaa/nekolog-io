@@ -4,6 +4,7 @@ import {
   DEFAULT_CONTEXT_ROWS,
   DEFAULT_SEARCH_ROWS,
   logContextQuery,
+  logHistogramQuery,
   logSearchQuery,
   MAX_SEARCH_ROWS,
   SIDE_COLUMN,
@@ -62,6 +63,25 @@ export async function searchLogs(ask: Search): Promise<LogRow[]> {
     },
     { database: config.database },
     { limit: ask.limit ?? DEFAULT_ROWS, order: 'newest', environments: ask.environments },
+  )
+
+  return queryRows<LogRow>(config, compiled.sql, { params: compiled.params })
+}
+
+export type Volume = Omit<Search, 'limit'> & { bucket: string }
+
+export async function countVolume(ask: Volume): Promise<LogRow[]> {
+  const config = clickHouse()
+  const compiled = logHistogramQuery(
+    ask.search,
+    {
+      projectId: ask.projectId,
+      environmentIds: ask.environmentIds,
+      from: ask.from,
+      to: ask.to,
+    },
+    { database: config.database },
+    { bucket: ask.bucket, environments: ask.environments },
   )
 
   return queryRows<LogRow>(config, compiled.sql, { params: compiled.params })

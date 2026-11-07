@@ -7,6 +7,7 @@ import { Notice } from '@/components/field'
 import { LogDetail } from '@/components/log-detail'
 import { LogTable } from '@/components/log-table'
 import { type EnvironmentChoice, QueryBar } from '@/components/query-bar'
+import { VolumeChart } from '@/components/volume-chart'
 import { call } from '@/lib/client'
 import {
   appendPage,
@@ -17,6 +18,7 @@ import {
   searchOf,
   windowOf,
 } from '@/lib/explorer'
+import { gridOf, type HistogramRow, type Volume, volumeFrom } from '@/lib/histogram'
 
 const PAGE = 200
 const LIVE_EVERY_MS = 3000
@@ -47,6 +49,7 @@ export function Explorer({
   const [selected, setSelected] = useState(-1)
   const [context, setContext] = useState<LogRow[] | undefined>(undefined)
   const [live, setLive] = useState(false)
+  const [volume, setVolume] = useState<Volume>({ buckets: [], bands: [], total: 0 })
 
   const anchor = useRef(Date.now())
   const loading = useRef(false)
@@ -77,6 +80,31 @@ export function Explorer({
     [logsPath, query.environmentId, query.search],
   )
 
+  const fetchVolume = useCallback(
+    async (from: Date, to: Date): Promise<void> => {
+      const params = new URLSearchParams({
+        env: query.environmentId,
+        from: from.toISOString(),
+        to: to.toISOString(),
+      })
+      if (query.search !== '') {
+        params.set('q', query.search)
+      }
+
+      const answer = await call<{ rows: HistogramRow[]; seconds: number }>(
+        `${logsPath}/histogram?${params.toString()}`,
+      )
+      if (!answer.ok) {
+        setVolume({ buckets: [], bands: [], total: 0 })
+        return
+      }
+
+      const grid = gridOf(from.getTime(), to.getTime(), answer.body.seconds)
+      setVolume(volumeFrom(answer.body.rows, grid))
+    },
+    [logsPath, query.environmentId, query.search],
+  )
+
   const reload = useCallback(
     async (at: number) => {
       if (query.environmentId === '') {
@@ -87,13 +115,16 @@ export function Explorer({
       anchor.current = at
 
       const span = windowOf(query.period, at)
-      const page = await fetchPage(span.to, span.from)
+      const [page] = await Promise.all([
+        fetchPage(span.to, span.from),
+        fetchVolume(span.from, span.to),
+      ])
 
       setLoaded({ rows: page ?? [], exhausted: page !== undefined && page.length < PAGE })
       setBusy(false)
       loading.current = false
     },
-    [fetchPage, query.environmentId, query.period],
+    [fetchPage, fetchVolume, query.environmentId, query.period],
   )
 
   useEffect(() => {
@@ -203,6 +234,10 @@ export function Explorer({
           live={live}
           onLive={setLive}
         />
+      </div>
+
+      <div className="border-border border-b px-3 py-2">
+        <VolumeChart volume={volume} withDay={withDay} busy={busy} />
       </div>
 
       <div className="flex min-h-0 flex-1">

@@ -10,7 +10,12 @@ import { clockText } from '@/lib/when'
 
 export const ROW_CLASS = 'h-[30px]'
 
-const COLUMNS = 'grid grid-cols-[13ch_6ch_16ch_minmax(0,1fr)] items-center gap-2 px-3 text-left'
+const SHARED = 'grid items-center gap-2 px-3 text-left'
+
+const COLUMNS: Readonly<Record<'clock' | 'day', string>> = {
+  clock: `${SHARED} grid-cols-[13ch_6ch_16ch_minmax(0,1fr)]`,
+  day: `${SHARED} grid-cols-[21ch_6ch_16ch_minmax(0,1fr)]`,
+}
 
 export function LogTable({
   rows,
@@ -66,7 +71,7 @@ export function LogTable({
               aria-current={at === selected ? 'true' : undefined}
               onClick={() => onSelect(at)}
               className={cn(
-                COLUMNS,
+                withDay ? COLUMNS.day : COLUMNS.clock,
                 ROW_CLASS,
                 'w-full rounded-none hover:bg-muted/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
                 at === selected && 'bg-muted',

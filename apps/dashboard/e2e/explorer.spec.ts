@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { aMinuteOfLines, clickHouseAnswers, writeLines } from './support/lines'
-import { anAccount, api, closeWorld, openBrowser, signIn } from './support/world'
+import { aProjectWithLines, clickHouseAnswers } from './support/lines'
+import { api, closeWorld } from './support/world'
 
 test.afterAll(async () => {
   await closeWorld()
@@ -13,34 +13,6 @@ function aLine(at: number): string {
 const WIDE = {
   from: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   to: new Date(Date.now() + 60 * 1000).toISOString(),
-}
-
-async function aProjectWithLines(context: Parameters<typeof openBrowser>[0], howMany = 120) {
-  const page = await openBrowser(context)
-  const email = await anAccount(page)
-  expect((await signIn(page, email)).status).toBe(200)
-
-  const org = String(
-    (await api(page, '/api/orgs', { name: `Acme ${Date.now()}` })).body?.organization,
-  )
-  const project = String(
-    (await api(page, `/api/orgs/${org}/projects`, { name: 'The Shop' })).body?.project,
-  )
-  const read = await api(page, `/api/orgs/${org}/projects/${project}`)
-  const environments = (read.body?.environments ?? []) as Array<{ id: string; name: string }>
-
-  const production = environments.find((one) => one.name === 'production') ?? environments[0]
-  if (production === undefined) {
-    throw new Error('the project was born with no environment')
-  }
-
-  await writeLines(
-    project,
-    production.id,
-    aMinuteOfLines(new Date(Date.now() - 30 * 60 * 1000), howMany),
-  )
-
-  return { page, org, project, environment: production.id, environments }
 }
 
 test.describe('the explorer', () => {

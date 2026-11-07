@@ -79,4 +79,16 @@ describe('the height the table draws and the height it measures', () => {
   it('writes no style attribute, because the policy has no nonce for one', () => {
     expect(TABLE).not.toMatch(/style=\{/)
   })
+
+  it('widens the clock when the date is in it, or the timestamp is cut off', () => {
+    expect(TABLE).toContain('grid-cols-[13ch_')
+    expect(TABLE).toContain('grid-cols-[21ch_')
+    expect(TABLE).toContain('withDay ? COLUMNS.day : COLUMNS.clock')
+  })
+
+  it('writes every width as a literal, because Tailwind cannot see a built one', () => {
+    for (const found of TABLE.matchAll(/grid-cols-\[[^\]]*\]/g)) {
+      expect(found[0], 'a class built at runtime is never compiled').not.toContain('${')
+    }
+  })
 })
