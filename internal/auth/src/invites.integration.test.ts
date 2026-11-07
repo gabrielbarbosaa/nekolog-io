@@ -86,6 +86,15 @@ async function anAccount(email: string): Promise<string> {
   return userId
 }
 
+async function anOwner(organizationId: string): Promise<string> {
+  const userId = await anAccount(address())
+  await sql.unsafe(
+    "insert into memberships (id, organization_id, user_id, role) values ($1, $2, $3, 'owner')",
+    [id(MEMBERSHIP_ID_PREFIX), organizationId, userId],
+  )
+  return userId
+}
+
 async function anInvite(
   organizationId: string,
   email: string,
@@ -194,6 +203,7 @@ describe.skipIf(!reachable)('finding the invite behind a link', () => {
 describe.skipIf(!reachable)('claiming it', () => {
   it('confirms the account, spends the invite and creates the membership at once', async () => {
     const organizationId = await anOrganization()
+    await anOwner(organizationId)
     const email = address()
     await anInvite(organizationId, email)
     const userId = await anAccount(email)
@@ -216,6 +226,36 @@ describe.skipIf(!reachable)('claiming it', () => {
     expect(account?.email_verified_at).not.toBeNull()
     expect(membership?.role).toBe('member')
     expect(invite?.accepted_at).not.toBeNull()
+  })
+
+  it('makes the first person into an organization its owner, whatever the invite said', async () => {
+    const organizationId = await anOrganization()
+    const email = address()
+    await anInvite(organizationId, email)
+    const userId = await anAccount(email)
+
+    const claimed = await claimInvite(run, userId, id(MEMBERSHIP_ID_PREFIX))
+
+    expect(
+      claimed?.role,
+      'an operator cannot invite an owner, because the schema refuses one',
+    ).toBe('owner')
+
+    const [membership] = await sql.unsafe(
+      'select role from memberships where user_id = $1 and organization_id = $2',
+      [userId, organizationId],
+    )
+    expect(membership?.role).toBe('owner')
+  })
+
+  it('leaves the invited role alone once somebody already owns the place', async () => {
+    const organizationId = await anOrganization()
+    await anOwner(organizationId)
+    const email = address()
+    await anInvite(organizationId, email)
+    const userId = await anAccount(email)
+
+    expect((await claimInvite(run, userId, id(MEMBERSHIP_ID_PREFIX)))?.role).toBe('member')
   })
 
   it('does nothing a second time, and leaves one membership', async () => {

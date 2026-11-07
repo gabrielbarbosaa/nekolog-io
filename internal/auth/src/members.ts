@@ -34,6 +34,8 @@ const RENAME_ORGANIZATION = `
 
 const DELETE_ORGANIZATION = `delete from organizations where id = $1 returning id`
 
+const RETENTION_CAP = `select max_retention_days from organizations where id = $1`
+
 const MEMBERSHIPS_OF = `
   select organizations.id, organizations.name, memberships.role
   from memberships
@@ -210,6 +212,15 @@ export async function renameOrganization(
   const rows = await run(RENAME_ORGANIZATION, [organizationId, wanted])
   const row = rows[0]
   return row === undefined ? undefined : String(row.name)
+}
+
+export async function retentionCap(
+  run: SqlRunner,
+  organizationId: string,
+): Promise<number | undefined> {
+  const rows = await run(RETENTION_CAP, [organizationId])
+  const found = rows[0]?.max_retention_days
+  return found === undefined || found === null ? undefined : Number(found)
 }
 
 export async function deleteOrganization(run: SqlRunner, organizationId: string): Promise<boolean> {

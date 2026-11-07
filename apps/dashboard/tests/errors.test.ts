@@ -8,6 +8,10 @@ import { locales } from '../i18n/locales'
 const API = fileURLToPath(new URL('../app/api/', import.meta.url))
 const MESSAGES = fileURLToPath(new URL('../messages/', import.meta.url))
 
+const GATES = ['../lib/guard.ts', '../lib/operator.ts'].map((where) =>
+  readFileSync(fileURLToPath(new URL(where, import.meta.url)), 'utf8'),
+)
+
 const ANSWERED = /(?:error: '([a-z_]+)'|refusal\('([a-z_]+)')/g
 
 const NOT_FOR_A_PERSON = new Set(['bad_origin', 'signed_out', 'no_such_session', 'session_ended'])
@@ -35,7 +39,7 @@ const FROM_AN_OUTCOME: Record<string, string> = {
 
 function codesAnswered(): string[] {
   const found = new Set<string>([...SETTINGS_REFUSALS, ...Object.keys(FROM_AN_OUTCOME)])
-  for (const source of sources(API)) {
+  for (const source of [...sources(API), ...GATES]) {
     for (const match of source.matchAll(ANSWERED)) {
       found.add((match[1] ?? match[2]) as string)
     }

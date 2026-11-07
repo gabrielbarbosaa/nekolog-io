@@ -50,14 +50,26 @@ describe('the auth routes that accept a POST', () => {
     expect(guard).toContain("refusal('bad_origin', 403)")
   })
 
+  it('and the operator gate checks it too, because it answers to nobody else', () => {
+    const operator = readFileSync(
+      fileURLToPath(new URL('../lib/operator.ts', import.meta.url)),
+      'utf8',
+    )
+
+    expect(operator).toContain("originAllowed(request.headers.get('origin')")
+    expect(operator).toContain("refusal('bad_origin', 403)")
+  })
+
   it.each(POSTS)('$name refuses a request from another origin', ({ source }) => {
     const inline =
       source.includes("originAllowed(request.headers.get('origin')") &&
       source.includes('status: 403')
 
     expect(
-      inline || source.includes('await guard(request,'),
-      'a POST either checks the origin itself or goes through lib/guard.ts',
+      inline ||
+        source.includes('await guard(request,') ||
+        source.includes('await operatorGuard(request'),
+      'a POST either checks the origin itself or goes through one of the two gates',
     ).toBe(true)
   })
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createOrganization } from './members.ts'
+import { setQuota } from './operator.ts'
 import {
   createEnvironment,
   createProject,
@@ -225,13 +226,16 @@ describe.runIf(reachable)('a project belonging to somebody else', () => {
 
     expect(await findEnvironment(run, mine, project, environment.id)).toBeUndefined()
     expect(
-      await updateEnvironment(run, {
-        organizationId: mine,
-        projectId: project,
-        environmentId: environment.id,
-        settings: sound({ retentionDays: 365 }),
-      }),
-    ).toBeUndefined()
+      (
+        await updateEnvironment(run, {
+          organizationId: mine,
+          projectId: project,
+          environmentId: environment.id,
+          settings: sound({ retentionDays: 3 }),
+        })
+      ).outcome,
+      'the retention is within every cap, so this can only be refused for whose it is',
+    ).toBe('no-such-environment')
     expect((await deleteEnvironment(run, mine, project, environment.id)).outcome).toBe(
       'the-last-environment',
     )
@@ -269,22 +273,26 @@ describe.runIf(reachable)('the settings of an environment', () => {
       throw new Error('no production')
     }
 
+    await setQuota(run, organizationId, { dailyEventQuota: 500_000, maxRetentionDays: 30 })
+
     expect(
-      await updateEnvironment(run, {
-        organizationId,
-        projectId: project,
-        environmentId: production.id,
-        settings: sound({
-          color: 'chart-2',
-          retentionDays: 30,
-          minLevel: 'warn',
-          sampleRate: 0.25,
-          dailyEventQuota: 50_000,
-          originAllowlist: ['https://shop.test', 'https://*.shop.test'],
-          redactionRules: { patterns: ['cpf', 'email'], attributes: ['user.*'] },
-        }),
-      }),
-    ).toBe('production')
+      (
+        await updateEnvironment(run, {
+          organizationId,
+          projectId: project,
+          environmentId: production.id,
+          settings: sound({
+            color: 'chart-2',
+            retentionDays: 30,
+            minLevel: 'warn',
+            sampleRate: 0.25,
+            dailyEventQuota: 50_000,
+            originAllowlist: ['https://shop.test', 'https://*.shop.test'],
+            redactionRules: { patterns: ['cpf', 'email'], attributes: ['user.*'] },
+          }),
+        })
+      ).outcome,
+    ).toBe('written')
 
     const back = await findEnvironment(run, organizationId, project, production.id)
 

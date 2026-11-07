@@ -23,16 +23,24 @@ export async function POST(
   }
 
   const run = loginDeps().run
-  const name = await updateEnvironment(run, {
+  const written = await updateEnvironment(run, {
     organizationId: org,
     projectId: project,
     environmentId: env,
     settings: read.settings,
   })
 
-  if (name === undefined) {
+  if (written.outcome === 'over-the-cap') {
+    return NextResponse.json(
+      { error: 'over_the_retention_cap', field: 'retentionDays', cap: written.cap },
+      { status: 422 },
+    )
+  }
+  if (written.outcome !== 'written') {
     return refusal('no_such_environment', 404)
   }
+
+  const { name } = written
 
   await recordAudit(run, {
     organizationId: org,

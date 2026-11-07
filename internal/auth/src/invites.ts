@@ -37,10 +37,17 @@ const CLAIM = `
     returning id, organization_id, role
   )
   insert into memberships (id, organization_id, user_id, role)
-  select $2, claimed.organization_id, (select id from account), claimed.role
+  select $2, claimed.organization_id, (select id from account),
+    case
+      when exists (
+        select 1 from memberships owners
+        where owners.organization_id = claimed.organization_id and owners.role = 'owner'
+      ) then claimed.role
+      else 'owner'
+    end
   from claimed
   on conflict (organization_id, user_id) do nothing
-  returning id, organization_id
+  returning id, organization_id, role
 `
 
 export function newInviteToken(): string {
@@ -77,8 +84,10 @@ export async function claimInvite(
   run: SqlRunner,
   userId: string,
   membershipId: string,
-): Promise<{ joined: string } | undefined> {
+): Promise<{ joined: string; role: string } | undefined> {
   const rows = await run(CLAIM, [userId, membershipId])
   const row = rows[0]
-  return row === undefined ? undefined : { joined: String(row.organization_id) }
+  return row === undefined
+    ? undefined
+    : { joined: String(row.organization_id), role: String(row.role) }
 }

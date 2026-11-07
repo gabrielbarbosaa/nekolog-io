@@ -28,7 +28,7 @@ type Environment = {
 
 const SOUND = {
   color: 'chart-2',
-  retentionDays: 14,
+  retentionDays: 5,
   minLevel: 'info',
   sampleRate: 0.5,
   dailyEventQuota: 1000,
@@ -103,7 +103,7 @@ test('the settings of an environment survive the round trip', async ({ context }
   const back = named(await environmentsOf(page, org, project), 'production')
   expect(back).toMatchObject({
     color: 'chart-2',
-    retentionDays: 14,
+    retentionDays: 5,
     minLevel: 'info',
     sampleRate: 0.5,
     dailyEventQuota: 1000,
