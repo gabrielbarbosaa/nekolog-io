@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { memoryBlobStore } from './memory-blob-store.ts'
 import { R2_LIST_PAGE, type R2BucketLike, r2BlobStore } from './r2-blob-store.ts'
 

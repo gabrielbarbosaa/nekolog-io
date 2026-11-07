@@ -1,7 +1,8 @@
 import { serve } from '@hono/node-server'
 import { keyStoreFromDocument, type SeedDocument } from '@internal/seed'
+import { fileKvNamespace } from '@internal/self-host'
 import type { BlobStore, BlockedEnvironments, KeyStore } from '@nekolog-io/adapters'
-import { memoryRateLimiter } from '@nekolog-io/adapters'
+import { cachedKeyStore, firstKeyStore, kvKeyStore, memoryRateLimiter } from '@nekolog-io/adapters'
 import type { ClickHouseConfig } from '@nekolog-io/clickhouse/client'
 import { clickHouseLogStore } from '@nekolog-io/clickhouse/log-store'
 import type { Hono } from 'hono'
@@ -21,12 +22,14 @@ export type LocalIngestConfig = {
   clickhouse: ClickHouseConfig
   eventsPerMinute: number
   version?: string
+  kvDir?: string
 }
 
 export type LocalIngestEnv = {
   PORT?: string
   INGEST_HOST?: string
   INGEST_SEED_FILE?: string
+  KV_DIR?: string
   CLICKHOUSE_URL?: string
   CLICKHOUSE_DB?: string
   CLICKHOUSE_INSERT_USER?: string
@@ -72,6 +75,7 @@ export function localIngestConfigFrom(env: LocalIngestEnv): LocalIngestConfig {
     },
     eventsPerMinute: eventsPerMinuteFrom(env.INGEST_EVENTS_PER_MINUTE),
     ...(env.INGEST_VERSION ? { version: env.INGEST_VERSION } : {}),
+    ...(env.KV_DIR === undefined || env.KV_DIR === '' ? {} : { kvDir: env.KV_DIR }),
   }
 }
 
@@ -85,10 +89,24 @@ export type LocalIngestOptions = {
   onSpooled?: (spooled: SpooledBatch) => void
 }
 
+export async function localKeyStore(options: LocalIngestOptions): Promise<KeyStore> {
+  if (options.keyStore !== undefined) {
+    return options.keyStore
+  }
+
+  const fromSeed = await keyStoreFromDocument(options.document)
+  const kvDir = options.config.kvDir
+  if (kvDir === undefined) {
+    return fromSeed
+  }
+
+  return firstKeyStore(cachedKeyStore(kvKeyStore(fileKvNamespace(kvDir))), fromSeed)
+}
+
 export async function localIngestApp(options: LocalIngestOptions): Promise<Hono> {
   return createIngestApp({
     authenticate: createKeyAuthenticator({
-      keyStore: options.keyStore ?? (await keyStoreFromDocument(options.document)),
+      keyStore: await localKeyStore(options),
       ...(options.blocks === undefined ? {} : { blocks: options.blocks }),
     }),
     sink: createLogStoreSink({

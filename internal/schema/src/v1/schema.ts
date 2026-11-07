@@ -1,4 +1,4 @@
-﻿import * as v from 'valibot'
+import * as v from 'valibot'
 import {
   ATTRIBUTE_KEY_PATTERN,
   LOG_LEVELS,

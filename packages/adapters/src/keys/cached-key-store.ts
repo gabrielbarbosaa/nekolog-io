@@ -1,4 +1,4 @@
-﻿import type { KeyRecord, KeyStore } from '../key-store.ts'
+import type { KeyRecord, KeyStore } from '../key-store.ts'
 
 export const DEFAULT_KEY_CACHE_TTL_MS = 60_000
 export const DEFAULT_KEY_MISS_TTL_MS = 5_000

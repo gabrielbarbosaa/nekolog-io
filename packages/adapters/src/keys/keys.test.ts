@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { KeyRecord } from '../key-store.ts'
 import type { KvNamespace } from '../kv.ts'
 import { cachedKeyStore } from './cached-key-store.ts'

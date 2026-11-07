@@ -20,6 +20,7 @@ next-env.d.ts
 # Env files
 .env
 .nekolog-seed.json
+.nekolog-dev/
 .env.local
 .env.*.local
 

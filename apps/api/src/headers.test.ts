@@ -1,4 +1,4 @@
-﻿import { memoryRateLimiter } from '@nekolog-io/adapters'
+import { memoryRateLimiter } from '@nekolog-io/adapters'
 import { describe, expect, it } from 'vitest'
 import { API_HEADERS, type ApiDeps, createApiApp } from './app.ts'
 import type { ApiPrincipal } from './authenticate.ts'

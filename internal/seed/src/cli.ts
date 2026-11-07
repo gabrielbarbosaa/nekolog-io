@@ -17,6 +17,19 @@ import {
   toDocument,
 } from './document.ts'
 import {
+  ensureOrganization,
+  FIND_ACCOUNT,
+  hashInviteToken,
+  mailWillReach,
+  makeOwner,
+  newInviteToken,
+  openInvite,
+  organizationOf,
+  readInviteEmail,
+  readRole,
+  signupLink,
+} from './invite.ts'
+import {
   buildSeed,
   DEFAULT_ENVIRONMENTS,
   DEFAULT_RETENTION_DAYS,
@@ -39,7 +52,12 @@ pnpm seed set      muda nível mínimo, amostragem e redação de um ambiente
 pnpm seed show     mostra o que existe, sem segredo nenhum
 pnpm seed sync-db  escreve a organização, o projeto, os ambientes e os hashes
                    das keys no Postgres de DATABASE_URL, sem segredo nenhum
+pnpm seed invite   abre o convite da primeira conta e imprime o link de cadastro;
+                   rodado de novo depois do cadastro, torna a pessoa owner
 
+  --email <endereço>         para o invite
+  --role <admin|member|viewer>  para o invite; padrão: admin. Um convite nunca
+                             concede owner — o esquema recusa
   --organization <nome>      padrão: NekoLog
   --project <nome>           padrão: nekolog
   --environments <lista>     padrão: ${DEFAULT_ENVIRONMENTS.join(',')}
@@ -337,6 +355,74 @@ async function syncDb(values: Record<string, string | boolean | undefined>): Pro
   warnAboutRedaction(document)
 }
 
+async function invite(values: Record<string, string | boolean | undefined>): Promise<void> {
+  const url = process.env.DATABASE_URL
+  if (url === undefined || url === '') {
+    throw new Error('Preciso de DATABASE_URL para abrir um convite.')
+  }
+  const appUrl = process.env.APP_URL
+  if (appUrl === undefined || appUrl === '') {
+    throw new Error('Preciso de APP_URL para montar o link de cadastro.')
+  }
+
+  const email = readInviteEmail(typeof values.email === 'string' ? values.email : undefined)
+  const role = readRole(typeof values.role === 'string' ? values.role : undefined)
+  const file = resolve(ROOT, String(values.file ?? DEFAULT_SEED_FILE))
+  const document = existsSync(file) ? parseSeedDocument(readFileSync(file, 'utf8')) : undefined
+  const organization = organizationOf(document, 'NekoLog')
+
+  const { default: postgres } = await import('postgres')
+  const sql = postgres(url, { max: 1, onnotice: () => {} })
+  try {
+    const ensure = ensureOrganization(organization)
+    await sql.unsafe(ensure.text, ensure.params as never[])
+
+    const found = (await sql.unsafe(FIND_ACCOUNT, [email] as never[])) as unknown as Array<{
+      id: string
+    }>
+    const account = found[0]
+
+    if (account !== undefined) {
+      const promote = makeOwner(organization.id, account.id)
+      await sql.unsafe(promote.text, promote.params as never[])
+      write(`${email} já tem conta e agora é owner de "${organization.name}".`)
+      write(`Entre em ${new URL('/login', appUrl).toString()}`)
+      return
+    }
+
+    const token = newInviteToken()
+    const opened = openInvite({
+      organizationId: organization.id,
+      email,
+      role,
+      tokenHash: hashInviteToken(token),
+    })
+    const rows = await sql.unsafe(opened.text, opened.params as never[])
+    if (rows.length === 0) {
+      write(`${email} já é membro de "${organization.name}". Nada a fazer.`)
+      return
+    }
+
+    write(`Convite aberto para ${email} como ${role} em "${organization.name}".`)
+    write('')
+    write(signupLink(appUrl, token))
+    write('')
+    if (!mailWillReach(email, process.env)) {
+      write(
+        `Atenção: ${email} não está em EMAIL_ALLOWLIST, então o código de confirmação ` +
+          'não vai ser enviado e ninguém consegue terminar o cadastro. Acrescente o ' +
+          `domínio em .env:  EMAIL_ALLOWLIST=...,${email.slice(email.indexOf('@'))}`,
+      )
+      write('')
+    }
+    write('O link vale por 7 dias e só pode ser gasto uma vez.')
+    write('Depois de se cadastrar, rode este comando de novo para virar owner:')
+    write(`  pnpm seed invite --email ${email}`)
+  } finally {
+    await sql.end({ timeout: 5 })
+  }
+}
+
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -353,6 +439,8 @@ async function main(): Promise<void> {
       replacement: { type: 'string' },
       environment: { type: 'string' },
       kind: { type: 'string' },
+      email: { type: 'string' },
+      role: { type: 'string' },
       file: { type: 'string' },
       force: { type: 'boolean' },
       help: { type: 'boolean' },
@@ -385,6 +473,10 @@ async function main(): Promise<void> {
   }
   if (command === 'sync-db') {
     await syncDb(values)
+    return
+  }
+  if (command === 'invite') {
+    await invite(values)
     return
   }
 

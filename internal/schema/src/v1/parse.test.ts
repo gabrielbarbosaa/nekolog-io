@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   MAX_ATTRIBUTE_KEYS,
   MAX_EVENTS_PER_BATCH,

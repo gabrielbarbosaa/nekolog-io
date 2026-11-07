@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { KvNamespace } from '../kv.ts'
 import type { QuotaBlock, QuotaStore } from '../quota-store.ts'
 import { cachedBlockedEnvironments } from './cached-blocks.ts'

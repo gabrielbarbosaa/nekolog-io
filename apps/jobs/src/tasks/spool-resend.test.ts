@@ -1,4 +1,4 @@
-﻿import {
+import {
   encodeSpoolEnvelope,
   QUARANTINE_PREFIX,
   SPOOL_PREFIX,
